@@ -1,0 +1,168 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Каталог подарков — Лукоморье{% endblock %}
+
+{% block content %}
+    <section class="catalog-list-layout" aria-label="Каталог подарков">
+        <aside class="catalog-sidebar" aria-label="Фильтры каталога">
+            <div class="catalog-breadcrumb">
+                <a href="{% url 'home' %}">Главная</a>
+                <span aria-hidden="true">›</span>
+                <span>Каталог</span>
+            </div>
+
+            <form class="catalog-filter-form" method="get" action="{% url 'catalog:category_list' %}">
+                <input type="hidden" name="query" value="{{ filter_form.query.value|default:'' }}">
+                <input type="hidden" name="sort" value="{{ filter_form.sort.value|default:'popular' }}">
+
+                <div class="catalog-sidebar-block">
+                    <div class="catalog-sidebar-header">
+                        <span>Категории</span>
+                        <span class="catalog-pill">{{ products|length }}</span>
+                    </div>
+
+                    {% for category in categories %}
+                        <label class="catalog-filter-item">
+                            <input class="catalog-check" type="checkbox" name="categories" value="{{ category.pk }}"{% if category.pk|stringformat:"s" in selected_category_ids %} checked{% endif %}>
+                            <span>{{ category.name }}</span>
+                            <span class="catalog-pill">{{ category.active_product_count }}</span>
+                        </label>
+                    {% empty %}
+                        <p class="catalog-empty">Категории скоро появятся.</p>
+                    {% endfor %}
+                </div>
+
+                <div class="catalog-sidebar-block filter-block">
+                    <h3>Цена</h3>
+                    <div class="catalog-price-fields">
+                        <label>
+                            <span>От, ₽</span>
+                            <input type="number" name="min_price" min="0" step="1" value="{{ filter_form.min_price.value|default:'' }}" placeholder="0">
+                        </label>
+                        <label>
+                            <span>До, ₽</span>
+                            <input type="number" name="max_price" min="0" step="1" value="{{ filter_form.max_price.value|default:'' }}" placeholder="25000">
+                        </label>
+                    </div>
+                    {% for error in filter_form.min_price.errors %}
+                        <p class="catalog-filter-error">{{ error }}</p>
+                    {% endfor %}
+                    {% for error in filter_form.max_price.errors %}
+                        <p class="catalog-filter-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <button class="catalog-filter-apply" type="submit">Применить фильтры</button>
+                <a class="catalog-clear-button" href="{% url 'catalog:category_list' %}">Сбросить фильтры</a>
+            </form>
+        </aside>
+
+        <div class="catalog-results">
+            <div class="catalog-toolbar">
+                <div class="catalog-heading-wrap">
+                    <div class="catalog-breadcrumb desktop-only">
+                        <a href="{% url 'home' %}">Главная</a>
+                        <span aria-hidden="true">›</span>
+                        <span>Каталог</span>
+                    </div>
+                    <h1>Каталог</h1>
+                </div>
+
+                <div class="catalog-toolbar-actions">
+                    <form class="catalog-search" method="get" action="{% url 'catalog:category_list' %}">
+                        {% for category_id in selected_category_ids %}
+                            <input type="hidden" name="categories" value="{{ category_id }}">
+                        {% endfor %}
+                        <input type="hidden" name="min_price" value="{{ filter_form.min_price.value|default:'' }}">
+                        <input type="hidden" name="max_price" value="{{ filter_form.max_price.value|default:'' }}">
+                        <input type="hidden" name="sort" value="{{ filter_form.sort.value|default:'popular' }}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg>
+                        <input type="search" name="query" value="{{ filter_form.query.value|default:'' }}" placeholder="Поиск" aria-label="Поиск" />
+                        <button type="submit" aria-label="Искать">↵</button>
+                    </form>
+
+                    <form class="catalog-sort" method="get" action="{% url 'catalog:category_list' %}">
+                        {% for category_id in selected_category_ids %}
+                            <input type="hidden" name="categories" value="{{ category_id }}">
+                        {% endfor %}
+                        <input type="hidden" name="query" value="{{ filter_form.query.value|default:'' }}">
+                        <input type="hidden" name="min_price" value="{{ filter_form.min_price.value|default:'' }}">
+                        <input type="hidden" name="max_price" value="{{ filter_form.max_price.value|default:'' }}">
+                        <label for="catalog-sort">Сортировать по:</label>
+                        <select id="catalog-sort" name="sort" aria-label="Сортировать товары" onchange="this.form.submit()">
+                            <option value="popular"{% if filter_form.sort.value == "popular" or not filter_form.sort.value %} selected{% endif %}>по популярности</option>
+                            <option value="price_asc"{% if filter_form.sort.value == "price_asc" %} selected{% endif %}>сначала недорогие</option>
+                            <option value="price_desc"{% if filter_form.sort.value == "price_desc" %} selected{% endif %}>сначала дорогие</option>
+                            <option value="name"{% if filter_form.sort.value == "name" %} selected{% endif %}>по названию</option>
+                        </select>
+                    </form>
+
+                    <div class="catalog-view-switch" role="group" aria-label="Вид каталога">
+                        <button type="button" aria-label="Сетка" aria-pressed="true" class="is-active" data-catalog-view="grid">▦</button>
+                        <button type="button" aria-label="Список" aria-pressed="false" data-catalog-view="list">☰</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="catalog-grid">
+                {% for product in products %}
+                    <article class="catalog-product-card">
+                        <div class="catalog-product-image-wrap">
+                            <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}" class="catalog-product-link-wrapper">
+                                {% if product.image_url %}
+                                    <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+                                {% else %}
+                                    <div class="catalog-product-placeholder" aria-label="{{ product.name }}"></div>
+                                {% endif %}
+                            </a>
+                            <form class="favorite-toggle-form" method="post" action="{% url 'catalog:toggle_favorite' product.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button class="catalog-favorite{% if product.pk in favorite_ids %} is-active{% endif %}" type="submit" aria-label="{% if product.pk in favorite_ids %}Убрать из избранного{% else %}Добавить в избранное{% endif %}" aria-pressed="{% if product.pk in favorite_ids %}true{% else %}false{% endif %}">{% if product.pk in favorite_ids %}♥{% else %}♡{% endif %}</button>
+                            </form>
+                        </div>
+
+                        <div class="catalog-product-body">
+                            <div class="catalog-product-header-row">
+                                <h2><a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">{{ product.name }}</a></h2>
+                            </div>
+                            <p class="catalog-product-price">от <span data-size-price data-base-price="{{ product.price|default:'1490' }}">{{ product.price|default:"1490" }}</span> ₽ / 1 шт</p>
+
+                            <div class="catalog-product-meta">
+                                <div class="meta-row">
+                                    <span>Размер</span>
+                                    <select data-size-price-control aria-label="Выбрать размер для {{ product.name }}">
+                                        <option value="8" selected>8 см</option>
+                                        <option value="10">10 см</option>
+                                        <option value="12">12 см</option>
+                                        <option value="15">15 см</option>
+                                    </select>
+                                </div>
+                                <div class="meta-row">
+                                    <span>Покрытие</span>
+                                    <select aria-label="Выбрать покрытие для {{ product.name }}">
+                                        <option>Роспись на айсинге</option>
+                                        <option>Печать на айсинге</option>
+                                        <option>Классическое</option>
+                                    </select>
+                                </div>
+                                <div class="meta-row">
+                                    <span>Вид теста</span>
+                                    <select aria-label="Выбрать тесто для {{ product.name }}">
+                                        <option>Классическое</option>
+                                        <option>Шоколадное</option>
+                                        <option>Ванильное</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button class="catalog-cart-button" type="button">В корзину</button>
+                        </div>
+                    </article>
+                {% empty %}
+                    <p class="catalog-empty catalog-empty-wide">По выбранным фильтрам товары не найдены.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+{% endblock %}

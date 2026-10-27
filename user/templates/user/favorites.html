@@ -1,0 +1,88 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Избранное — Лукоморье{% endblock %}
+
+{% block content %}
+    <section class="favorites-page" aria-label="Избранное">
+        <header class="favorites-header">
+            <h1>Избранное</h1>
+            <span>{{ favorites|length }} товара</span>
+        </header>
+
+        <div class="favorites-toolbar" aria-label="Поиск в избранном">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg>
+            <input type="search" placeholder="Поиск в избранном" aria-label="Поиск в избранном" />
+        </div>
+
+        <div class="favorites-grid">
+            {% for product in favorites %}
+                <article class="favorite-card" data-favorite-card>
+                    <div class="favorite-image-wrap">
+                        <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">
+                            {% if product.image_url %}
+                                <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+                            {% else %}
+                                <span class="catalog-product-placeholder" aria-hidden="true"></span>
+                            {% endif %}
+                        </a>
+                        <form class="favorite-toggle-form" method="post" action="{% url 'catalog:toggle_favorite' product.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button class="favorite-heart is-active" type="submit" aria-label="Убрать из избранного" aria-pressed="true">♥</button>
+                        </form>
+                    </div>
+
+                    <div class="favorite-card-body">
+                        <h2><a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">{{ product.name }}</a></h2>
+                        <p class="favorite-price">от <span data-size-price data-base-price="{{ product.price|default:'1490' }}">{{ product.price|default:"1490" }}</span> ₽ / 1 шт</p>
+
+                        <div class="favorite-meta">
+                            <div class="favorite-row">
+                                <span>Размер</span>
+                                <select data-size-price-control aria-label="Выбрать размер для {{ product.name }}">
+                                    <option value="8" selected>8 см</option>
+                                    <option value="10">10 см</option>
+                                    <option value="12">12 см</option>
+                                    <option value="15">15 см</option>
+                                </select>
+                            </div>
+                            <div class="favorite-row">
+                                <span>Покрытие</span>
+                                <select aria-label="Выбрать покрытие для {{ product.name }}">
+                                    <option>Роспись на айсинге</option>
+                                    <option>Печать на айсинге</option>
+                                    <option>Классическое</option>
+                                </select>
+                            </div>
+                            <div class="favorite-row">
+                                <span>Вид теста</span>
+                                <select aria-label="Выбрать вид теста для {{ product.name }}">
+                                    <option>Классическое</option>
+                                    <option>Шоколадное</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="favorite-bottom-row">
+                            <form class="favorite-toggle-form" method="post" action="{% url 'catalog:toggle_favorite' product.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button class="favorite-remove" type="submit" aria-label="Удалить из избранного">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V4h6v3m-7 0 1 12h8l1-12"/></svg>
+                                </button>
+                            </form>
+                            <div class="favorite-qty" aria-label="Количество товара">
+                                <button type="button" aria-label="Уменьшить количество">−</button>
+                                <span>1</span>
+                                <button type="button" aria-label="Увеличить количество">+</button>
+                            </div>
+                            <button class="favorite-cart" type="button">В корзину</button>
+                        </div>
+                    </div>
+                </article>
+            {% empty %}
+                <p class="favorites-empty">В избранном пока пусто. Нажмите на сердечко в каталоге, чтобы сохранить товар.</p>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}

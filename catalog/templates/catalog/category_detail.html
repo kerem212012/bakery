@@ -1,0 +1,47 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}{{ category.name }} — каталог Лукоморья{% endblock %}
+
+{% block content %}
+    <section class="catalog-intro">
+        <a class="catalog-back-link" href="{% url 'catalog:category_list' %}">← Все категории</a>
+        <p class="eyebrow">Каталог подарков</p>
+        <h1>{{ category.name }}</h1>
+        {% if category.description %}
+            <p>{{ category.description }}</p>
+        {% endif %}
+    </section>
+
+    <section class="catalog-product-grid" aria-label="Товары категории {{ category.name }}">
+        {% for product in products %}
+            <article class="catalog-product-card catalog-product-link">
+                <div class="catalog-product-image-wrap">
+                    <a href="{% url 'catalog:product_detail' category.slug product.slug %}">
+                        {% if product.image_url %}
+                            <img class="catalog-product-image" src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+                        {% else %}
+                            <div class="catalog-product-image catalog-product-placeholder" role="img" aria-label="{{ product.name }}"></div>
+                        {% endif %}
+                    </a>
+                    <form class="favorite-toggle-form" method="post" action="{% url 'catalog:toggle_favorite' product.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button class="catalog-favorite{% if product.pk in favorite_ids %} is-active{% endif %}" type="submit" aria-label="{% if product.pk in favorite_ids %}Убрать из избранного{% else %}Добавить в избранное{% endif %}" aria-pressed="{% if product.pk in favorite_ids %}true{% else %}false{% endif %}">{% if product.pk in favorite_ids %}♥{% else %}♡{% endif %}</button>
+                    </form>
+                </div>
+                <div class="catalog-product-copy">
+                    <p class="eyebrow">{{ category.name }}</p>
+                    <h2><a href="{% url 'catalog:product_detail' category.slug product.slug %}">{{ product.name }}</a></h2>
+                    {% if product.description %}
+                        <p>{{ product.description }}</p>
+                    {% endif %}
+                    {% if product.price %}
+                        <strong class="catalog-product-price">{{ product.price }} ₽</strong>
+                    {% endif %}
+                </div>
+            </article>
+        {% empty %}
+            <p class="catalog-empty">В этой категории пока нет товаров.</p>
+        {% endfor %}
+    </section>
+{% endblock %}

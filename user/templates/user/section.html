@@ -1,0 +1,51 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}{{ section_title }} — Лукоморье{% endblock %}
+
+{% block content %}
+    <section class="account-page">
+        <div class="account-heading">
+            <p class="eyebrow">Ваше пространство</p>
+            <h1>{{ section_title }}</h1>
+            <p>{{ section_intro }}</p>
+        </div>
+
+        {% include "user/_account_messages.html" %}
+
+        <div class="account-layout">
+            {% include "user/_account_sidebar.html" %}
+            <div class="account-content">
+                <section class="account-panel account-section-panel">
+                    {% if section_key == "orders" %}
+                        <div class="account-panel-heading">
+                            <div><p class="eyebrow">История покупок</p><h2>Ваши заказы</h2></div>
+                            <span class="account-count">0 заказов</span>
+                        </div>
+                        <div class="account-empty">
+                            <span class="account-empty-mark" aria-hidden="true">◇</span>
+                            <h3>Заказов пока нет</h3>
+                            <p>После оформления покупки здесь появятся ваши заказы и информация об их статусе.</p>
+                            <a class="button button-dark" href="{% url 'catalog:category_list' %}">Перейти в каталог</a>
+                        </div>
+                    {% elif section_key == "favorites" %}
+                        <div class="account-empty">
+                            <span class="account-empty-mark" aria-hidden="true">♡</span>
+                            <h3>В избранном пока пусто</h3>
+                            <p>Добавляйте понравившиеся товары в избранное, чтобы быстро найти их позже.</p>
+                            <a class="button button-dark" href="{% url 'catalog:category_list' %}">Найти что-то особенное</a>
+                        </div>
+                    {% else %}
+                        <div class="account-panel-heading">
+                            <div><p class="eyebrow">Доставка</p><h2>Сохранённые адреса</h2></div>
+                        </div>
+                        <div class="account-empty">
+                            <span class="account-empty-mark" aria-hidden="true">⌂</span>
+                            <h3>Адресов пока нет</h3>
+                            <p>Сохранённые адреса доставки появятся здесь после того, как функция оформления заказов будет подключена.</p>
+                        </div>
+                    {% endif %}
+                </section>
+            </div>
+        </div>
+    </section>
+{% endblock %}

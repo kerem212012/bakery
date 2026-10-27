@@ -1,0 +1,219 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}{{ product.name }} — {{ category.name }}{% endblock %}
+
+{% block content %}
+    <section class="product-page" aria-label="Карточка товара">
+        <div class="product-breadcrumbs" aria-label="Хлебные крошки">
+            <a href="{% url 'home' %}">Главная</a>
+            <span aria-hidden="true">›</span>
+            <a href="{% url 'catalog:category_list' %}">Каталог</a>
+            <span aria-hidden="true">›</span>
+            <a href="{% url 'catalog:category_detail' category.slug %}">{{ category.name }}</a>
+            <span aria-hidden="true">›</span>
+            <span>{{ product.name }}</span>
+        </div>
+
+        <div class="product-main-layout">
+            <div class="product-gallery-panel">
+                <div class="product-thumb-column" aria-label="Выбор фото товара">
+                    <button class="product-thumb is-active" type="button" aria-label="Основное фото">
+                        {% if product.image_url %}
+                            <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                        {% else %}
+                            <span class="thumb-placeholder" aria-hidden="true"></span>
+                        {% endif %}
+                    </button>
+                    <button class="product-thumb" type="button" aria-label="Другой вариант фото">
+                        {% if product.image_url %}
+                            <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                        {% else %}
+                            <span class="thumb-placeholder" aria-hidden="true"></span>
+                        {% endif %}
+                    </button>
+                    <button class="product-thumb" type="button" aria-label="Ещё вариант фото">
+                        {% if product.image_url %}
+                            <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                        {% else %}
+                            <span class="thumb-placeholder" aria-hidden="true"></span>
+                        {% endif %}
+                    </button>
+                    <button class="product-thumb" type="button" aria-label="Предпросмотр видео">
+                        <span class="product-video-mark" aria-hidden="true">▶</span>
+                    </button>
+                </div>
+
+                <div class="product-image-stage">
+                    {% if product.image_url %}
+                        <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                    {% else %}
+                        <div class="product-image-placeholder" aria-label="{{ product.name }}"></div>
+                    {% endif %}
+                    <button class="product-zoom" type="button" aria-label="Увеличить фото">◌</button>
+                </div>
+            </div>
+
+            <div class="product-detail-panel">
+                <div class="product-header-row">
+                    <h1>{{ product.name }}</h1>
+                    <form class="favorite-toggle-form" method="post" action="{% url 'catalog:toggle_favorite' product.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button class="product-like{% if is_favorite %} is-active{% endif %}" type="submit" aria-label="{% if is_favorite %}Убрать из избранного{% else %}Добавить в избранное{% endif %}" aria-pressed="{% if is_favorite %}true{% else %}false{% endif %}">{% if is_favorite %}♥{% else %}♡{% endif %}</button>
+                    </form>
+                </div>
+
+                <p class="product-summary">{{ product.description|default:"Нежные пряники ручной работы с изысканной росписью. Идеальный подарок для особых моментов." }}</p>
+
+                <div class="product-rating-row">
+                    <div class="stars" aria-label="Рейтинг 4.9 из 5">★★★★★</div>
+                    <span class="rating-value">4.9</span>
+                    <span class="rating-meta">(32 отзыва)</span>
+                    <span class="product-article">Артикул: 00123</span>
+                </div>
+
+                <div class="product-price-row">
+                    <span class="price-prefix">от</span>
+                    <strong data-size-price data-base-price="{{ product.price|default:'250' }}">{{ product.price|default:250 }}</strong>
+                    <span>₽</span>
+                    <span class="price-unit">/ 1 шт</span>
+                </div>
+
+                <div class="product-quantity-box">
+                    <label class="quantity-label" for="product-qty">Количество</label>
+                    <div class="quantity-picker" aria-label="Выбор количества">
+                        <button type="button" aria-label="Уменьшить количество">−</button>
+                        <input id="product-qty" type="number" value="1" min="1" max="99" />
+                        <button type="button" aria-label="Увеличить количество">+</button>
+                    </div>
+                </div>
+
+                <div class="size-group">
+                    <div class="option-label-row">
+                        <span>Размер</span>
+                        <span class="help-mark">?</span>
+                    </div>
+                    <div class="option-pills" aria-label="Размеры">
+                        <button type="button" class="option-pill" data-size-cm="6" aria-pressed="false">6 см</button>
+                        <button type="button" class="option-pill is-selected" data-size-cm="8" aria-pressed="true">8 см</button>
+                        <button type="button" class="option-pill" data-size-cm="10" aria-pressed="false">10 см</button>
+                        <button type="button" class="option-pill" data-size-cm="12" aria-pressed="false">12 см</button>
+                        <button type="button" class="option-pill" data-size-cm="15" aria-pressed="false">15 см</button>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <div class="option-label-row">
+                        <span>Покрытие</span>
+                        <span class="help-mark">?</span>
+                    </div>
+                    <div class="option-swatch-grid" role="group" aria-label="Выберите покрытие">
+                        <button type="button" class="option-swatch is-selected" data-option-choice aria-pressed="true">
+                            <span class="swatch-image swatch-ribbon" aria-hidden="true"></span>
+                            <span>Роспись на айсинге</span>
+                        </button>
+                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                            <span class="swatch-image swatch-plain" aria-hidden="true"></span>
+                            <span>Печать на айсинге</span>
+                        </button>
+                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                            <span class="swatch-image swatch-choco" aria-hidden="true"></span>
+                            <span>Шоколадное</span>
+                        </button>
+                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                            <span class="swatch-image swatch-none" aria-hidden="true"></span>
+                            <span>Без покрытия</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <div class="option-label-row">
+                        <span>Вид теста</span>
+                    </div>
+                    <div class="option-pills" role="group" aria-label="Вид теста">
+                        <button type="button" class="option-pill is-selected" data-option-choice aria-pressed="true">Классическое</button>
+                        <button type="button" class="option-pill" data-option-choice aria-pressed="false">Шоколадное</button>
+                        <button type="button" class="option-pill" data-option-choice aria-pressed="false">Пряное</button>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <div class="option-label-row">
+                        <span>Упаковка</span>
+                    </div>
+                    <div class="option-swatch-grid compact" role="group" aria-label="Выберите упаковку">
+                        <button type="button" class="option-swatch is-selected" data-option-choice aria-pressed="true">
+                            <span class="swatch-image swatch-box" aria-hidden="true"></span>
+                            <span>Подарочная коробка</span>
+                        </button>
+                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                            <span class="swatch-image swatch-bag" aria-hidden="true"></span>
+                            <span>Крафт коробка</span>
+                        </button>
+                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                            <span class="swatch-image swatch-individual" aria-hidden="true"></span>
+                            <span>Индивидуальная упаковка</span>
+                        </button>
+                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                            <span class="swatch-image swatch-none" aria-hidden="true"></span>
+                            <span>Без упаковки</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="product-actions">
+                    <button class="primary-action" type="button">В корзину</button>
+                    <button class="secondary-action" type="button">Рассчитать скидку</button>
+                </div>
+
+                <div class="product-delivery-row">
+                    <span class="delivery-item">Срок изготовления: от 3 дней</span>
+                    <span class="delivery-item">Доставка по всей России</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="product-tabs" aria-label="Описание товара">
+            <div class="tab-list" role="tablist" aria-label="Информация о товаре">
+                <button class="tab-button is-active" type="button" role="tab" aria-selected="true">Описание</button>
+                <button class="tab-button" type="button" role="tab" aria-selected="false">Состав</button>
+                <button class="tab-button" type="button" role="tab" aria-selected="false">Доставка</button>
+                <button class="tab-button" type="button" role="tab" aria-selected="false">Оплата</button>
+                <button class="tab-button" type="button" role="tab" aria-selected="false">Отзывы (32)</button>
+            </div>
+
+            <div class="tab-panel">
+                <p>
+                    Пряники ручной работы в форме сердца с нежной цветочной росписью.
+                    Выполнены из натуральных ингредиентов, с любовью и вниманием к деталям.
+                    Подходят для подарков, корпоративных наборов и особых событий.
+                </p>
+            </div>
+        </div>
+
+        {% if related_products %}
+            <div class="related-products">
+                <div class="related-header">
+                    <h2>Похожие товары</h2>
+                    <div class="related-nav">
+                        <button type="button" aria-label="Предыдущие товары">←</button>
+                        <button type="button" aria-label="Следующие товары">→</button>
+                    </div>
+                </div>
+                <div class="related-grid">
+                    {% for related in related_products %}
+                        <a class="related-card" href="{% url 'catalog:product_detail' category.slug related.slug %}">
+                            {% if related.image_url %}
+                                <img src="{{ related.image_url }}" alt="{{ related.name }}">
+                            {% else %}
+                                <div class="related-placeholder" aria-label="{{ related.name }}"></div>
+                            {% endif %}
+                            <span>{{ related.name }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

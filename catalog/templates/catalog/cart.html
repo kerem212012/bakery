@@ -1,0 +1,184 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Корзина — Лукоморье{% endblock %}
+
+{% block content %}
+    <section class="cart-page" aria-label="Корзина">
+        <header class="cart-page-heading">
+            <h1>Корзина</h1>
+            <span>{{ item_count }} товара</span>
+        </header>
+
+        {% if messages %}
+            <div class="cart-messages" role="status">
+                {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="cart-layout{% if not items %} is-empty{% endif %}">
+            <div class="cart-items-column">
+                {% for item in items %}
+                    <article class="cart-item">
+                        <a class="cart-item-image" href="{% url 'catalog:product_detail' item.product.category.slug item.product.slug %}">
+                            {% if item.product.image_url %}
+                                <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}">
+                            {% else %}
+                                <span aria-hidden="true"></span>
+                            {% endif %}
+                        </a>
+                        <div class="cart-item-main">
+                            <a class="cart-item-name" href="{% url 'catalog:product_detail' item.product.category.slug item.product.slug %}">{{ item.product.name }}</a>
+                            <p class="cart-item-unit-price">от {{ item.unit_price }} ₽ / 1 шт</p>
+                            <form class="cart-item-options" method="post" action="{% url 'catalog:update_cart_item' item.item_id %}">
+                                {% csrf_token %}
+                                <label>
+                                    <span>Размер</span>
+                                    <select name="size" aria-label="Размер — {{ item.product.name }}">
+                                        {% for size in size_options %}
+                                            <option value="{{ size }}"{% if item.size == size %} selected{% endif %}>{{ size }} см</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Покрытие</span>
+                                    <select name="coating" aria-label="Покрытие — {{ item.product.name }}">
+                                        {% for value, label in coating_options %}
+                                            <option value="{{ value }}"{% if item.coating == value %} selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Вид теста</span>
+                                    <select name="dough" aria-label="Вид теста — {{ item.product.name }}">
+                                        {% for value, label in dough_options %}
+                                            <option value="{{ value }}"{% if item.dough == value %} selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Упаковка</span>
+                                    <select name="packaging" aria-label="Упаковка — {{ item.product.name }}">
+                                        {% for value, label in packaging_options %}
+                                            <option value="{{ value }}"{% if item.packaging == value %} selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <div class="cart-item-controls">
+                                    <label class="cart-quantity-control">
+                                        <span class="visually-hidden">Количество — {{ item.product.name }}</span>
+                                        <input type="number" name="quantity" min="1" max="99" value="{{ item.quantity }}">
+                                    </label>
+                                    <button class="cart-update-button" type="submit">Обновить</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="cart-item-price-column">
+                            <strong>{{ item.line_total }} ₽</strong>
+                            <form method="post" action="{% url 'catalog:remove_cart_item' item.item_id %}">
+                                {% csrf_token %}
+                                <button class="cart-remove-button" type="submit" aria-label="Удалить {{ item.product.name }} из корзины">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V4h6v3m-7 0 1 12h8l1-12"/></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="cart-empty">
+                        <h2>Корзина пока пуста</h2>
+                        <p>Добавьте понравившиеся товары из каталога.</p>
+                        <a class="button button-dark" href="{% url 'catalog:category_list' %}">Перейти в каталог</a>
+                    </div>
+                {% endfor %}
+
+                {% if items %}
+                    <form class="cart-clear-form" method="post" action="{% url 'catalog:clear_cart' %}">
+                        {% csrf_token %}
+                        <button class="cart-clear-button" type="submit">Очистить корзину</button>
+                    </form>
+                {% endif %}
+            </div>
+
+            {% if items %}
+            <aside class="cart-sidebar">
+                <form method="post" enctype="multipart/form-data" class="cart-checkout-form">
+                    {% csrf_token %}
+                    <section class="cart-checkout-section">
+                        <label class="cart-section-label" for="{{ form.delivery.id_for_label }}">
+                            <span class="cart-section-icon" aria-hidden="true">▣</span>
+                            <span>Доставка</span>
+                        </label>
+                        {{ form.delivery }}
+                        {% for error in form.delivery.errors %}<p class="cart-field-error">{{ error }}</p>{% endfor %}
+                    </section>
+
+                    <section class="cart-checkout-section">
+                        <p class="cart-section-label"><span class="cart-section-icon" aria-hidden="true">▤</span><span>Способ оплаты</span></p>
+                        <div class="cart-payment-options">
+                            {% for value, label in form.payment.field.choices %}
+                                <label class="cart-payment-option">
+                                    <input type="radio" name="payment" value="{{ value }}"{% if form.payment.value == value or not form.payment.value and value == "card" %} checked{% endif %}>
+                                    <span>{{ label }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                        {% for error in form.payment.errors %}<p class="cart-field-error">{{ error }}</p>{% endfor %}
+                    </section>
+
+                    <div class="cart-totals">
+                        <div><span>Товары ({{ item_count }})</span><strong data-cart-subtotal="{{ subtotal }}">{{ subtotal }} ₽</strong></div>
+                        <div><span>Доставка</span><strong data-cart-delivery>{{ delivery_cost }} ₽</strong></div>
+                        <div><span>Скидка</span><strong>− 0 ₽</strong></div>
+                        <div class="cart-total"><span>Итого</span><strong data-cart-total>{{ total }} ₽</strong></div>
+                    </div>
+
+                    {% if items %}
+                        {% if form.non_field_errors %}
+                            <div class="cart-field-error">{{ form.non_field_errors }}</div>
+                        {% endif %}
+                        <section class="cart-contact">
+                            <h2>Свяжитесь с нами</h2>
+                            <p>Оставьте контактные данные, и мы свяжемся с вами для подтверждения заказа, расчёта стоимости доставки и уточнения деталей.</p>
+                            <label class="cart-field">
+                                <span>Ваше имя *</span>
+                                {{ form.name }}
+                                {% for error in form.name.errors %}<small>{{ error }}</small>{% endfor %}
+                            </label>
+                            <label class="cart-field">
+                                <span>Телефон *</span>
+                                {{ form.phone }}
+                                {% for error in form.phone.errors %}<small>{{ error }}</small>{% endfor %}
+                            </label>
+                            <label class="cart-field">
+                                <span>E-mail *</span>
+                                {{ form.email }}
+                                {% for error in form.email.errors %}<small>{{ error }}</small>{% endfor %}
+                            </label>
+                            <label class="cart-field">
+                                <span>Адрес доставки</span>
+                                {{ form.address }}
+                                {% for error in form.address.errors %}<small>{{ error }}</small>{% endfor %}
+                            </label>
+                            <label class="cart-field">
+                                <span>Комментарий к заказу</span>
+                                {{ form.comment }}
+                            </label>
+                            <label class="cart-upload">
+                                <span>Прикрепить файл</span>
+                                {{ form.attachments }}
+                                <small>Макет, реквизиты и другие файлы (до 5)</small>
+                                {% for error in form.attachments.errors %}<small>{{ error }}</small>{% endfor %}
+                            </label>
+                            <label class="cart-consent">
+                                {{ form.consent_given }}
+                                <span>Согласен(на) на обработку персональных данных *</span>
+                            </label>
+                            {% for error in form.consent_given.errors %}<p class="cart-field-error">{{ error }}</p>{% endfor %}
+                            <button class="cart-submit-button" type="submit">Связаться с нами <span aria-hidden="true">→</span></button>
+                        </section>
+                    {% endif %}
+                </form>
+            </aside>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

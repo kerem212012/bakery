@@ -1,0 +1,42 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Личный кабинет — Лукоморье{% endblock %}
+
+{% block content %}
+    <section class="account-page">
+        <div class="account-heading">
+            <p class="eyebrow">Ваше пространство</p>
+            <h1>Личный кабинет</h1>
+            <p>Здравствуйте{% if user.first_name %}, {{ user.first_name }}{% endif %}! Здесь собрана информация о вашем аккаунте.</p>
+        </div>
+
+        {% include "user/_account_messages.html" %}
+
+        <div class="account-layout">
+            {% with account_active="overview" %}
+                {% include "user/_account_sidebar.html" %}
+            {% endwith %}
+
+            <div class="account-content">
+                <div class="account-stats">
+                    <a class="account-stat" href="{% url 'accounts:orders' %}"><span>Мои заказы</span><strong>0</strong></a>
+                    <a class="account-stat" href="{% url 'accounts:favorites' %}"><span>Избранное</span><strong>0</strong></a>
+                    <a class="account-stat" href="{% url 'accounts:addresses' %}"><span>Адрес доставки</span><strong>—</strong></a>
+                </div>
+
+                <section class="account-panel">
+                    <div class="account-panel-heading">
+                        <div><p class="eyebrow">История покупок</p><h2>Последние заказы</h2></div>
+                        <span class="account-count">0 заказов</span>
+                    </div>
+                    <div class="account-empty">
+                        <span class="account-empty-mark" aria-hidden="true">◇</span>
+                        <h3>Заказов пока нет</h3>
+                        <p>Когда вы оформите заказ, здесь появится информация о его статусе.</p>
+                        <a class="button button-dark" href="{% url 'catalog:category_list' %}">Перейти в каталог</a>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </section>
+{% endblock %}

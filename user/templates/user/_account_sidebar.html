@@ -1,0 +1,11 @@
+<aside class="account-sidebar" aria-label="Разделы личного кабинета">
+    <a class="account-nav-link{% if account_active == 'overview' %} is-active{% endif %}" href="{% url 'accounts:dashboard' %}">Обзор</a>
+    <a class="account-nav-link{% if account_active == 'orders' %} is-active{% endif %}" href="{% url 'accounts:orders' %}">Мои заказы</a>
+    <a class="account-nav-link{% if account_active == 'favorites' %} is-active{% endif %}" href="{% url 'accounts:favorites' %}">Избранное</a>
+    <a class="account-nav-link{% if account_active == 'addresses' %} is-active{% endif %}" href="{% url 'accounts:addresses' %}">Адрес доставки</a>
+    <a class="account-nav-link{% if account_active == 'profile' %} is-active{% endif %}" href="{% url 'accounts:profile' %}">Мои данные</a>
+    <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button class="account-nav-link account-logout" type="submit">Выйти из аккаунта</button>
+    </form>
+</aside>
