@@ -36,10 +36,12 @@
                         <h2><a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">{{ product.name }}</a></h2>
                         <p class="favorite-price">от <span data-size-price data-base-price="{{ product.price|default:'1490' }}">{{ product.price|default:"1490" }}</span> ₽ / 1 шт</p>
 
-                        <div class="favorite-meta">
+                        <form class="favorite-add-form" method="post" action="{% url 'catalog:add_to_cart' product.pk %}">
+                            {% csrf_token %}
+                            <div class="favorite-meta">
                             <div class="favorite-row">
                                 <span>Размер</span>
-                                <select data-size-price-control aria-label="Выбрать размер для {{ product.name }}">
+                                <select name="size" data-size-price-control aria-label="Выбрать размер для {{ product.name }}">
                                     <option value="8" selected>8 см</option>
                                     <option value="10">10 см</option>
                                     <option value="12">12 см</option>
@@ -48,36 +50,30 @@
                             </div>
                             <div class="favorite-row">
                                 <span>Покрытие</span>
-                                <select aria-label="Выбрать покрытие для {{ product.name }}">
-                                    <option>Роспись на айсинге</option>
-                                    <option>Печать на айсинге</option>
-                                    <option>Классическое</option>
+                                <select name="coating" aria-label="Выбрать покрытие для {{ product.name }}">
+                                    <option value="painting">Роспись на айсинге</option>
+                                    <option value="printing">Печать на айсинге</option>
+                                    <option value="classic">Классическое</option>
                                 </select>
                             </div>
                             <div class="favorite-row">
                                 <span>Вид теста</span>
-                                <select aria-label="Выбрать вид теста для {{ product.name }}">
-                                    <option>Классическое</option>
-                                    <option>Шоколадное</option>
+                                <select name="dough" aria-label="Выбрать вид теста для {{ product.name }}">
+                                    <option value="classic">Классическое</option>
+                                    <option value="chocolate">Шоколадное</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="favorite-bottom-row">
-                            <form class="favorite-toggle-form" method="post" action="{% url 'catalog:toggle_favorite' product.pk %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                <button class="favorite-remove" type="submit" aria-label="Удалить из избранного">
-                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V4h6v3m-7 0 1 12h8l1-12"/></svg>
-                                </button>
-                            </form>
-                            <div class="favorite-qty" aria-label="Количество товара">
-                                <button type="button" aria-label="Уменьшить количество">−</button>
-                                <span>1</span>
-                                <button type="button" aria-label="Увеличить количество">+</button>
-                            </div>
-                            <button class="favorite-cart" type="button">В корзину</button>
+                            <input type="hidden" name="packaging" value="gift_box">
+                            <label class="favorite-qty">
+                                <span class="visually-hidden">Количество товара</span>
+                                <input type="number" name="quantity" min="1" max="99" value="1">
+                            </label>
+                            <button class="favorite-cart" type="submit">В корзину</button>
                         </div>
+                        </form>
                     </div>
                 </article>
             {% empty %}

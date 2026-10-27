@@ -5,6 +5,11 @@ from .models import Category
 
 class CatalogFilterForm(forms.Form):
     query = forms.CharField(required=False, max_length=100)
+    search_mode = forms.ChoiceField(
+        required=False,
+        choices=(("all", "Везде"), ("name", "По названию")),
+        initial="all",
+    )
     categories = forms.ModelMultipleChoiceField(
         queryset=Category.objects.none(),
         required=False,

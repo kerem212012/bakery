@@ -74,21 +74,24 @@
 
                 <div class="product-price-row">
                     <span class="price-prefix">от</span>
-                    <strong data-size-price data-base-price="{{ product.price|default:'250' }}">{{ product.price|default:250 }}</strong>
+                    <strong data-size-price data-base-price="{{ product.price|default:'1490' }}">{{ product.price|default:1490 }}</strong>
                     <span>₽</span>
                     <span class="price-unit">/ 1 шт</span>
                 </div>
 
-                <div class="product-quantity-box">
-                    <label class="quantity-label" for="product-qty">Количество</label>
-                    <div class="quantity-picker" aria-label="Выбор количества">
-                        <button type="button" aria-label="Уменьшить количество">−</button>
-                        <input id="product-qty" type="number" value="1" min="1" max="99" />
-                        <button type="button" aria-label="Увеличить количество">+</button>
+                <form class="product-cart-form" method="post" action="{% url 'catalog:add_to_cart' product.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <div class="product-quantity-box">
+                        <label class="quantity-label" for="product-qty">Количество</label>
+                        <div class="quantity-picker" aria-label="Выбор количества">
+                            <button type="button" aria-label="Уменьшить количество" data-quantity-step="-1">−</button>
+                            <input id="product-qty" name="quantity" type="number" value="1" min="1" max="99" />
+                            <button type="button" aria-label="Увеличить количество" data-quantity-step="1">+</button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="size-group">
+                    <div class="size-group">
                     <div class="option-label-row">
                         <span>Размер</span>
                         <span class="help-mark">?</span>
@@ -100,6 +103,7 @@
                         <button type="button" class="option-pill" data-size-cm="12" aria-pressed="false">12 см</button>
                         <button type="button" class="option-pill" data-size-cm="15" aria-pressed="false">15 см</button>
                     </div>
+                    <input type="hidden" name="size" value="8">
                 </div>
 
                 <div class="option-group">
@@ -107,65 +111,73 @@
                         <span>Покрытие</span>
                         <span class="help-mark">?</span>
                     </div>
-                    <div class="option-swatch-grid" role="group" aria-label="Выберите покрытие">
-                        <button type="button" class="option-swatch is-selected" data-option-choice aria-pressed="true">
+                    <div class="option-swatch-grid" role="group" aria-label="Выберите покрытие" data-cart-field="coating">
+                        <button type="button" class="option-swatch is-selected" data-option-choice data-cart-value="painting" aria-pressed="true">
                             <span class="swatch-image swatch-ribbon" aria-hidden="true"></span>
                             <span>Роспись на айсинге</span>
                         </button>
-                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                        <button type="button" class="option-swatch" data-option-choice data-cart-value="printing" aria-pressed="false">
                             <span class="swatch-image swatch-plain" aria-hidden="true"></span>
                             <span>Печать на айсинге</span>
                         </button>
-                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                        <button type="button" class="option-swatch" data-option-choice data-cart-value="chocolate" aria-pressed="false">
                             <span class="swatch-image swatch-choco" aria-hidden="true"></span>
                             <span>Шоколадное</span>
                         </button>
-                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                        <button type="button" class="option-swatch" data-option-choice data-cart-value="none" aria-pressed="false">
                             <span class="swatch-image swatch-none" aria-hidden="true"></span>
                             <span>Без покрытия</span>
                         </button>
                     </div>
+                    <input type="hidden" name="coating" value="painting">
                 </div>
 
                 <div class="option-group">
                     <div class="option-label-row">
                         <span>Вид теста</span>
                     </div>
-                    <div class="option-pills" role="group" aria-label="Вид теста">
-                        <button type="button" class="option-pill is-selected" data-option-choice aria-pressed="true">Классическое</button>
-                        <button type="button" class="option-pill" data-option-choice aria-pressed="false">Шоколадное</button>
-                        <button type="button" class="option-pill" data-option-choice aria-pressed="false">Пряное</button>
+                    <div class="option-pills" role="group" aria-label="Вид теста" data-cart-field="dough">
+                        <button type="button" class="option-pill is-selected" data-option-choice data-cart-value="classic" aria-pressed="true">Классическое</button>
+                        <button type="button" class="option-pill" data-option-choice data-cart-value="chocolate" aria-pressed="false">Шоколадное</button>
+                        <button type="button" class="option-pill" data-option-choice data-cart-value="spiced" aria-pressed="false">Пряное</button>
                     </div>
+                    <input type="hidden" name="dough" value="classic">
                 </div>
 
                 <div class="option-group">
                     <div class="option-label-row">
                         <span>Упаковка</span>
                     </div>
-                    <div class="option-swatch-grid compact" role="group" aria-label="Выберите упаковку">
-                        <button type="button" class="option-swatch is-selected" data-option-choice aria-pressed="true">
+                    <div class="option-swatch-grid compact" role="group" aria-label="Выберите упаковку" data-cart-field="packaging">
+                        <button type="button" class="option-swatch is-selected" data-option-choice data-cart-value="gift_box" aria-pressed="true">
                             <span class="swatch-image swatch-box" aria-hidden="true"></span>
                             <span>Подарочная коробка</span>
                         </button>
-                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                        <button type="button" class="option-swatch" data-option-choice data-cart-value="kraft_box" aria-pressed="false">
                             <span class="swatch-image swatch-bag" aria-hidden="true"></span>
                             <span>Крафт коробка</span>
                         </button>
-                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                        <button type="button" class="option-swatch" data-option-choice data-cart-value="individual" aria-pressed="false">
                             <span class="swatch-image swatch-individual" aria-hidden="true"></span>
                             <span>Индивидуальная упаковка</span>
                         </button>
-                        <button type="button" class="option-swatch" data-option-choice aria-pressed="false">
+                        <button type="button" class="option-swatch" data-option-choice data-cart-value="none" aria-pressed="false">
                             <span class="swatch-image swatch-none" aria-hidden="true"></span>
                             <span>Без упаковки</span>
                         </button>
                     </div>
+                    <input type="hidden" name="packaging" value="gift_box">
                 </div>
 
-                <div class="product-actions">
-                    <button class="primary-action" type="button">В корзину</button>
-                    <button class="secondary-action" type="button">Рассчитать скидку</button>
-                </div>
+                    <div class="product-actions">
+                        {% if user.is_authenticated %}
+                            <button class="primary-action" type="submit">В корзину</button>
+                        {% else %}
+                            <a class="primary-action" href="{% url 'accounts:login' %}?next={{ request.get_full_path }}">Войти, чтобы добавить</a>
+                        {% endif %}
+                        <button class="secondary-action" type="button">Рассчитать скидку</button>
+                    </div>
+                </form>
 
                 <div class="product-delivery-row">
                     <span class="delivery-item">Срок изготовления: от 3 дней</span>

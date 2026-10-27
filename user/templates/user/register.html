@@ -8,22 +8,50 @@
             <p class="eyebrow">Станьте частью Лукоморья</p>
             <h1>Создать аккаунт</h1>
             <p class="auth-intro">Сохраняйте данные профиля и следите за своими заказами.</p>
-            <form method="post" class="account-form">
+            <form method="post" class="account-form" id="registration-form">
                 {% csrf_token %}
                 {% if form.non_field_errors %}
                     <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
                 {% endif %}
                 {% for field in form %}
-                    <div class="form-field">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
+                    {% if field.name == "company_name" %}<div class="registration-company-fields" id="registration-company-fields" hidden>{% endif %}
+                    <div class="form-field{% if field.name == 'customer_type' %} customer-type-field{% endif %}">
+                        {% if field.name == "customer_type" %}
+                            <span class="form-field-label">{{ field.label }}</span>
+                            {{ field }}
+                        {% else %}
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                        {% endif %}
                         {% if field.help_text %}<small class="field-help">{{ field.help_text|safe }}</small>{% endif %}
                         {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
                     </div>
+                    {% if field.name == "phone" %}</div>{% endif %}
                 {% endfor %}
                 <button class="button button-dark auth-submit" type="submit">Зарегистрироваться</button>
             </form>
             <p class="auth-switch">Уже есть аккаунт? <a href="{% url 'accounts:login' %}">Войти</a></p>
         </div>
     </section>
+    <script>
+        const customerTypeInputs = document.querySelectorAll(
+            '#registration-form [name="customer_type"]'
+        );
+        const companyFields = document.querySelector("#registration-company-fields");
+
+        function updateCompanyFields() {
+            const isLegalEntity = document.querySelector(
+                '#registration-form [name="customer_type"]:checked'
+            )?.value === "legal_entity";
+            companyFields.hidden = !isLegalEntity;
+            companyFields.querySelectorAll("input, textarea").forEach((input) => {
+                input.required = isLegalEntity;
+            });
+        }
+
+        customerTypeInputs.forEach((input) => {
+            input.addEventListener("change", updateCompanyFields);
+        });
+        updateCompanyFields();
+    </script>
 {% endblock %}

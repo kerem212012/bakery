@@ -13,6 +13,7 @@
 
             <form class="catalog-filter-form" method="get" action="{% url 'catalog:category_list' %}">
                 <input type="hidden" name="query" value="{{ filter_form.query.value|default:'' }}">
+                <input type="hidden" name="search_mode" value="{{ filter_form.search_mode.value|default:'all' }}">
                 <input type="hidden" name="sort" value="{{ filter_form.sort.value|default:'popular' }}">
 
                 <div class="catalog-sidebar-block">
@@ -66,6 +67,7 @@
                         <span>Каталог</span>
                     </div>
                     <h1>Каталог</h1>
+                    <a class="catalog-category-overview-link" href="{% url 'catalog:categories' %}">Все категории</a>
                 </div>
 
                 <div class="catalog-toolbar-actions">
@@ -76,6 +78,7 @@
                         <input type="hidden" name="min_price" value="{{ filter_form.min_price.value|default:'' }}">
                         <input type="hidden" name="max_price" value="{{ filter_form.max_price.value|default:'' }}">
                         <input type="hidden" name="sort" value="{{ filter_form.sort.value|default:'popular' }}">
+                        <input type="hidden" name="search_mode" value="{{ filter_form.search_mode.value|default:'all' }}">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg>
                         <input type="search" name="query" value="{{ filter_form.query.value|default:'' }}" placeholder="Поиск" aria-label="Поиск" />
                         <button type="submit" aria-label="Искать">↵</button>
@@ -86,6 +89,7 @@
                             <input type="hidden" name="categories" value="{{ category_id }}">
                         {% endfor %}
                         <input type="hidden" name="query" value="{{ filter_form.query.value|default:'' }}">
+                        <input type="hidden" name="search_mode" value="{{ filter_form.search_mode.value|default:'all' }}">
                         <input type="hidden" name="min_price" value="{{ filter_form.min_price.value|default:'' }}">
                         <input type="hidden" name="max_price" value="{{ filter_form.max_price.value|default:'' }}">
                         <label for="catalog-sort">Сортировать по:</label>
@@ -128,35 +132,44 @@
                             </div>
                             <p class="catalog-product-price">от <span data-size-price data-base-price="{{ product.price|default:'1490' }}">{{ product.price|default:"1490" }}</span> ₽ / 1 шт</p>
 
-                            <div class="catalog-product-meta">
-                                <div class="meta-row">
-                                    <span>Размер</span>
-                                    <select data-size-price-control aria-label="Выбрать размер для {{ product.name }}">
-                                        <option value="8" selected>8 см</option>
-                                        <option value="10">10 см</option>
-                                        <option value="12">12 см</option>
-                                        <option value="15">15 см</option>
-                                    </select>
+                            <form class="catalog-cart-form" method="post" action="{% url 'catalog:add_to_cart' product.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <input type="hidden" name="quantity" value="1">
+                                <div class="catalog-product-meta">
+                                    <div class="meta-row">
+                                        <span>Размер</span>
+                                        <select name="size" data-size-price-control aria-label="Выбрать размер для {{ product.name }}">
+                                            <option value="8" selected>8 см</option>
+                                            <option value="10">10 см</option>
+                                            <option value="12">12 см</option>
+                                            <option value="15">15 см</option>
+                                        </select>
+                                    </div>
+                                    <div class="meta-row">
+                                        <span>Покрытие</span>
+                                        <select name="coating" aria-label="Выбрать покрытие для {{ product.name }}">
+                                            <option value="painting">Роспись на айсинге</option>
+                                            <option value="printing">Печать на айсинге</option>
+                                            <option value="classic">Классическое</option>
+                                        </select>
+                                    </div>
+                                    <div class="meta-row">
+                                        <span>Вид теста</span>
+                                        <select name="dough" aria-label="Выбрать тесто для {{ product.name }}">
+                                            <option value="classic">Классическое</option>
+                                            <option value="chocolate">Шоколадное</option>
+                                            <option value="vanilla">Ванильное</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="meta-row">
-                                    <span>Покрытие</span>
-                                    <select aria-label="Выбрать покрытие для {{ product.name }}">
-                                        <option>Роспись на айсинге</option>
-                                        <option>Печать на айсинге</option>
-                                        <option>Классическое</option>
-                                    </select>
-                                </div>
-                                <div class="meta-row">
-                                    <span>Вид теста</span>
-                                    <select aria-label="Выбрать тесто для {{ product.name }}">
-                                        <option>Классическое</option>
-                                        <option>Шоколадное</option>
-                                        <option>Ванильное</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <button class="catalog-cart-button" type="button">В корзину</button>
+                                <input type="hidden" name="packaging" value="gift_box">
+                                {% if user.is_authenticated %}
+                                    <button class="catalog-cart-button" type="submit">В корзину</button>
+                                {% else %}
+                                    <a class="catalog-cart-button" href="{% url 'accounts:login' %}?next={{ request.get_full_path }}">Войти, чтобы добавить</a>
+                                {% endif %}
+                            </form>
                         </div>
                     </article>
                 {% empty %}

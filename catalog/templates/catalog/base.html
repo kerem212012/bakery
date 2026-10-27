@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=30">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=35">
 </head>
 <body>
     <div class="site-shell catalog-page">
@@ -28,8 +28,9 @@
                 <a class="icon-link" href="{% url 'accounts:favorites' %}" aria-label="Избранное">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 8.8c0 4.2-8.4 10-8.4 10s-8.4-5.8-8.4-10a4.3 4.3 0 0 1 8.4-1.3 4.3 4.3 0 0 1 8.4 1.3Z"/></svg>
                 </a>
-                <a class="icon-link" href="{% url 'catalog:category_list' %}" aria-label="Корзина">
+                <a class="icon-link cart-header-link" href="{% url 'catalog:cart' %}" aria-label="Корзина, {{ cart_item_count }} товаров">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+                    {% if cart_item_count %}<span class="cart-header-count">{{ cart_item_count }}</span>{% endif %}
                 </a>
                 <a class="icon-link account-link" href="{% if user.is_authenticated %}{% url 'accounts:dashboard' %}{% else %}{% url 'accounts:login' %}{% endif %}" aria-label="Личный кабинет">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
@@ -46,7 +47,7 @@
                 <a href="{% url 'accounts:login' %}">Войти</a>
                 <a href="{% url 'accounts:register' %}">Регистрация</a>
             {% endif %}
-            <a href="{% url 'home' %}#about">О компании</a>
+            <a href="{% url 'about' %}">О нас</a>
             <a href="{% url 'home' %}#contact">Контакты</a>
         </nav>
 
@@ -58,7 +59,7 @@
             <a class="footer-wordmark" href="{% url 'home' %}">Лукоморье</a>
             <nav class="footer-nav" aria-label="Навигация в подвале">
                 <a href="{% url 'catalog:category_list' %}">Каталог</a>
-                <a href="{% url 'home' %}#about">О компании</a>
+                <a href="{% url 'about' %}">О нас</a>
                 <a href="{% url 'home' %}#contact">Контакты</a>
             </nav>
         </footer>
@@ -132,6 +133,8 @@
                     sizeButton.setAttribute("aria-pressed", String(isSelected));
                 });
                 updateSizePrice(button, button.dataset.sizeCm);
+                const sizeInput = button.closest("form")?.querySelector('input[name="size"]');
+                if (sizeInput) sizeInput.value = button.dataset.sizeCm;
             });
         });
 
@@ -143,8 +146,34 @@
                     choice.classList.toggle("is-selected", isSelected);
                     choice.setAttribute("aria-pressed", String(isSelected));
                 });
+                const fieldName = group.dataset.cartField;
+                const fieldInput = fieldName && group.closest("form")?.querySelector(`input[name="${fieldName}"]`);
+                if (fieldInput && button.dataset.cartValue) fieldInput.value = button.dataset.cartValue;
             });
         });
+
+        document.querySelectorAll("[data-quantity-step]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const input = button.closest(".quantity-picker").querySelector("input");
+                const nextValue = Number(input.value) + Number(button.dataset.quantityStep);
+                input.value = String(Math.min(Number(input.max), Math.max(Number(input.min), nextValue)));
+            });
+        });
+
+        const deliverySelect = document.querySelector("[data-cart-delivery-select]");
+        if (deliverySelect) {
+            const updateCartTotal = () => {
+                const subtotal = Number(document.querySelector("[data-cart-subtotal]")?.dataset.cartSubtotal || 0);
+                const deliveryCost = Number(deliverySelect.selectedOptions[0]?.dataset.cost || 0);
+                const deliveryElement = document.querySelector("[data-cart-delivery]");
+                const totalElement = document.querySelector("[data-cart-total]");
+                const priceFormat = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 });
+                if (deliveryElement) deliveryElement.textContent = `${priceFormat.format(deliveryCost)} ₽`;
+                if (totalElement) totalElement.textContent = `${priceFormat.format(subtotal + deliveryCost)} ₽`;
+            };
+            deliverySelect.addEventListener("change", updateCartTotal);
+            updateCartTotal();
+        }
 
     </script>
 </body>

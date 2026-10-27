@@ -1,0 +1,35 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Все категории — Лукоморье{% endblock %}
+
+{% block content %}
+    <section class="catalog-intro">
+        <a class="catalog-back-link" href="{% url 'catalog:category_list' %}">← В каталог</a>
+        <p class="eyebrow">Каталог подарков</p>
+        <h1>Все категории</h1>
+        <p>Выберите категорию, чтобы посмотреть подходящие подарки.</p>
+    </section>
+
+    <section class="catalog-category-grid" aria-label="Все категории товаров">
+        {% for category in categories %}
+            <a class="catalog-category-card" href="{% url 'catalog:category_detail' category.slug %}">
+                {% if category.image_url %}
+                    <img src="{{ category.image_url }}" alt="{{ category.name }}" loading="lazy">
+                {% else %}
+                    <span class="catalog-category-placeholder" role="img" aria-label="{{ category.name }}"></span>
+                {% endif %}
+                <span class="catalog-category-copy">
+                    <span class="catalog-category-name">{{ category.name }}</span>
+                    {% if category.description %}
+                        <span class="catalog-category-description">{{ category.description }}</span>
+                    {% endif %}
+                    <span class="catalog-category-link">
+                        {{ category.active_product_count }} товаров <span aria-hidden="true">→</span>
+                    </span>
+                </span>
+            </a>
+        {% empty %}
+            <p class="catalog-empty">Категории скоро появятся.</p>
+        {% endfor %}
+    </section>
+{% endblock %}

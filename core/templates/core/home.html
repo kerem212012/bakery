@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=41">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=46">
 </head>
 <body>
     <div class="site-shell">
@@ -17,29 +17,37 @@
             <button class="icon-link menu-toggle" type="button" aria-label="Открыть меню" aria-controls="navigation" aria-expanded="false">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
             </button>
-            <a class="wordmark" href="#" aria-label="Лукоморье — главная">
+            <a class="wordmark" href="/" aria-label="Лукоморье — главная">
                 <span class="wordmark-name">Лукоморье</span>
                 <span class="wordmark-caption">Идеи, воплощённые в деталях</span>
             </a>
             <nav class="header-actions" aria-label="Быстрые ссылки">
-                <a class="icon-link search-link" href="#catalog" aria-label="Поиск">
+                <button class="icon-link search-link" type="button" aria-label="Открыть поиск" aria-controls="home-search-panel" aria-expanded="false">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg>
-                </a>
+                </button>
                 <a class="icon-link" href="{% url 'accounts:favorites' %}" aria-label="Избранное">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 8.8c0 4.2-8.4 10-8.4 10s-8.4-5.8-8.4-10a4.3 4.3 0 0 1 8.4-1.3 4.3 4.3 0 0 1 8.4 1.3Z"/></svg>
                 </a>
-                <a class="icon-link" href="#catalog" aria-label="Корзина">
+                <a class="icon-link cart-header-link" href="{% url 'catalog:cart' %}" aria-label="Корзина, {{ cart_item_count }} товаров">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+                    {% if cart_item_count %}<span class="cart-header-count">{{ cart_item_count }}</span>{% endif %}
                 </a>
                 <a class="icon-link account-link" href="{% if user.is_authenticated %}{% url 'accounts:dashboard' %}{% else %}{% url 'accounts:login' %}{% endif %}" aria-label="Личный кабинет">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
                 </a>
             </nav>
+
+            <form class="home-search-panel" id="home-search-panel" method="get" action="{% url 'catalog:category_list' %}" hidden>
+                <label class="visually-hidden" for="home-search-input">Поиск товаров по названию</label>
+                <input id="home-search-input" type="search" name="query" maxlength="100" placeholder="Название товара" autocomplete="off">
+                <input type="hidden" name="search_mode" value="name">
+                <button type="submit">Найти</button>
+            </form>
         </header>
 
         <nav class="main-nav" id="navigation" aria-label="Главная навигация">
             <a href="#">Главная</a>
-            <a href="#about">О компании</a>
+            <a href="{% url 'about' %}">О нас</a>
             <a href="{% url 'catalog:category_list' %}">Каталог</a>
             <a href="#popular">Подарки</a>
             <a href="#calculator">Калькулятор</a>
@@ -465,6 +473,22 @@
         const partnersArrows = document.querySelectorAll(".partners-arrow");
         const menuToggle = document.querySelector(".menu-toggle");
         const mainNavigation = document.querySelector("#navigation");
+        const searchToggle = document.querySelector(".search-link");
+        const homeSearchPanel = document.querySelector("#home-search-panel");
+        const homeSearchInput = document.querySelector("#home-search-input");
+
+        function setHomeSearchOpen(isOpen) {
+            searchToggle.setAttribute("aria-expanded", String(isOpen));
+            searchToggle.setAttribute("aria-label", isOpen ? "Закрыть поиск" : "Открыть поиск");
+            homeSearchPanel.hidden = !isOpen;
+            if (isOpen) {
+                homeSearchInput.focus();
+            }
+        }
+
+        searchToggle.addEventListener("click", () => {
+            setHomeSearchOpen(searchToggle.getAttribute("aria-expanded") !== "true");
+        });
 
         function setNavigationOpen(isOpen) {
             menuToggle.setAttribute("aria-expanded", String(isOpen));
@@ -483,6 +507,7 @@
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape") {
                 setNavigationOpen(false);
+                setHomeSearchOpen(false);
             }
         });
 
@@ -545,9 +570,13 @@
                 delete quoteAnimations[key];
                 quoteValues[key] = target;
                 quoteOutputs[key].textContent = `${currencyFormatter.format(target)}${quoteSuffixes[key]}`;
+                quoteOutputs[key].classList.remove("is-counting");
                 return;
             }
 
+            quoteOutputs[key].classList.remove("is-counting");
+            void quoteOutputs[key].offsetWidth;
+            quoteOutputs[key].classList.add("is-counting");
             const animation = { start, target, elapsed: 0, lastTime: performance.now() };
             quoteAnimations[key] = animation;
             function frame(now) {
@@ -568,6 +597,7 @@
                     quoteFrames[key] = window.requestAnimationFrame(frame);
                 } else {
                     delete quoteAnimations[key];
+                    quoteOutputs[key].classList.remove("is-counting");
                 }
             }
 
@@ -601,19 +631,13 @@
             const deliveryCost = Number(deliverySelect.selectedOptions[0].dataset.cost);
             const total = unitPrice * quantity * (1 - discount / 100) + deliveryCost;
 
-            const duration = animate && !reducedMotionPreference.matches ? 1000 : 0;
-            const totalChanged = total !== quoteValues.total;
+            const duration = animate
+                ? (reducedMotionPreference.matches ? 350 : 1000)
+                : 0;
             animateQuoteValue("unitPrice", unitPrice, duration);
             animateQuoteValue("discount", discount, duration);
             animateQuoteValue("deliveryCost", deliveryCost, duration);
             animateQuoteValue("total", total, duration);
-            if (totalChanged && duration > 0) {
-                const totalOutput = quoteOutputs.total;
-                totalOutput.classList.remove("is-counting");
-                void totalOutput.offsetWidth;
-                totalOutput.classList.add("is-counting");
-                window.setTimeout(() => totalOutput.classList.remove("is-counting"), duration);
-            }
             quoteAnnouncement.textContent = `Стоимость за штуку ${currencyFormatter.format(unitPrice)} рублей. Общая стоимость ${currencyFormatter.format(total)} рублей.`;
             if (animate) {
                 const summary = document.querySelector(".quote-summary");

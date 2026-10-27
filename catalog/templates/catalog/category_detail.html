@@ -4,7 +4,7 @@
 
 {% block content %}
     <section class="catalog-intro">
-        <a class="catalog-back-link" href="{% url 'catalog:category_list' %}">← Все категории</a>
+        <a class="catalog-back-link" href="{% url 'catalog:categories' %}">← Все категории</a>
         <p class="eyebrow">Каталог подарков</p>
         <h1>{{ category.name }}</h1>
         {% if category.description %}

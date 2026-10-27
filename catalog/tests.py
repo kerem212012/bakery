@@ -1,5 +1,8 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+
+from core.models import Preorder
 
 from .models import Category, Product
 
@@ -44,6 +47,23 @@ class CatalogPageTests(TestCase):
             reverse("catalog:category_detail", args=[self.category.slug]),
         )
         self.assertContains(response, self.product.name)
+
+    def test_category_overview_lists_active_categories(self):
+        inactive_category = Category.objects.create(
+            name="Скрытая категория",
+            is_active=False,
+        )
+
+        response = self.client.get(reverse("catalog:categories"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Все категории")
+        self.assertContains(response, self.category.name)
+        self.assertContains(
+            response,
+            reverse("catalog:category_detail", args=[self.category.slug]),
+        )
+        self.assertNotContains(response, inactive_category.name)
 
     def test_catalog_filters_by_category_and_price(self):
         affordable_product = Product.objects.create(
@@ -95,6 +115,22 @@ class CatalogPageTests(TestCase):
         self.assertNotContains(response, "Самая доступная")
         self.assertNotContains(response, self.product.name)
 
+    def test_catalog_name_search_does_not_match_description(self):
+        description_match = Product.objects.create(
+            name="Сердце",
+            category=self.category,
+            description="Подарочный набор",
+        )
+
+        response = self.client.get(
+            reverse("catalog:category_list"),
+            {"query": "подарочный", "search_mode": "name"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.product.name)
+        self.assertNotContains(response, description_match.name)
+
     def test_catalog_marks_size_selector_with_8_cm_base_price(self):
         response = self.client.get(reverse("catalog:category_list"))
 
@@ -113,7 +149,10 @@ class CatalogPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-size-cm="8" aria-pressed="true"')
         self.assertContains(response, 'data-base-price="1490.00"')
-        self.assertContains(response, 'data-option-choice aria-pressed="true"')
+        self.assertContains(
+            response,
+            'data-option-choice data-cart-value="painting" aria-pressed="true"',
+        )
         self.assertContains(response, 'aria-label="Выберите покрытие"')
         self.assertContains(response, 'aria-label="Выберите упаковку"')
 
@@ -202,6 +241,10 @@ class CatalogPageTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f'href="{reverse("catalog:categories")}">← Все категории</a>',
+        )
         self.assertContains(response, self.product.name)
         self.assertContains(response, "1490.00 ₽")
         self.assertNotContains(response, "Товар другой категории")
@@ -218,3 +261,156 @@ class CatalogPageTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+
+class CartTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name="Пряники")
+        self.product = Product.objects.create(
+            name="Пряник с росписью",
+            category=self.category,
+            price="1490.00",
+        )
+        self.add_url = reverse("catalog:add_to_cart", args=[self.product.pk])
+        self.cart_url = reverse("catalog:cart")
+        self.user = get_user_model().objects.create_user(
+            username="customer",
+            password="secure-test-password",
+        )
+        self.client.force_login(self.user)
+
+    def add_product(self, **overrides):
+        data = {
+            "quantity": "1",
+            "size": "8",
+            "coating": "painting",
+            "dough": "classic",
+            "packaging": "gift_box",
+        }
+        data.update(overrides)
+        return self.client.post(self.add_url, data)
+
+    def test_guest_cannot_add_to_cart_and_is_sent_to_login(self):
+        self.client.logout()
+
+        response = self.add_product()
+
+        self.assertRedirects(
+            response,
+            f'{reverse("accounts:login")}?next={reverse("catalog:category_list")}',
+        )
+        self.assertNotIn("cart", self.client.session)
+
+    def test_guest_catalog_buttons_link_to_login(self):
+        self.client.logout()
+
+        response = self.client.get(reverse("catalog:category_list"))
+
+        self.assertContains(
+            response,
+            f'href="{reverse("accounts:login")}?next={reverse("catalog:category_list")}"',
+        )
+        self.assertContains(response, "Войти, чтобы добавить")
+        self.assertContains(response, 'class="catalog-cart-form"')
+
+    def test_guest_product_detail_links_to_login(self):
+        self.client.logout()
+
+        product_url = reverse(
+            "catalog:product_detail",
+            args=[self.category.slug, self.product.slug],
+        )
+        response = self.client.get(product_url)
+
+        self.assertContains(
+            response,
+            f'href="{reverse("accounts:login")}?next={product_url}"',
+        )
+        self.assertNotContains(response, '<button class="primary-action" type="submit">В корзину</button>')
+
+    def test_add_to_cart_saves_validated_options_and_updates_header_count(self):
+        response = self.add_product(quantity="2", size="10", dough="chocolate")
+
+        self.assertRedirects(response, self.cart_url)
+        response = self.client.get(self.cart_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.product.name)
+        self.assertContains(response, "2 товара")
+        self.assertContains(response, "2328")
+        self.assertContains(response, 'aria-label="Корзина, 2 товаров"')
+
+    def test_add_to_cart_merges_identical_variants_and_rejects_bad_options(self):
+        self.add_product(quantity="3")
+        self.add_product(quantity="2")
+
+        response = self.client.get(self.cart_url)
+        self.assertContains(response, "5 товара")
+
+        self.client.post(self.add_url, {"size": "999", "quantity": "1"})
+        response = self.client.get(self.cart_url)
+        self.assertContains(response, "5 товара")
+
+    def test_cart_update_remove_and_clear(self):
+        self.add_product()
+        item_id = next(iter(self.client.session["cart"]))
+
+        response = self.client.post(
+            reverse("catalog:update_cart_item", args=[item_id]),
+            {
+                "quantity": "3",
+                "size": "10",
+                "coating": "printing",
+                "dough": "spiced",
+                "packaging": "kraft_box",
+            },
+        )
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(len(self.client.session["cart"]), 1)
+        updated_id = next(iter(self.client.session["cart"]))
+        self.assertNotEqual(updated_id, item_id)
+        self.assertEqual(self.client.session["cart"][updated_id]["quantity"], 3)
+
+        self.client.post(reverse("catalog:remove_cart_item", args=[updated_id]))
+        self.assertFalse(self.client.session.get("cart"))
+        self.add_product()
+        self.client.post(reverse("catalog:clear_cart"))
+        self.assertFalse(self.client.session.get("cart"))
+
+    def test_checkout_creates_preorder_and_clears_cart(self):
+        self.add_product(quantity="2")
+        response = self.client.post(
+            self.cart_url,
+            {
+                "delivery": "pickup",
+                "payment": "card",
+                "name": "Анна",
+                "phone": "+7 900 000-00-00",
+                "email": "anna@example.com",
+                "consent_given": "on",
+            },
+        )
+
+        self.assertRedirects(response, self.cart_url)
+        preorder = Preorder.objects.get()
+        self.assertEqual(preorder.total_price, 2980)
+        self.assertEqual(preorder.configuration["items"][0]["product_id"], self.product.pk)
+        self.assertNotIn("cart", self.client.session)
+
+    def test_checkout_requires_delivery_address(self):
+        self.add_product()
+        response = self.client.post(
+            self.cart_url,
+            {
+                "delivery": "moscow",
+                "payment": "card",
+                "name": "Анна",
+                "phone": "+7 900 000-00-00",
+                "email": "anna@example.com",
+                "consent_given": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Укажите адрес доставки.")
+        self.assertEqual(Preorder.objects.count(), 0)
+        self.assertTrue(self.client.session.get("cart"))

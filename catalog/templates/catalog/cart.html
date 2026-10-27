@@ -107,7 +107,11 @@
                             <span class="cart-section-icon" aria-hidden="true">▣</span>
                             <span>Доставка</span>
                         </label>
-                        {{ form.delivery }}
+                        <select name="delivery" id="{{ form.delivery.id_for_label }}" data-cart-delivery-select>
+                            {% for value, label, cost in delivery_options %}
+                                <option value="{{ value }}" data-cost="{{ cost }}"{% if form.delivery.value == value or not form.delivery.value and value == "moscow" %} selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
                         {% for error in form.delivery.errors %}<p class="cart-field-error">{{ error }}</p>{% endfor %}
                     </section>
 

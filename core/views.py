@@ -65,3 +65,7 @@ def home(request):
         "calculator_options": CALCULATOR_OPTIONS,
     }
     return render(request, "core/home.html", context)
+
+
+def about(request):
+    return render(request, "core/about.html")

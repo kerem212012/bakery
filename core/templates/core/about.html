@@ -1,0 +1,86 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}О нас — Лукоморье{% endblock %}
+
+{% block content %}
+    <div class="about-page">
+        <nav class="about-breadcrumbs" aria-label="Хлебные крошки">
+            <a href="{% url 'home' %}">Главная</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">О нас</span>
+        </nav>
+
+        <section class="about-hero" aria-labelledby="about-heading">
+            <div class="about-hero-copy">
+                <p class="eyebrow">История Лукоморья</p>
+                <h1 id="about-heading">О нас</h1>
+                <p class="about-hero-lead">Лукоморье — идеи, воплощённые в деталях.</p>
+                <p>Мы создаём кондитерские изделия, которые превращают идеи в сладкие истории. Для нас важно не просто испечь пряник, а вложить в него смысл, эстетику и внимание к каждой детали.</p>
+                <a class="button button-dark" href="mailto:hello@lukomorye.example">
+                    Обсудить заказ <span aria-hidden="true">→</span>
+                </a>
+            </div>
+            <div class="about-hero-image" role="img" aria-label="Подарочный набор с расписными пряниками и цветами"></div>
+        </section>
+
+        <section class="about-promises" aria-label="Наши принципы">
+            <article class="about-promise">
+                <span class="about-promise-icon" aria-hidden="true">♡</span>
+                <div><h2>Натуральные ингредиенты</h2><p>Используем только качественное сырьё</p></div>
+            </article>
+            <article class="about-promise">
+                <span class="about-promise-icon" aria-hidden="true">☆</span>
+                <div><h2>Индивидуальный подход</h2><p>Реализуем любые идеи и корпоративные проекты</p></div>
+            </article>
+            <article class="about-promise">
+                <span class="about-promise-icon" aria-hidden="true">♧</span>
+                <div><h2>Эстетика в деталях</h2><p>Каждое изделие — это продуманный дизайн</p></div>
+            </article>
+            <article class="about-promise">
+                <span class="about-promise-icon" aria-hidden="true">♧</span>
+                <div><h2>Надёжное партнёрство</h2><p>Соблюдаем сроки и ценим доверие клиентов</p></div>
+            </article>
+        </section>
+
+        <section class="about-story" aria-labelledby="about-story-heading">
+            <div class="about-story-image" role="img" aria-label="Расписные пряники ручной работы"></div>
+            <div class="about-story-copy">
+                <p class="eyebrow">С теплом и заботой</p>
+                <h2 id="about-story-heading">Наша история</h2>
+                <p>Лукоморье родилось из любви к традициям, ремеслу и красивым деталям. Мы вдохновляемся культурой, природой и людьми, создавая современные кондитерские изделия с душой.</p>
+                <p>С самого начала наша цель — дарить эмоции и делать важные моменты ещё особеннее.</p>
+                <div class="about-stats" aria-label="Лукоморье в цифрах">
+                    <div><strong>5+ лет</strong><span>создаём сладкие истории</span></div>
+                    <div><strong>5000+</strong><span>выполненных заказов</span></div>
+                    <div><strong>100+</strong><span>корпоративных клиентов</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="about-values" aria-labelledby="about-values-heading">
+            <header class="about-values-heading">
+                <p class="eyebrow">Что для нас важно</p>
+                <h2 id="about-values-heading">Наши ценности</h2>
+                <p>Всё, что мы делаем, основано на главном — качестве, внимании и любви к своему делу.</p>
+            </header>
+            <div class="about-value-grid">
+                <article class="about-value-card">
+                    <div class="about-value-image about-value-quality" role="img" aria-label="Натуральные ингредиенты для выпечки"></div>
+                    <div><h3>Качество</h3><p>Только проверенные ингредиенты и контроль на каждом этапе</p></div>
+                </article>
+                <article class="about-value-card">
+                    <div class="about-value-image about-value-creativity" role="img" aria-label="Готовые пряники с цветочной росписью"></div>
+                    <div><h3>Творчество</h3><p>Создаём уникальные дизайны и воплощаем любые идеи</p></div>
+                </article>
+                <article class="about-value-card">
+                    <div class="about-value-image about-value-craft" role="img" aria-label="Мастер расписывает пряник вручную"></div>
+                    <div><h3>Ручная работа</h3><p>Вкладываем душу в каждое изделие</p></div>
+                </article>
+                <article class="about-value-card">
+                    <div class="about-value-image about-value-service" role="img" aria-label="Упакованный подарок Лукоморье"></div>
+                    <div><h3>Сервис</h3><p>Сопровождаем вас на всех этапах — от идеи до доставки</p></div>
+                </article>
+            </div>
+        </section>
+    </div>
+{% endblock %}
