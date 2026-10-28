@@ -1,0 +1,162 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Корпоративным клиентам — Лукоморье{% endblock %}
+
+{% block content %}
+    <div class="corporate-page">
+        <nav class="about-breadcrumbs" aria-label="Хлебные крошки">
+            <a href="{% url 'home' %}">Главная</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Корпоративным клиентам</span>
+        </nav>
+
+        <section class="corporate-hero" aria-labelledby="corporate-heading">
+            <div class="corporate-hero-copy">
+                <h1 id="corporate-heading">Корпоративным<br>клиентам</h1>
+                <p class="corporate-hero-lead">Индивидуальные решения<br>для вашего бизнеса</p>
+                <p>Создаём кондитерские изделия, которые подчёркивают ценности вашей компании и оставляют приятные впечатления у сотрудников, партнёров и клиентов.</p>
+                <a class="button button-dark" href="mailto:hello@lukomorye.example">
+                    Обсудить заказ <span aria-hidden="true">→</span>
+                </a>
+            </div>
+            <div class="corporate-hero-image" role="img" aria-label="Подарочный набор с пряниками для корпоративного клиента"></div>
+        </section>
+
+        <section class="corporate-process" aria-labelledby="corporate-process-heading">
+            <header class="corporate-section-heading">
+                <span class="corporate-section-number">1.</span>
+                <div>
+                    <h2 id="corporate-process-heading">Взаимодействие</h2>
+                    <p>Простой и удобный процесс работы — от идеи до готового заказа.</p>
+                </div>
+            </header>
+            <div class="corporate-process-grid">
+                <article class="corporate-process-step">
+                    <span class="corporate-icon" aria-hidden="true">☏</span>
+                    <h3>Заявка</h3>
+                    <p>Оставьте запрос на сайте, по телефону или e-mail.</p>
+                </article>
+                <span class="corporate-step-arrow" aria-hidden="true">→</span>
+                <article class="corporate-process-step">
+                    <span class="corporate-icon" aria-hidden="true">▤</span>
+                    <h3>Обсуждение</h3>
+                    <p>Уточним детали, предложим решения и согласуем макет.</p>
+                </article>
+                <span class="corporate-step-arrow" aria-hidden="true">→</span>
+                <article class="corporate-process-step">
+                    <span class="corporate-icon" aria-hidden="true">✿</span>
+                    <h3>Согласование</h3>
+                    <p>Подготовим визуализацию и утвердим финальный дизайн.</p>
+                </article>
+                <span class="corporate-step-arrow" aria-hidden="true">→</span>
+                <article class="corporate-process-step">
+                    <span class="corporate-icon" aria-hidden="true">⚙</span>
+                    <h3>Производство</h3>
+                    <p>Изготовим заказ в согласованные сроки и проверим качество.</p>
+                </article>
+                <span class="corporate-step-arrow" aria-hidden="true">→</span>
+                <article class="corporate-process-step">
+                    <span class="corporate-icon" aria-hidden="true">◇</span>
+                    <h3>Доставка</h3>
+                    <p>Отправим удобным для вас способом.</p>
+                </article>
+            </div>
+        </section>
+
+        <div class="corporate-info-grid">
+            <section class="corporate-info-card" aria-labelledby="corporate-payment-heading">
+                <header class="corporate-section-heading">
+                    <span class="corporate-section-number">2.</span>
+                    <div>
+                        <h2 id="corporate-payment-heading">Оплата</h2>
+                        <p>Работаем с юридическими лицами и предоставляем полный пакет документов.</p>
+                    </div>
+                </header>
+                <div class="corporate-options-grid">
+                    <article class="corporate-option">
+                        <span class="corporate-icon" aria-hidden="true">▣</span>
+                        <p>Безналичный расчёт по договору</p>
+                    </article>
+                    <article class="corporate-option">
+                        <span class="corporate-icon" aria-hidden="true">▤</span>
+                        <p>Счёт и закрывающие документы (УПД, акт)</p>
+                    </article>
+                    <article class="corporate-option">
+                        <span class="corporate-icon" aria-hidden="true">％</span>
+                        <p>Индивидуальные условия при больших объёмах</p>
+                    </article>
+                </div>
+                <a class="button button-light corporate-card-button" href="mailto:hello@lukomorye.example?subject=Реквизиты%20и%20документы">
+                    Запросить реквизиты <span aria-hidden="true">→</span>
+                </a>
+            </section>
+
+            <section class="corporate-info-card" aria-labelledby="corporate-delivery-heading">
+                <header class="corporate-section-heading">
+                    <span class="corporate-section-number">3.</span>
+                    <div>
+                        <h2 id="corporate-delivery-heading">Доставка / Самовывоз</h2>
+                        <p>Выбирайте удобный способ получения заказа.</p>
+                    </div>
+                </header>
+                <div class="corporate-options-grid corporate-delivery-grid">
+                    <article class="corporate-option">
+                        <span class="corporate-icon" aria-hidden="true">▱</span>
+                        <h3>Доставка по Москве и МО</h3>
+                        <p>Собственной службой или курьерскими компаниями.</p>
+                    </article>
+                    <article class="corporate-option">
+                        <span class="corporate-icon" aria-hidden="true">⌖</span>
+                        <h3>Доставка по России</h3>
+                        <p>СДЭК, Деловые линии и другие транспортные компании.</p>
+                    </article>
+                    <article class="corporate-option">
+                        <span class="corporate-icon" aria-hidden="true">◇</span>
+                        <h3>Самовывоз</h3>
+                        <p>г. Москва, ул. Пряничная, д. 12, стр. 1.</p>
+                    </article>
+                </div>
+            </section>
+        </div>
+
+        <section class="corporate-calculator" aria-labelledby="corporate-calculator-heading">
+            <div class="corporate-calculator-copy">
+                <header class="corporate-section-heading">
+                    <span class="corporate-section-number">4.</span>
+                    <div>
+                        <h2 id="corporate-calculator-heading">Калькулятор заказа</h2>
+                        <p>Рассчитайте ориентировочную стоимость вашего заказа и отправьте нам запрос.</p>
+                    </div>
+                </header>
+                <a class="button button-dark" href="{% url 'home' %}#calculator">
+                    Перейти к калькулятору <span aria-hidden="true">→</span>
+                </a>
+            </div>
+            <div class="corporate-calculator-image" role="img" aria-label="Корпоративные пряники с логотипом компании"></div>
+        </section>
+
+        <section class="corporate-contacts" id="corporate-contacts" aria-labelledby="corporate-contacts-heading">
+            <header class="corporate-section-heading">
+                <span class="corporate-section-number">5.</span>
+                <div>
+                    <h2 id="corporate-contacts-heading">Контакты</h2>
+                    <p>Мы всегда на связи и готовы обсудить ваш проект.</p>
+                </div>
+            </header>
+            <div class="corporate-contact-grid">
+                <a class="corporate-contact-item" href="tel:+74951234567">
+                    <span class="corporate-icon" aria-hidden="true">☎</span>
+                    <span><strong>+7 495 123-45-67</strong><small>Ежедневно с 9:00 до 21:00</small></span>
+                </a>
+                <a class="corporate-contact-item" href="mailto:hello@lukomorye.example">
+                    <span class="corporate-icon" aria-hidden="true">✉</span>
+                    <span><strong>hello@lukomorye.example</strong><small>Ответим в течение дня</small></span>
+                </a>
+                <a class="corporate-contact-item" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012">
+                    <span class="corporate-icon" aria-hidden="true">⌖</span>
+                    <span><strong>г. Москва, ул. Пряничная, д. 12</strong><small>Бизнес-центр «Пример»</small></span>
+                </a>
+            </div>
+        </section>
+    </div>
+{% endblock %}

@@ -69,3 +69,15 @@ def home(request):
 
 def about(request):
     return render(request, "core/about.html")
+
+
+def corporate(request):
+    return render(request, "core/corporate.html")
+
+
+def delivery(request):
+    return render(request, "core/delivery.html")
+
+
+def packaging(request):
+    return render(request, "core/packaging.html")

@@ -1,0 +1,116 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Варианты упаковки — Лукоморье{% endblock %}
+
+{% block content %}
+    <div class="packaging-page">
+        <nav class="about-breadcrumbs" aria-label="Хлебные крошки">
+            <a href="{% url 'home' %}">Главная</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Варианты упаковки</span>
+        </nav>
+
+        <section class="packaging-hero" aria-labelledby="packaging-heading">
+            <div class="packaging-hero-copy">
+                <h1 id="packaging-heading">Варианты упаковки</h1>
+                <p>Подбираем упаковку под ваш повод, формат заказа и фирменный стиль.</p>
+            </div>
+            <div class="packaging-hero-image" role="img" aria-label="Набор подарочных пряников в мягкой романтической упаковке"></div>
+        </section>
+
+        <section class="packaging-section" aria-labelledby="packaging-main-heading">
+            <header class="packaging-section-header">
+                <h2 id="packaging-main-heading">Основные варианты упаковки</h2>
+            </header>
+            <div class="packaging-grid">
+                <article class="packaging-card">
+                    <div class="packaging-preview packaging-preview-individual" role="img" aria-label="Индивидуальная упаковка"></div>
+                    <div class="packaging-card-copy">
+                        <h3>Индивидуальная упаковка</h3>
+                        <span class="packaging-arrow" aria-hidden="true">→</span>
+                    </div>
+                </article>
+                <article class="packaging-card">
+                    <div class="packaging-preview packaging-preview-craft" role="img" aria-label="Крафтовая коробка"></div>
+                    <div class="packaging-card-copy">
+                        <h3>Крафтовая коробка</h3>
+                        <span class="packaging-arrow" aria-hidden="true">→</span>
+                    </div>
+                </article>
+                <article class="packaging-card">
+                    <div class="packaging-preview packaging-preview-box" role="img" aria-label="Коробка с окном"></div>
+                    <div class="packaging-card-copy">
+                        <h3>Коробка с окном</h3>
+                        <span class="packaging-arrow" aria-hidden="true">→</span>
+                    </div>
+                </article>
+                <article class="packaging-card">
+                    <div class="packaging-preview packaging-preview-premium" role="img" aria-label="Премиальная коробка"></div>
+                    <div class="packaging-card-copy">
+                        <h3>Премиальная коробка</h3>
+                        <span class="packaging-arrow" aria-hidden="true">→</span>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="packaging-section" aria-labelledby="packaging-named-heading">
+            <header class="packaging-section-header">
+                <h2 id="packaging-named-heading">Упаковка для наборов</h2>
+                <p>Собираем подарочные наборы в различных вариантах упаковки с учётом ваших пожеланий и формата мероприятия.</p>
+            </header>
+            <div class="packaging-grid">
+                <article class="packaging-card">
+                    <div class="packaging-preview packaging-preview-round" role="img" aria-label="Круглая коробка"></div>
+                    <div class="packaging-card-copy">
+                        <h3>Круглая коробка</h3>
+                        <span class="packaging-arrow" aria-hidden="true">→</span>
+                    </div>
+                </article>
+                <article class="packaging-card">
+                    <div class="packaging-preview packaging-preview-gift" role="img" aria-label="Подарочный набор"></div>
+                    <div class="packaging-card-copy">
+                        <h3>Подарочный набор</h3>
+                        <span class="packaging-arrow" aria-hidden="true">→</span>
+                    </div>
+                </article>
+                <article class="packaging-card">
+                    <div class="packaging-preview packaging-preview-transport" role="img" aria-label="Транспортная упаковка"></div>
+                    <div class="packaging-card-copy">
+                        <h3>Транспортная упаковка</h3>
+                        <span class="packaging-arrow" aria-hidden="true">→</span>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="packaging-section packaging-section-last" aria-labelledby="packaging-extra-heading">
+            <header class="packaging-section-header">
+                <h2 id="packaging-extra-heading">Дополнительные варианты</h2>
+            </header>
+            <div class="packaging-grid">
+                <article class="packaging-card">
+                    <div class="packaging-preview packaging-preview-brand" role="img" aria-label="Коробка с брендированием"></div>
+                    <div class="packaging-card-copy">
+                        <h3>Коробка с брендированием</h3>
+                        <span class="packaging-arrow" aria-hidden="true">→</span>
+                    </div>
+                </article>
+                <article class="packaging-card">
+                    <div class="packaging-preview packaging-preview-plain" role="img" aria-label="Узкая коробка"></div>
+                    <div class="packaging-card-copy">
+                        <h3>Узкая коробка</h3>
+                        <span class="packaging-arrow" aria-hidden="true">→</span>
+                    </div>
+                </article>
+                <article class="packaging-card">
+                    <div class="packaging-preview packaging-preview-mini" role="img" aria-label="Мини-коробка"></div>
+                    <div class="packaging-card-copy">
+                        <h3>Мини-коробка</h3>
+                        <span class="packaging-arrow" aria-hidden="true">→</span>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </div>
+{% endblock %}

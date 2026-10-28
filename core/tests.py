@@ -191,6 +191,41 @@ class HomePageCatalogTests(TestCase):
         self.assertContains(response, 'href="mailto:hello@lukomorye.example"')
         self.assertContains(response, f'href="{reverse("about")}">О нас</a>')
 
+    def test_corporate_page_renders_order_and_contact_sections(self):
+        response = self.client.get(reverse("corporate"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<title>Корпоративным клиентам — Лукоморье</title>")
+        self.assertContains(response, "Взаимодействие")
+        self.assertContains(response, "Оплата")
+        self.assertContains(response, "Доставка / Самовывоз")
+        self.assertContains(response, "Калькулятор заказа")
+        self.assertContains(response, 'id="corporate-contacts"')
+        self.assertContains(response, f'href="{reverse("corporate")}">Корпоративным клиентам</a>')
+
+    def test_delivery_page_renders_methods_pickup_and_useful_information(self):
+        response = self.client.get(reverse("delivery"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<title>Доставка и самовывоз — Лукоморье</title>")
+        self.assertContains(response, "По Москве")
+        self.assertContains(response, "По России")
+        self.assertContains(response, "Упаковка")
+        self.assertContains(response, "Стоимость доставки")
+        self.assertContains(response, "Самовывоз")
+        self.assertContains(response, "Полезная информация")
+        self.assertContains(response, f'href="{reverse("delivery")}"><span class="mobile-menu-number">05</span>')
+
+    def test_packaging_page_renders_packaging_cards_and_links(self):
+        response = self.client.get(reverse("packaging"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<title>Варианты упаковки — Лукоморье</title>")
+        self.assertContains(response, "Варианты упаковки")
+        self.assertContains(response, "Основные варианты упаковки")
+        self.assertContains(response, "Коробка с окном")
+        self.assertContains(response, f'href="{reverse("packaging")}"><span class="mobile-menu-number">04</span>')
+
     def test_homepage_favorites_and_cart_buttons_open_their_pages(self):
         response = self.client.get("/")
 

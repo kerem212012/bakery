@@ -1,0 +1,108 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Доставка и самовывоз — Лукоморье{% endblock %}
+
+{% block content %}
+    <div class="delivery-page">
+        <nav class="about-breadcrumbs" aria-label="Хлебные крошки">
+            <a href="{% url 'home' %}">Главная</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Доставка и самовывоз</span>
+        </nav>
+
+        <section class="delivery-hero" aria-labelledby="delivery-heading">
+            <div class="delivery-hero-copy">
+                <h1 id="delivery-heading">Доставка<br>и самовывоз</h1>
+                <p>Доставляем заказы по всей России и предлагаем удобный самовывоз в Москве.</p>
+            </div>
+            <div class="delivery-hero-image" role="img" aria-label="Подарочный набор с пряниками в красивой упаковке"></div>
+        </section>
+
+        <section class="delivery-methods" aria-labelledby="delivery-methods-heading">
+            <header class="delivery-section-heading">
+                <h2 id="delivery-methods-heading">Доставка</h2>
+                <p>Мы доставляем заказы по Москве, Московской области и по всей России.</p>
+            </header>
+            <div class="delivery-methods-layout">
+                <div class="delivery-method-grid">
+                    <article class="delivery-method-card">
+                        <span class="delivery-icon" aria-hidden="true">▱</span>
+                        <h3>По Москве<br>и Московской области</h3>
+                        <p>Доставка собственной службой или курьерскими компаниями.</p>
+                        <p class="delivery-method-note"><span aria-hidden="true">◷</span> Обычно 1–2 дня с момента готовности.</p>
+                    </article>
+                    <article class="delivery-method-card">
+                        <span class="delivery-icon" aria-hidden="true">⌖</span>
+                        <h3>По России</h3>
+                        <p>Отправляем СДЭК, Деловыми линиями и другими транспортными компаниями.</p>
+                        <p class="delivery-method-note"><span aria-hidden="true">◷</span> Сроки зависят от региона и выбранной ТК.</p>
+                    </article>
+                    <article class="delivery-method-card">
+                        <span class="delivery-icon" aria-hidden="true">◇</span>
+                        <h3>Упаковка</h3>
+                        <p>Надёжно упаковываем изделия, чтобы они доехали до вас в идеальном состоянии.</p>
+                        <p class="delivery-method-note"><span aria-hidden="true">✓</span> Защитная и индивидуальная упаковка.</p>
+                    </article>
+                </div>
+                <div class="delivery-feature-image" role="img" aria-label="Упакованный подарочный набор с пряниками"></div>
+            </div>
+            <div class="delivery-cost">
+                <span class="delivery-info-icon" aria-hidden="true">ⓘ</span>
+                <p><strong>Стоимость доставки</strong><br>Точная стоимость рассчитывается индивидуально в зависимости от веса, габаритов и региона. Стоимость и сроки можно уточнить при оформлении заказа или у менеджера.</p>
+            </div>
+        </section>
+
+        <section class="pickup-section" aria-labelledby="pickup-heading">
+            <div class="pickup-copy">
+                <header class="delivery-section-heading">
+                    <h2 id="pickup-heading">Самовывоз</h2>
+                    <p>Вы можете самостоятельно забрать готовый заказ в нашем офисе в Москве.</p>
+                </header>
+                <div class="pickup-detail">
+                    <span class="delivery-icon" aria-hidden="true">⌖</span>
+                    <p><strong>Адрес</strong><br>г. Москва, ул. Пряничная, д. 12, стр. 1<br>(Бизнес-центр «Пример»)</p>
+                </div>
+                <div class="pickup-detail">
+                    <span class="delivery-icon" aria-hidden="true">◷</span>
+                    <p><strong>Время работы</strong><br>Ежедневно с 9:00 до 21:00</p>
+                </div>
+                <a class="button button-dark pickup-route" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201" target="_blank" rel="noopener noreferrer">
+                    Построить маршрут <span aria-hidden="true">→</span>
+                </a>
+            </div>
+            <a class="pickup-map" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201" target="_blank" rel="noopener noreferrer" aria-label="Открыть карту и построить маршрут до офиса">
+                <span class="map-area map-area-one">ТВЕРСКОЙ</span>
+                <span class="map-area map-area-two">АРБАТ</span>
+                <span class="map-area map-area-three">КИТАЙ-ГОРОД</span>
+                <span class="map-city">Москва</span>
+                <span class="map-pin" aria-hidden="true">⌖</span>
+                <span class="map-zoom" aria-hidden="true"><span>+</span><span>−</span></span>
+                <span class="map-open-hint">Открыть карту <span aria-hidden="true">↗</span></span>
+            </a>
+        </section>
+
+        <section class="delivery-help" aria-labelledby="delivery-help-heading">
+            <header class="delivery-section-heading">
+                <h2 id="delivery-help-heading">Полезная информация</h2>
+            </header>
+            <div class="delivery-help-grid">
+                <article class="delivery-help-item">
+                    <span class="delivery-icon" aria-hidden="true">▦</span>
+                    <div><h3>Сроки изготовления</h3><p>Сроки зависят от сложности и объёма заказа. Актуальные даты уточняйте у менеджера.</p></div>
+                </article>
+                <article class="delivery-help-item">
+                    <span class="delivery-icon" aria-hidden="true">▤</span>
+                    <div><h3>Отслеживание заказа</h3><p>После отправки сообщим трек-номер для отслеживания вашего заказа.</p></div>
+                </article>
+                <article class="delivery-help-item">
+                    <span class="delivery-icon" aria-hidden="true">◇</span>
+                    <div><h3>Приём заказа</h3><p>Проверьте целостность упаковки при получении. Если возникнут вопросы — свяжитесь с нами.</p></div>
+                </article>
+                <article class="delivery-help-item">
+                    <span class="delivery-icon" aria-hidden="true">♧</span>
+                    <div><h3>Вопросы</h3><p>Если остались вопросы по доставке, мы всегда на связи.</p><a href="mailto:hello@lukomorye.example">Написать нам →</a></div>
+                </article>
+            </div>
+        </section>
+    </div>
+{% endblock %}

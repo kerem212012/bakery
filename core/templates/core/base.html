@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=58">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=60">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -55,7 +55,7 @@
                     <h2>Каталог</h2>
                     <a href="{% url 'catalog:category_list' %}">Все изделия</a>
                     <a href="{% url 'catalog:category_list' %}">Подарочные наборы</a>
-                    <a href="{% url 'catalog:category_list' %}">Корпоративные подарки</a>
+                    <a href="{% url 'corporate' %}">Корпоративные подарки</a>
                     <a href="mailto:hello@lukomorye.example">Индивидуальный заказ</a>
                 </nav>
                 <nav class="footer-column" aria-label="О компании">
@@ -67,7 +67,7 @@
                 </nav>
                 <nav class="footer-column" aria-label="Корпоративным клиентам">
                     <h2>Корпоративным клиентам</h2>
-                    <a href="{% url 'home' %}#popular">Подарки для бизнеса</a>
+                    <a href="{% url 'corporate' %}">Подарки для бизнеса</a>
                     <a href="mailto:hello@lukomorye.example">Индивидуальные заказы</a>
                     <a href="mailto:hello@lukomorye.example">Брендирование</a>
                     <a href="mailto:hello@lukomorye.example">Партнёрство</a>
@@ -124,8 +124,10 @@
                 <a href="{% url 'accounts:login' %}">Войти</a>
                 <a href="{% url 'accounts:register' %}">Регистрация</a>
             {% endif %}
+            <a href="{% url 'packaging' %}">Варианты упаковки</a>
+            <a href="{% url 'corporate' %}">Корпоративным клиентам</a>
             <a href="{% url 'about' %}">О нас</a>
-            <a href="{% url 'home' %}#contact">Контакты</a>
+            <a href="{% url 'corporate' %}#corporate-contacts">Контакты</a>
         </div>
         <div class="mobile-menu-header">
             <a class="mobile-menu-brand" href="{% url 'home' %}" aria-label="Лукоморье — главная">
@@ -146,13 +148,13 @@
         <div class="mobile-menu-links">
             <a href="{% url 'home' %}"><span class="mobile-menu-number">01</span><span>Главная</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="{% url 'catalog:category_list' %}"><span class="mobile-menu-number">02</span><span>Каталог</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
-            <a href="{% url 'home' %}#calculator"><span class="mobile-menu-number">03</span><span>Корпоративным клиентам</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
-            <a href="{% url 'home' %}#calculator"><span class="mobile-menu-number">04</span><span>Варианты упаковки</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
-            <a href="{% url 'home' %}#calculator"><span class="mobile-menu-number">05</span><span>Доставка и самовывоз</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'corporate' %}"><span class="mobile-menu-number">03</span><span>Корпоративным клиентам</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'packaging' %}"><span class="mobile-menu-number">04</span><span>Варианты упаковки</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'delivery' %}"><span class="mobile-menu-number">05</span><span>Доставка и самовывоз</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="{% url 'about' %}"><span class="mobile-menu-number">06</span><span>О компании</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="mailto:hello@lukomorye.example"><span class="mobile-menu-number">07</span><span>Сотрудничество</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="mailto:hello@lukomorye.example"><span class="mobile-menu-number">08</span><span>Часто задаваемые вопросы</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
-            <a href="{% url 'home' %}#contact"><span class="mobile-menu-number">09</span><span>Контакты</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'corporate' %}#corporate-contacts"><span class="mobile-menu-number">09</span><span>Контакты</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="mailto:hello@lukomorye.example"><span class="mobile-menu-number">10</span><span>Обратная связь</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
         </div>
     </nav>
