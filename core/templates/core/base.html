@@ -1,0 +1,217 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f8f3ed" />
+    <title>{% block title %}Лукоморье — идеи, воплощённые в деталях{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=58">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <div class="site-shell{% block shell_class %}{% endblock %}">
+        <header class="site-header">
+            <button class="icon-link menu-toggle" type="button" aria-label="Открыть меню" aria-controls="navigation" aria-expanded="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            </button>
+            <a class="wordmark" href="{% url 'home' %}" aria-label="Лукоморье — главная">
+                <span class="wordmark-name">Лукоморье</span>
+                <span class="wordmark-caption">Идеи, воплощённые в деталях</span>
+            </a>
+            <nav class="header-actions" aria-label="Быстрые ссылки">
+                <button class="icon-link search-link" type="button" aria-label="Открыть поиск" aria-controls="home-search-panel" aria-expanded="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg>
+                </button>
+                <a class="icon-link" href="{% url 'accounts:favorites' %}" aria-label="Избранное">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 8.8c0 4.2-8.4 10-8.4 10s-8.4-5.8-8.4-10a4.3 4.3 0 0 1 8.4-1.3 4.3 4.3 0 0 1 8.4 1.3Z"/></svg>
+                </a>
+                <a class="icon-link cart-header-link" href="{% url 'catalog:cart' %}" aria-label="Корзина, {{ cart_item_count }} товаров">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+                    {% if cart_item_count %}<span class="cart-header-count">{{ cart_item_count }}</span>{% endif %}
+                </a>
+                <a class="icon-link account-link" href="{% if user.is_authenticated %}{% url 'accounts:dashboard' %}{% else %}{% url 'accounts:login' %}{% endif %}" aria-label="Личный кабинет">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+                </a>
+            </nav>
+            <form class="home-search-panel" id="home-search-panel" method="get" action="{% url 'catalog:category_list' %}" hidden>
+                <label class="visually-hidden" for="home-search-input">Поиск товаров по названию</label>
+                <input id="home-search-input" type="search" name="query" maxlength="100" placeholder="Название товара" autocomplete="off">
+                <input type="hidden" name="search_mode" value="name">
+                <button type="submit">Найти</button>
+            </form>
+        </header>
+
+        <main class="{% block main_class %}{% endblock %}">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="site-footer">
+            <div class="footer-main">
+                <nav class="footer-column" aria-label="Каталог">
+                    <h2>Каталог</h2>
+                    <a href="{% url 'catalog:category_list' %}">Все изделия</a>
+                    <a href="{% url 'catalog:category_list' %}">Подарочные наборы</a>
+                    <a href="{% url 'catalog:category_list' %}">Корпоративные подарки</a>
+                    <a href="mailto:hello@lukomorye.example">Индивидуальный заказ</a>
+                </nav>
+                <nav class="footer-column" aria-label="О компании">
+                    <h2>О компании</h2>
+                    <a href="{% url 'about' %}">Наша история</a>
+                    <a href="{% url 'about' %}">Производство</a>
+                    <a href="{% url 'about' %}">Преимущества</a>
+                    <a href="mailto:hello@lukomorye.example">Сотрудничество</a>
+                </nav>
+                <nav class="footer-column" aria-label="Корпоративным клиентам">
+                    <h2>Корпоративным клиентам</h2>
+                    <a href="{% url 'home' %}#popular">Подарки для бизнеса</a>
+                    <a href="mailto:hello@lukomorye.example">Индивидуальные заказы</a>
+                    <a href="mailto:hello@lukomorye.example">Брендирование</a>
+                    <a href="mailto:hello@lukomorye.example">Партнёрство</a>
+                </nav>
+                <div class="footer-column footer-contact">
+                    <h2>Контакты</h2>
+                    <a class="footer-contact-item" href="tel:+74951234567">
+                        <span class="footer-contact-icon" aria-hidden="true">☎</span>
+                        <span>+7 495 123-45-67<br>+7 800 123-45-67</span>
+                    </a>
+                    <a class="footer-contact-item" href="mailto:hello@lukomorye.example">
+                        <span class="footer-contact-icon" aria-hidden="true">✉</span>
+                        <span>hello@lukomorye.example</span>
+                    </a>
+                    <div class="footer-contact-item">
+                        <span class="footer-contact-icon" aria-hidden="true">⌖</span>
+                        <span>г. Москва,<br>ул. Пряничная, д. 12</span>
+                    </div>
+                </div>
+                <a class="footer-map" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012" aria-label="Открыть карту Москвы">
+                    <span class="footer-map-pin" aria-hidden="true">●</span>
+                    <span class="footer-map-city">Москва</span>
+                    <span class="footer-map-route"><span aria-hidden="true">⌖</span> Построить маршрут <span aria-hidden="true">→</span></span>
+                </a>
+            </div>
+            <div class="footer-bottom">
+                <a class="footer-brand" href="{% url 'home' %}" aria-label="Лукоморье — главная">
+                    <span class="footer-brand-mark" aria-hidden="true">❧</span>
+                    <span class="footer-brand-name">Лукоморье</span>
+                    <span class="footer-brand-caption">Кондитерские изделия</span>
+                </a>
+                <p class="footer-tagline">Лукоморье — идеи, воплощённые в деталях.</p>
+                <div class="social-links" aria-label="Социальные сети">
+                    <span role="img" aria-label="Telegram">тг</span>
+                    <span role="img" aria-label="WhatsApp">wa</span>
+                    <span role="img" aria-label="ВКонтакте">vk</span>
+                    <span role="img" aria-label="Видео">▶</span>
+                    <span role="img" aria-label="Социальная сеть">◎</span>
+                </div>
+                <div class="footer-legal">
+                    <span>© 2026 Лукоморье. Все права защищены.</span>
+                    <span>Политика конфиденциальности&nbsp; | &nbsp;Пользовательское соглашение</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+    <nav class="main-nav" id="navigation" aria-label="Главная навигация" aria-hidden="true">
+        <div class="desktop-nav-links">
+            <a href="{% url 'home' %}">Главная</a>
+            <a href="{% url 'catalog:category_list' %}">Каталог</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'accounts:dashboard' %}">Личный кабинет</a>
+            {% else %}
+                <a href="{% url 'accounts:login' %}">Войти</a>
+                <a href="{% url 'accounts:register' %}">Регистрация</a>
+            {% endif %}
+            <a href="{% url 'about' %}">О нас</a>
+            <a href="{% url 'home' %}#contact">Контакты</a>
+        </div>
+        <div class="mobile-menu-header">
+            <a class="mobile-menu-brand" href="{% url 'home' %}" aria-label="Лукоморье — главная">
+                <span class="mobile-menu-brand-name">Лукоморье</span>
+                <span class="mobile-menu-brand-caption">Кондитерские изделия</span>
+            </a>
+            <button class="mobile-menu-close" type="button" aria-label="Закрыть меню">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+            </button>
+        </div>
+        <a class="mobile-account-link" href="{% if user.is_authenticated %}{% url 'accounts:dashboard' %}{% else %}{% url 'accounts:login' %}{% endif %}">
+            <span class="mobile-account-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+            </span>
+            <span>Личный кабинет</span>
+            <svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+        </a>
+        <div class="mobile-menu-links">
+            <a href="{% url 'home' %}"><span class="mobile-menu-number">01</span><span>Главная</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'catalog:category_list' %}"><span class="mobile-menu-number">02</span><span>Каталог</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'home' %}#calculator"><span class="mobile-menu-number">03</span><span>Корпоративным клиентам</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'home' %}#calculator"><span class="mobile-menu-number">04</span><span>Варианты упаковки</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'home' %}#calculator"><span class="mobile-menu-number">05</span><span>Доставка и самовывоз</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'about' %}"><span class="mobile-menu-number">06</span><span>О компании</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="mailto:hello@lukomorye.example"><span class="mobile-menu-number">07</span><span>Сотрудничество</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="mailto:hello@lukomorye.example"><span class="mobile-menu-number">08</span><span>Часто задаваемые вопросы</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'home' %}#contact"><span class="mobile-menu-number">09</span><span>Контакты</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="mailto:hello@lukomorye.example"><span class="mobile-menu-number">10</span><span>Обратная связь</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+        </div>
+    </nav>
+    <button class="menu-backdrop" type="button" aria-label="Закрыть меню"></button>
+    <a class="telegram-float" href="https://t.me/" target="_blank" rel="noopener noreferrer" aria-label="Открыть Telegram">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21.5 3.8 18.2 20c-.2 1.1-.9 1.4-1.8.8l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L5.6 13.5.7 12c-1.1-.3-1.1-1 .2-1.5L19.8 3c.9-.3 1.8.2 1.7.8Z"/>
+        </svg>
+        <span>Telegram</span>
+    </a>
+    {% block entrance %}{% endblock %}
+    <script>
+        const menuToggle = document.querySelector(".menu-toggle");
+        const mainNavigation = document.querySelector("#navigation");
+        const menuBackdrop = document.querySelector(".menu-backdrop");
+        const menuClose = document.querySelector(".mobile-menu-close");
+        const searchToggle = document.querySelector(".search-link");
+        const siteSearchPanel = document.querySelector("#home-search-panel");
+
+        function setNavigationOpen(isOpen) {
+            menuToggle.setAttribute("aria-expanded", String(isOpen));
+            menuToggle.setAttribute("aria-label", isOpen ? "Закрыть меню" : "Открыть меню");
+            mainNavigation.setAttribute("aria-hidden", String(!isOpen));
+            mainNavigation.inert = !isOpen;
+            mainNavigation.classList.toggle("is-open", isOpen);
+            menuBackdrop.classList.toggle("is-open", isOpen);
+            document.body.classList.toggle("menu-open", isOpen);
+            if (isOpen) {
+                mainNavigation.querySelector(".mobile-menu-close").focus();
+            } else if (document.activeElement !== menuToggle) {
+                menuToggle.focus();
+            }
+        }
+
+        function setSearchOpen(isOpen) {
+            searchToggle.setAttribute("aria-expanded", String(isOpen));
+            searchToggle.setAttribute("aria-label", isOpen ? "Закрыть поиск" : "Открыть поиск");
+            siteSearchPanel.hidden = !isOpen;
+            if (isOpen) siteSearchPanel.querySelector('input[type="search"]').focus();
+        }
+
+        menuToggle.addEventListener("click", () => {
+            setNavigationOpen(menuToggle.getAttribute("aria-expanded") !== "true");
+        });
+        menuClose.addEventListener("click", () => setNavigationOpen(false));
+        menuBackdrop.addEventListener("click", () => setNavigationOpen(false));
+        searchToggle.addEventListener("click", () => {
+            setSearchOpen(searchToggle.getAttribute("aria-expanded") !== "true");
+        });
+        mainNavigation.querySelectorAll("a").forEach((link) => {
+            link.addEventListener("click", () => setNavigationOpen(false));
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                setNavigationOpen(false);
+                setSearchOpen(false);
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

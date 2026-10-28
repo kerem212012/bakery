@@ -45,6 +45,9 @@ class CalculatorTests(TestCase):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="site-intro"')
+        self.assertContains(response, 'document.documentElement.classList.add("site-intro-playing")')
+        self.assertNotContains(response, "sessionStorage")
         self.assertContains(response, 'id="calculator"')
         self.assertContains(response, "Рассчитайте стоимость")
         self.assertContains(response, 'name="quantity"')
@@ -62,6 +65,22 @@ class CalculatorTests(TestCase):
         self.assertContains(response, 'name="query" maxlength="100"')
         self.assertContains(response, 'name="search_mode" value="name"')
         self.assertContains(response, ">Найти</button>")
+
+    def test_shared_layout_renders_numbered_mobile_navigation(self):
+        response = self.client.get("/")
+
+        self.assertContains(response, 'id="navigation"')
+        self.assertContains(response, 'class="mobile-menu-close"')
+        self.assertContains(response, 'class="menu-backdrop"')
+        self.assertContains(response, 'class="mobile-menu-number">01</span>')
+        self.assertContains(response, 'class="mobile-menu-number">10</span>')
+
+    def test_shared_layout_renders_floating_telegram_button(self):
+        response = self.client.get("/")
+
+        self.assertContains(response, 'class="telegram-float"')
+        self.assertContains(response, 'href="https://t.me/"')
+        self.assertContains(response, 'aria-label="Открыть Telegram"')
 
     def test_valid_preorder_is_saved_with_server_calculated_quote(self):
         response = self.client.post(
