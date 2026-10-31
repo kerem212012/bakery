@@ -102,3 +102,32 @@ class PreorderForm(forms.Form):
         ):
             self.add_error("address", "Укажите адрес доставки.")
         return cleaned_data
+
+
+class FeedbackForm(forms.Form):
+    name = forms.CharField(
+        max_length=120,
+        label="Ваше имя",
+        widget=forms.TextInput(attrs={"placeholder": "Как к вам обращаться"}),
+    )
+    email = forms.EmailField(
+        label="Электронная почта",
+        widget=forms.EmailInput(attrs={"placeholder": "name@example.com"}),
+    )
+    subject = forms.CharField(
+        max_length=160,
+        label="Тема обращения",
+        widget=forms.TextInput(attrs={"placeholder": "Например, вопрос о заказе"}),
+    )
+    message = forms.CharField(
+        max_length=5000,
+        label="Сообщение",
+        widget=forms.Textarea(
+            attrs={"rows": 6, "placeholder": "Расскажите, чем мы можем помочь"}
+        ),
+    )
+    consent_given = forms.BooleanField(
+        required=True,
+        label="Согласен(на) на обработку персональных данных",
+        error_messages={"required": "Необходимо дать согласие на обработку данных."},
+    )

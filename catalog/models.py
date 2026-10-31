@@ -46,9 +46,43 @@ class Product(SluggedModel):
     display_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
+    filter_options = models.ManyToManyField(
+        "ProductFilterOption",
+        related_name="products",
+        blank=True,
+    )
 
     class Meta:
         ordering = ("display_order", "name")
 
     def __str__(self):
         return self.name
+
+
+class ProductFilterOption(models.Model):
+    class FilterType(models.TextChoices):
+        SIZE = "size", "Размер"
+        COATING = "coating", "Покрытие"
+        DOUGH = "dough", "Вид теста"
+        COLOR = "color", "Цвет"
+        OCCASION = "occasion", "Повод"
+        PACKAGING = "packaging", "Упаковка"
+
+    filter_type = models.CharField(max_length=16, choices=FilterType.choices)
+    value = models.SlugField(max_length=80)
+    label = models.CharField(max_length=100)
+    display_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    class Meta:
+        ordering = ("display_order", "label")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("filter_type", "value"),
+                name="unique_product_filter_option",
+            )
+        ]
+        verbose_name = "параметр фильтра товара"
+        verbose_name_plural = "параметры фильтров товаров"
+
+    def __str__(self):
+        return f"{self.get_filter_type_display()}: {self.label}"

@@ -1,0 +1,110 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Заказ #{{ order.pk }} — Лукоморье{% endblock %}
+
+{% block content %}
+    <section class="account-page">
+        <div class="account-heading">
+            <p class="eyebrow">Ваше пространство</p>
+            <h1>Заказ #{{ order.pk }}</h1>
+            <p>Оформлен {{ order.created_at|date:"d.m.Y" }} в {{ order.created_at|date:"H:i" }}</p>
+        </div>
+
+        {% include "user/_account_messages.html" %}
+
+        <div class="account-layout">
+            {% include "user/_account_sidebar.html" %}
+            <div class="account-content">
+                <a class="account-order-back" href="{% url 'accounts:orders' %}">← Все заказы</a>
+
+                <div class="account-order-overview">
+                    <section class="account-order-summary-card">
+                        <span>Сумма заказа</span>
+                        <strong>{{ order.total_price }} ₽</strong>
+                        <a href="#order-items">Подробнее о заказе ↓</a>
+                    </section>
+                    <section class="account-order-summary-card">
+                        <span>Срок доставки</span>
+                        <strong>{% if order.delivery_date %}{{ order.delivery_date|date:"d E Y" }}{% else %}Уточняется{% endif %}</strong>
+                    </section>
+                    <section class="account-order-summary-card">
+                        <span>Адрес доставки</span>
+                        <strong>{% if delivery_label == "Самовывоз" %}Самовывоз{% else %}{{ order.address|default:"Уточняется" }}{% endif %}</strong>
+                    </section>
+                    <section class="account-order-summary-card">
+                        <span>Заказчик</span>
+                        <strong>{{ order.name }}</strong>
+                    </section>
+                </div>
+
+                <section class="account-panel account-order-tracking">
+                    <div class="account-panel-heading">
+                        <div><p class="eyebrow">Выполнение заказа</p><h2>Статус заказа</h2></div>
+                        <span class="account-order-status">{{ order.get_status_display }}</span>
+                    </div>
+                    {% if is_cancelled %}
+                        <p class="account-order-cancelled">Этот заказ отменён. Если это произошло по ошибке, свяжитесь с нами.</p>
+                    {% else %}
+                        <ol class="account-order-steps">
+                            {% for stage in status_stages %}
+                                <li class="account-order-step{% if stage.is_complete %} is-complete{% endif %}{% if stage.is_current %} is-current{% endif %}">
+                                    <span class="account-order-step-mark" aria-hidden="true">
+                                        {% if stage.is_complete %}✓{% elif stage.is_current %}•{% else %}{{ forloop.counter }}{% endif %}
+                                    </span>
+                                    <span class="account-order-step-label">{{ stage.label }}</span>
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    {% endif %}
+                </section>
+
+                <div class="account-order-detail-grid">
+                    <section class="account-panel account-order-products" id="order-items">
+                        <div class="account-panel-heading">
+                            <div><p class="eyebrow">Ваш заказ</p><h2>Состав заказа</h2></div>
+                            <span class="account-count">{{ item_count }} шт.</span>
+                        </div>
+                        <div class="account-order-product-list">
+                            {% for item in items %}
+                                <article class="account-order-product">
+                                    <div class="account-order-product-mark" aria-hidden="true">❧</div>
+                                    <div class="account-order-product-copy">
+                                        <h3>{{ item.name }}</h3>
+                                        <p>{{ item.quantity }} шт.{% if item.size %} · {{ item.size }} см{% endif %}</p>
+                                        {% if item.coating or item.dough or item.packaging %}
+                                            <small>
+                                                {% if item.coating %}Покрытие: {{ item.coating }}{% endif %}
+                                                {% if item.dough %}{% if item.coating %} · {% endif %}Тесто: {{ item.dough }}{% endif %}
+                                                {% if item.packaging %}{% if item.coating or item.dough %} · {% endif %}Упаковка: {{ item.packaging }}{% endif %}
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                    <strong>{{ item.line_total }} ₽</strong>
+                                </article>
+                            {% endfor %}
+                        </div>
+                    </section>
+
+                    <section class="account-panel account-order-facts">
+                        <p class="eyebrow">Заказ #{{ order.pk }}</p>
+                        <h2>Информация о заказе</h2>
+                        <dl>
+                            <div><dt>Номер заказа</dt><dd>#{{ order.pk }}</dd></div>
+                            <div><dt>Дата оформления</dt><dd>{{ order.created_at|date:"d.m.Y, H:i" }}</dd></div>
+                            <div><dt>Сумма заказа</dt><dd>{{ order.total_price }} ₽</dd></div>
+                            <div><dt>Способ оплаты</dt><dd>{{ payment_label }}</dd></div>
+                            <div><dt>Способ доставки</dt><dd>{{ delivery_label }}</dd></div>
+                            <div><dt>Получатель</dt><dd>{{ order.name }}</dd></div>
+                            <div><dt>Телефон</dt><dd>{{ order.phone }}</dd></div>
+                        </dl>
+                    </section>
+                </div>
+                <a class="account-order-support" href="{% url 'contacts' %}">
+                    <span class="account-order-support-mark" aria-hidden="true">♡</span>
+                    <span><strong>Остались вопросы?</strong><small>Свяжитесь с нами — поможем с заказом.</small></span>
+                    <span class="account-order-support-action">Контакты →</span>
+                </a>
+            </div>
+        </div>
+    </section>
+{% endblock %}

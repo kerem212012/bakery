@@ -168,3 +168,19 @@ class AccountProfileForm(forms.ModelForm):
         if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("Аккаунт с такой почтой уже существует.")
         return email
+
+
+class DeliveryAddressForm(forms.ModelForm):
+    class Meta:
+        model = CustomerProfile
+        fields = ("delivery_address",)
+        labels = {"delivery_address": "Адрес доставки"}
+        widgets = {
+            "delivery_address": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "autocomplete": "street-address",
+                    "placeholder": "Город, улица, дом, квартира и удобное время",
+                }
+            )
+        }

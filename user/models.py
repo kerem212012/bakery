@@ -22,6 +22,7 @@ class CustomerProfile(models.Model):
     inn = models.CharField("ИНН", max_length=12, blank=True)
     kpp = models.CharField("КПП", max_length=9, blank=True)
     legal_address = models.CharField("Юридический адрес", max_length=500, blank=True)
+    delivery_address = models.CharField("Адрес доставки", max_length=300, blank=True)
     contact_name = models.CharField("Контактное лицо", max_length=200, blank=True)
     phone = models.CharField("Телефон", max_length=32, blank=True)
 

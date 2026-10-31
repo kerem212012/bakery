@@ -1,4 +1,5 @@
 from django.core.validators import FileExtensionValidator
+from django.conf import settings
 from django.db import models
 
 
@@ -9,10 +10,20 @@ def preorder_attachment_path(instance, filename):
 class Preorder(models.Model):
     class Status(models.TextChoices):
         NEW = "new", "Новая"
-        CONTACTED = "contacted", "Связались"
-        COMPLETED = "completed", "Выполнена"
+        CONTACTED = "contacted", "Подтверждена"
+        PRODUCTION = "production", "В производстве"
+        SHIPPING = "shipping", "В пути"
+        COMPLETED = "completed", "Доставлена"
         CANCELLED = "cancelled", "Отменена"
 
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="preorders",
+        null=True,
+        blank=True,
+        verbose_name="Пользователь",
+    )
     name = models.CharField("Имя", max_length=120)
     email = models.EmailField("Электронная почта")
     phone = models.CharField("Телефон", max_length=32)
@@ -62,3 +73,31 @@ class PreorderAttachment(models.Model):
 
     def __str__(self):
         return self.file.name
+
+
+class FeedbackSubmission(models.Model):
+    class Status(models.TextChoices):
+        NEW = "new", "Новое"
+        IN_PROGRESS = "in_progress", "В работе"
+        RESOLVED = "resolved", "Решено"
+
+    name = models.CharField("Имя", max_length=120)
+    email = models.EmailField("Электронная почта")
+    subject = models.CharField("Тема", max_length=160)
+    message = models.TextField("Сообщение", max_length=5000)
+    consent_given = models.BooleanField("Согласие на обработку данных")
+    status = models.CharField(
+        "Статус",
+        max_length=16,
+        choices=Status.choices,
+        default=Status.NEW,
+    )
+    created_at = models.DateTimeField("Создано", auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "обращение обратной связи"
+        verbose_name_plural = "обращения обратной связи"
+
+    def __str__(self):
+        return f"Обращение #{self.pk} — {self.subject}"

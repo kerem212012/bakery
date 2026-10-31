@@ -1,0 +1,87 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Обратная связь — Лукоморье{% endblock %}
+
+{% block content %}
+    <div class="feedback-page">
+        <nav class="about-breadcrumbs" aria-label="Хлебные крошки">
+            <a href="{% url 'home' %}">Главная</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Обратная связь</span>
+        </nav>
+
+        <section class="feedback-hero" aria-labelledby="feedback-heading">
+            <div class="feedback-hero-copy">
+                <p class="eyebrow">Мы на связи</p>
+                <h1 id="feedback-heading">Обратная связь</h1>
+                <p>Есть вопрос или идея? Напишите нам — мы внимательно прочитаем ваше сообщение и ответим по электронной почте.</p>
+            </div>
+            <div class="feedback-hero-image" role="img" aria-label="Подарочный набор с расписными пряниками"></div>
+        </section>
+
+        <div class="feedback-content">
+            <section class="feedback-form-card" aria-labelledby="feedback-form-heading">
+                <header class="feedback-form-heading">
+                    <h2 id="feedback-form-heading">Напишите нам</h2>
+                    <p>Поля, отмеченные звёздочкой, обязательны для заполнения.</p>
+                </header>
+
+                {% if messages %}
+                    <div class="feedback-messages" role="status">
+                        {% for message in messages %}
+                            <p class="feedback-message feedback-message-{{ message.tags }}">{{ message }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if form.non_field_errors %}
+                    <div class="feedback-errors" role="alert">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <form class="feedback-form" method="post">
+                    {% csrf_token %}
+                    <div class="feedback-fields">
+                        <div class="feedback-field">
+                            <label for="{{ form.name.id_for_label }}">Ваше имя <span>*</span></label>
+                            {{ form.name }}
+                            {{ form.name.errors }}
+                        </div>
+                        <div class="feedback-field">
+                            <label for="{{ form.email.id_for_label }}">Электронная почта <span>*</span></label>
+                            {{ form.email }}
+                            {{ form.email.errors }}
+                        </div>
+                        <div class="feedback-field feedback-field-full">
+                            <label for="{{ form.subject.id_for_label }}">Тема обращения <span>*</span></label>
+                            {{ form.subject }}
+                            {{ form.subject.errors }}
+                        </div>
+                        <div class="feedback-field feedback-field-full">
+                            <label for="{{ form.message.id_for_label }}">Сообщение <span>*</span></label>
+                            {{ form.message }}
+                            {{ form.message.errors }}
+                        </div>
+                    </div>
+                    <div class="feedback-consent">
+                        <label for="{{ form.consent_given.id_for_label }}">
+                            {{ form.consent_given }}
+                            <span>{{ form.consent_given.label }}</span>
+                        </label>
+                        {{ form.consent_given.errors }}
+                    </div>
+                    <button class="button button-dark feedback-submit" type="submit">
+                        Отправить сообщение <span aria-hidden="true">→</span>
+                    </button>
+                </form>
+            </section>
+
+            <aside class="feedback-aside" aria-label="Другие способы связи">
+                <span class="contacts-detail-icon" aria-hidden="true">✉</span>
+                <h2>Предпочитаете написать напрямую?</h2>
+                <p>Свяжитесь с нами по электронной почте, и мы ответим в течение рабочего дня.</p>
+                <a href="mailto:hello@lukomorye.example">hello@lukomorye.example</a>
+                <a class="feedback-phone" href="tel:+74951234567">+7 495 123-45-67</a>
+            </aside>
+        </div>
+    </div>
+{% endblock %}

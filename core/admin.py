@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Preorder, PreorderAttachment
+from .models import FeedbackSubmission, Preorder, PreorderAttachment
 
 
 class PreorderAttachmentInline(admin.TabularInline):
@@ -13,6 +13,7 @@ class PreorderAttachmentInline(admin.TabularInline):
 class PreorderAdmin(admin.ModelAdmin):
     list_display = (
         "id",
+        "user",
         "name",
         "email",
         "phone",
@@ -21,7 +22,7 @@ class PreorderAdmin(admin.ModelAdmin):
         "created_at",
     )
     list_filter = ("status", "created_at")
-    search_fields = ("name", "email", "phone")
+    search_fields = ("name", "email", "phone", "user__username")
     readonly_fields = (
         "configuration",
         "unit_price",
@@ -31,3 +32,12 @@ class PreorderAdmin(admin.ModelAdmin):
         "created_at",
     )
     inlines = (PreorderAttachmentInline,)
+
+
+@admin.register(FeedbackSubmission)
+class FeedbackSubmissionAdmin(admin.ModelAdmin):
+    list_display = ("subject", "name", "email", "status", "created_at")
+    list_filter = ("status", "created_at")
+    list_editable = ("status",)
+    search_fields = ("name", "email", "subject", "message")
+    readonly_fields = ("name", "email", "subject", "message", "consent_given", "created_at")

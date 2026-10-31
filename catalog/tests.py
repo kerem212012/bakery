@@ -3,8 +3,9 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.models import Preorder
+from user.models import CustomerProfile
 
-from .models import Category, Product
+from .models import Category, Product, ProductFilterOption
 
 
 class CatalogModelTests(TestCase):
@@ -47,6 +48,51 @@ class CatalogPageTests(TestCase):
             reverse("catalog:category_detail", args=[self.category.slug]),
         )
         self.assertContains(response, self.product.name)
+
+    def test_catalog_sidebar_shows_quick_categories_and_price_range(self):
+        response = self.client.get(reverse("catalog:category_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["total_product_count"],
+            Product.objects.filter(is_active=True, category__is_active=True).count(),
+        )
+        self.assertContains(response, "Все товары")
+        self.assertContains(response, 'data-price-range-min')
+        self.assertContains(response, 'data-price-range-max')
+        self.assertContains(response, 'aria-controls="catalog-category-filters"')
+
+    def test_price_sliders_keep_default_bounds_when_other_filters_are_submitted(self):
+        response = self.client.get(
+            reverse("catalog:category_list"),
+            {"categories": [self.category.pk], "min_price": "", "max_price": ""},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'value="0" aria-label="Минимальная цена" data-price-range-min',
+        )
+        self.assertContains(
+            response,
+            'value="25000" aria-label="Максимальная цена" data-price-range-max',
+        )
+
+    def test_price_sliders_keep_submitted_price_bounds(self):
+        response = self.client.get(
+            reverse("catalog:category_list"),
+            {"min_price": "500", "max_price": "2300"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'value="500" aria-label="Минимальная цена" data-price-range-min',
+        )
+        self.assertContains(
+            response,
+            'value="2300" aria-label="Максимальная цена" data-price-range-max',
+        )
 
     def test_category_overview_lists_active_categories(self):
         inactive_category = Category.objects.create(
@@ -91,6 +137,49 @@ class CatalogPageTests(TestCase):
         self.assertContains(response, self.product.name)
         self.assertContains(response, affordable_product.name)
         self.assertNotContains(response, "Дорогая позиция")
+
+    def test_catalog_filters_by_multiple_product_attributes(self):
+        other_product = Product.objects.create(
+            name="Другой подарок",
+            category=self.category,
+            price="1790.00",
+        )
+        size = ProductFilterOption.objects.get(filter_type="size", value="8")
+        occasion = ProductFilterOption.objects.get_or_create(
+            filter_type="occasion",
+            value="birthday",
+            defaults={"label": "День рождения"},
+        )[0]
+        size.products.add(self.product, other_product)
+        occasion.products.add(self.product)
+
+        response = self.client.get(
+            reverse("catalog:category_list"),
+            {"sizes": ["8"], "occasions": ["birthday"]},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.product.name)
+        self.assertNotContains(response, other_product.name)
+        self.assertQuerySetEqual(
+            response.context["filter_form"].fields["sizes"].choices,
+            ProductFilterOption.objects.filter(
+                filter_type="size",
+                is_active=True,
+            ).values_list("value", "label"),
+            transform=tuple,
+            ordered=False,
+        )
+
+    def test_catalog_renders_all_product_attribute_filter_sections(self):
+        response = self.client.get(reverse("catalog:category_list"))
+
+        self.assertEqual(response.status_code, 200)
+        for label in ("Размер", "Покрытие", "Вид теста", "Цвет", "Повод", "Упаковка"):
+            self.assertContains(response, label)
+        self.assertContains(response, 'name="sizes"')
+        self.assertContains(response, 'name="colors"')
+        self.assertContains(response, 'name="packaging"')
 
     def test_catalog_search_and_price_sort(self):
         Product.objects.create(
@@ -335,9 +424,30 @@ class CartTests(TestCase):
         response = self.client.get(self.cart_url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.product.name)
+        self.assertContains(response, "cart-shell")
         self.assertContains(response, "2 товара")
         self.assertContains(response, "2328")
         self.assertContains(response, 'aria-label="Корзина, 2 товаров"')
+        self.assertContains(response, 'class="cart-payment-select"')
+        self.assertContains(response, "Онлайн-списание на сайте пока не подключено.")
+        self.assertContains(response, "Способ оплаты")
+        self.assertContains(response, "Свяжитесь с нами")
+        self.assertContains(response, 'class="cart-field-control"')
+        self.assertContains(response, 'class="cart-upload"')
+        self.assertContains(response, 'class="cart-submit-button"')
+
+    def test_saved_account_address_is_prefilled_in_checkout(self):
+        self.add_product()
+        CustomerProfile.objects.create(
+            user=self.user,
+            delivery_address="Москва, ул. Тестовая, 1",
+        )
+
+        response = self.client.get(self.cart_url)
+
+        self.assertTrue(response.wsgi_request.user.is_authenticated)
+        self.assertEqual(response.context["form"].initial.get("address"), "Москва, ул. Тестовая, 1")
+        self.assertContains(response, 'value="Москва, ул. Тестовая, 1"')
 
     def test_add_to_cart_merges_identical_variants_and_rejects_bad_options(self):
         self.add_product(quantity="3")
@@ -390,10 +500,66 @@ class CartTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(response.status_code, 302)
         preorder = Preorder.objects.get()
+        self.assertEqual(
+            response.url,
+            reverse("accounts:order_detail", args=[preorder.pk]),
+        )
+        self.assertEqual(preorder.user, self.user)
         self.assertEqual(preorder.total_price, 2980)
         self.assertEqual(preorder.configuration["items"][0]["product_id"], self.product.pk)
+        self.assertNotIn("cart", self.client.session)
+        order_page = self.client.get(response.url)
+        self.assertContains(order_page, f"Заказ #{preorder.pk} оформлен")
+        self.assertContains(order_page, self.product.name)
+
+    def test_successful_checkout_updates_saved_delivery_address(self):
+        self.add_product()
+
+        response = self.client.post(
+            self.cart_url,
+            {
+                "delivery": "moscow",
+                "payment": "card",
+                "name": "Анна",
+                "phone": "+7 900 000-00-00",
+                "email": "anna@example.com",
+                "address": "Москва, ул. Садовая, 7",
+                "consent_given": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            self.user.customer_profile.delivery_address,
+            "Москва, ул. Садовая, 7",
+        )
+
+    def test_guest_checkout_creates_order_without_account_owner(self):
+        self.add_product(quantity="2")
+        cart_data = self.client.session["cart"]
+        self.client.logout()
+        session = self.client.session
+        session["cart"] = cart_data
+        session.save()
+
+        response = self.client.post(
+            self.cart_url,
+            {
+                "delivery": "pickup",
+                "payment": "card",
+                "name": "Анна",
+                "phone": "+7 900 000-00-00",
+                "email": "anna@example.com",
+                "consent_given": "on",
+            },
+        )
+
+        self.assertRedirects(response, self.cart_url)
+        preorder = Preorder.objects.get()
+        self.assertIsNone(preorder.user)
+        self.assertEqual(preorder.total_price, 2980)
         self.assertNotIn("cart", self.client.session)
 
     def test_checkout_requires_delivery_address(self):
@@ -412,5 +578,6 @@ class CartTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Укажите адрес доставки.")
+        self.assertContains(response, "Не удалось оформить заказ. Проверьте данные:")
         self.assertEqual(Preorder.objects.count(), 0)
         self.assertTrue(self.client.session.get("cart"))

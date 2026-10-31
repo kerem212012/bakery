@@ -19,14 +19,36 @@
                     {% if section_key == "orders" %}
                         <div class="account-panel-heading">
                             <div><p class="eyebrow">История покупок</p><h2>Ваши заказы</h2></div>
-                            <span class="account-count">0 заказов</span>
+                            <span class="account-count">{{ orders_count_label }}</span>
                         </div>
-                        <div class="account-empty">
-                            <span class="account-empty-mark" aria-hidden="true">◇</span>
-                            <h3>Заказов пока нет</h3>
-                            <p>После оформления покупки здесь появятся ваши заказы и информация об их статусе.</p>
-                            <a class="button button-dark" href="{% url 'catalog:category_list' %}">Перейти в каталог</a>
-                        </div>
+                        {% if order_rows %}
+                            <div class="account-order-list">
+                                {% for row in order_rows %}
+                                    <a class="account-order" href="{% url 'accounts:order_detail' row.order.pk %}">
+                                        <div class="account-order-heading">
+                                            <div>
+                                                <h3>Заказ #{{ row.order.pk }}</h3>
+                                                <p>{{ row.order.created_at|date:"d.m.Y, H:i" }}</p>
+                                            </div>
+                                            <span class="account-order-status">{{ row.order.get_status_display }}</span>
+                                        </div>
+                                        <p class="account-order-summary">{{ row.summary }}</p>
+                                        <div class="account-order-footer">
+                                            <span>{{ row.item_count }} шт.</span>
+                                            <strong>{{ row.order.total_price }} ₽</strong>
+                                        </div>
+                                        <span class="account-order-link">Подробнее →</span>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="account-empty">
+                                <span class="account-empty-mark" aria-hidden="true">◇</span>
+                                <h3>Заказов пока нет</h3>
+                                <p>После оформления покупки здесь появятся ваши заказы и информация об их статусе.</p>
+                                <a class="button button-dark" href="{% url 'catalog:category_list' %}">Перейти в каталог</a>
+                            </div>
+                        {% endif %}
                     {% elif section_key == "favorites" %}
                         <div class="account-empty">
                             <span class="account-empty-mark" aria-hidden="true">♡</span>
@@ -34,15 +56,23 @@
                             <p>Добавляйте понравившиеся товары в избранное, чтобы быстро найти их позже.</p>
                             <a class="button button-dark" href="{% url 'catalog:category_list' %}">Найти что-то особенное</a>
                         </div>
-                    {% else %}
+                    {% elif section_key == "addresses" %}
                         <div class="account-panel-heading">
                             <div><p class="eyebrow">Доставка</p><h2>Сохранённые адреса</h2></div>
                         </div>
-                        <div class="account-empty">
-                            <span class="account-empty-mark" aria-hidden="true">⌂</span>
-                            <h3>Адресов пока нет</h3>
-                            <p>Сохранённые адреса доставки появятся здесь после того, как функция оформления заказов будет подключена.</p>
-                        </div>
+                        <form method="post" class="account-form saved-address-form">
+                            {% csrf_token %}
+                            <label class="account-form-field" for="{{ address_form.delivery_address.id_for_label }}">
+                                <span>{{ address_form.delivery_address.label }}</span>
+                                {{ address_form.delivery_address }}
+                            </label>
+                            {% for error in address_form.delivery_address.errors %}
+                                <p class="account-form-error">{{ error }}</p>
+                            {% endfor %}
+                            <p class="saved-address-help">Этот адрес будет автоматически подставляться при следующем оформлении заказа. Вы сможете изменить его в корзине.</p>
+                            <button class="button button-dark" type="submit">Сохранить адрес</button>
+                        </form>
+                    {% else %}
                     {% endif %}
                 </section>
             </div>

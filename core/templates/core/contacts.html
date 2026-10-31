@@ -1,0 +1,70 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Контакты — Лукоморье{% endblock %}
+
+{% block content %}
+    <div class="contacts-page">
+        <nav class="about-breadcrumbs" aria-label="Хлебные крошки">
+            <a href="{% url 'home' %}">Главная</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Контакты</span>
+        </nav>
+
+        <section class="contacts-hero" aria-labelledby="contacts-heading">
+            <div class="contacts-hero-copy">
+                <h1 id="contacts-heading">Контакты</h1>
+                <p>Мы всегда на связи и рады ответить на ваши вопросы, помочь с выбором и обсудить заказ.</p>
+            </div>
+            <div class="contacts-hero-image" role="img" aria-label="Пряники ручной работы с цветочным декором"></div>
+        </section>
+
+        <section class="contacts-details" aria-label="Контактная информация">
+            <a class="contacts-detail" href="tel:+74951234567">
+                <span class="contacts-detail-icon" aria-hidden="true">♧</span>
+                <span class="contacts-detail-copy">
+                    <strong>Телефон</strong>
+                    <span>+7 495 123-45-67</span>
+                    <small>Ежедневно с 9:00 до 21:00</small>
+                </span>
+            </a>
+            <a class="contacts-detail" href="mailto:hello@lukomorye.example">
+                <span class="contacts-detail-icon" aria-hidden="true">✉</span>
+                <span class="contacts-detail-copy">
+                    <strong>E-mail</strong>
+                    <span>hello@lukomorye.example</span>
+                    <small>Ответим в течение дня</small>
+                </span>
+            </a>
+            <a class="contacts-detail" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201" target="_blank" rel="noopener noreferrer">
+                <span class="contacts-detail-icon" aria-hidden="true">⌖</span>
+                <span class="contacts-detail-copy">
+                    <strong>Адрес</strong>
+                    <span>г. Москва, ул. Пряничная, д. 12,<br>стр. 1 (Бизнес-центр «Пример»)</span>
+                </span>
+            </a>
+        </section>
+
+        <a class="contacts-map" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201" target="_blank" rel="noopener noreferrer" aria-label="Открыть карту Москвы и построить маршрут">
+            <span class="contacts-map-area contacts-map-area-one">ТВЕРСКОЙ</span>
+            <span class="contacts-map-area contacts-map-area-two">АРБАТ</span>
+            <span class="contacts-map-area contacts-map-area-three">КИТАЙ-ГОРОД</span>
+            <span class="contacts-map-area contacts-map-area-four">ЗАМОСКВОРЕЧЬЕ</span>
+            <span class="contacts-map-city">Москва</span>
+            <span class="contacts-map-pin" aria-hidden="true">❧</span>
+            <span class="contacts-map-zoom" aria-hidden="true"><span>+</span><span>−</span></span>
+            <span class="contacts-map-hint">Открыть карту <span aria-hidden="true">↗</span></span>
+        </a>
+
+        <section class="contacts-requisites" aria-labelledby="requisites-heading">
+            <div class="contacts-requisites-details">
+                <h2 id="requisites-heading">Реквизиты</h2>
+                <p>Для получения реквизитов и документов, пожалуйста, свяжитесь с нами по электронной почте.</p>
+            </div>
+            <a class="contacts-requisites-link" href="mailto:hello@lukomorye.example?subject=Запрос%20реквизитов">
+                <span class="contacts-detail-icon" aria-hidden="true">▤</span>
+                <span><strong>Запросить реквизиты</strong><small>Напишите нам — отправим документы</small></span>
+                <span class="contacts-requisites-arrow" aria-hidden="true">→</span>
+            </a>
+        </section>
+    </div>
+{% endblock %}

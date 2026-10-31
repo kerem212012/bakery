@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Product
+from .models import Category, Product, ProductFilterOption
 
 
 @admin.register(Category)
@@ -20,3 +20,12 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ("name", "description", "slug", "category__name")
     prepopulated_fields = {"slug": ("name",)}
     autocomplete_fields = ("category",)
+    filter_horizontal = ("filter_options",)
+
+
+@admin.register(ProductFilterOption)
+class ProductFilterOptionAdmin(admin.ModelAdmin):
+    list_display = ("label", "filter_type", "value", "display_order", "is_active")
+    list_editable = ("display_order", "is_active")
+    list_filter = ("filter_type", "is_active")
+    search_fields = ("label", "value")

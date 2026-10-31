@@ -5,6 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 from openpyxl import load_workbook
 
+from core.models import Preorder
+
 from .models import CustomerProfile
 
 
@@ -12,6 +14,173 @@ User = get_user_model()
 
 
 class AccountTests(TestCase):
+    def test_orders_page_shows_only_orders_owned_by_the_logged_in_user(self):
+        user = User.objects.create_user(
+            username="order_customer",
+            email="order-customer@example.com",
+            password="A-long-password-482!",
+        )
+        other_user = User.objects.create_user(
+            username="other_customer",
+            email="other-customer@example.com",
+            password="A-long-password-583!",
+        )
+        order_values = {
+            "name": "Анна",
+            "email": "order-customer@example.com",
+            "phone": "+7 900 000-00-00",
+            "configuration": {
+                "items": [{"name": "Подарочный набор", "quantity": 2}],
+                "delivery": "pickup",
+                "payment": "card",
+            },
+            "unit_price": "1490.00",
+            "discount_percent": 0,
+            "delivery_cost": "0.00",
+            "total_price": "2980.00",
+            "consent_given": True,
+        }
+        order = Preorder.objects.create(user=user, **order_values)
+        Preorder.objects.create(
+            user=other_user,
+            **{**order_values, "email": "other-customer@example.com"},
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("accounts:orders"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"Заказ #{order.pk}")
+        self.assertContains(response, "Подарочный набор × 2")
+        self.assertContains(response, "1 заказ")
+        self.assertNotContains(response, "Заказ #2")
+
+    def test_dashboard_shows_current_user_order_count_and_recent_order(self):
+        user = User.objects.create_user(
+            username="dashboard_customer",
+            email="dashboard-customer@example.com",
+            password="A-long-password-482!",
+        )
+        order = Preorder.objects.create(
+            user=user,
+            name="Анна",
+            email=user.email,
+            phone="+7 900 000-00-00",
+            configuration={"quantity": 4, "size": "8"},
+            unit_price="100.00",
+            discount_percent=0,
+            delivery_cost="700.00",
+            total_price="1100.00",
+            consent_given=True,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("accounts:dashboard"))
+
+        self.assertContains(response, "Мои заказы")
+        self.assertContains(response, "1 заказ")
+        self.assertContains(response, f"Заказ #{order.pk}")
+        self.assertContains(response, "4 шт. · 8 см")
+
+    def test_order_detail_shows_items_and_production_tracking(self):
+        user = User.objects.create_user(
+            username="tracking_customer",
+            email="tracking-customer@example.com",
+            password="A-long-password-482!",
+        )
+        order = Preorder.objects.create(
+            user=user,
+            name="Анна",
+            email=user.email,
+            phone="+7 900 000-00-00",
+            address="Москва, ул. Примерная, 1",
+            configuration={
+                "items": [
+                    {
+                        "name": "Подарочный набор",
+                        "quantity": 2,
+                        "size": "8",
+                        "unit_price": "1490.00",
+                    },
+                ],
+                "delivery": "moscow",
+                "payment": "card",
+            },
+            unit_price="1490.00",
+            discount_percent=0,
+            delivery_cost="700.00",
+            total_price="3680.00",
+            status=Preorder.Status.PRODUCTION,
+            consent_given=True,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            reverse("accounts:order_detail", args=[order.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Состав заказа")
+        self.assertContains(response, "Подарочный набор")
+        self.assertContains(response, "В производстве")
+        self.assertContains(response, "Доставка по Москве")
+        self.assertContains(response, 'class="account-order-step is-complete"')
+        self.assertContains(response, 'class="account-order-step is-current"')
+
+    def test_customer_cannot_view_another_users_order_detail(self):
+        user = User.objects.create_user(
+            username="order_owner",
+            email="order-owner@example.com",
+            password="A-long-password-482!",
+        )
+        other_user = User.objects.create_user(
+            username="order_viewer",
+            email="order-viewer@example.com",
+            password="A-long-password-583!",
+        )
+        order = Preorder.objects.create(
+            user=user,
+            name="Анна",
+            email=user.email,
+            phone="+7 900 000-00-00",
+            configuration={"quantity": 1},
+            unit_price="100.00",
+            discount_percent=0,
+            delivery_cost="700.00",
+            total_price="800.00",
+            consent_given=True,
+        )
+        self.client.force_login(other_user)
+
+        response = self.client.get(
+            reverse("accounts:order_detail", args=[order.pk])
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_customer_can_save_delivery_address_for_future_orders(self):
+        user = User.objects.create_user(
+            username="address_customer",
+            email="address-customer@example.com",
+            password="A-long-password-482!",
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("accounts:addresses"),
+            {"delivery_address": "Москва, ул. Примерная, 12, кв. 4"},
+        )
+
+        self.assertRedirects(response, reverse("accounts:addresses"))
+        self.assertEqual(
+            user.customer_profile.delivery_address,
+            "Москва, ул. Примерная, 12, кв. 4",
+        )
+        self.assertContains(
+            self.client.get(reverse("accounts:addresses")),
+            "Москва, ул. Примерная, 12, кв. 4",
+        )
+
     def test_registration_shows_customer_type_and_hides_company_fields_initially(self):
         response = self.client.get("/account/register/")
 

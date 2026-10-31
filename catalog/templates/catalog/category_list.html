@@ -16,42 +16,87 @@
                 <input type="hidden" name="search_mode" value="{{ filter_form.search_mode.value|default:'all' }}">
                 <input type="hidden" name="sort" value="{{ filter_form.sort.value|default:'popular' }}">
 
-                <div class="catalog-sidebar-block">
-                    <div class="catalog-sidebar-header">
-                        <span>Категории</span>
-                        <span class="catalog-pill">{{ products|length }}</span>
-                    </div>
-
-                    {% for category in categories %}
-                        <label class="catalog-filter-item">
-                            <input class="catalog-check" type="checkbox" name="categories" value="{{ category.pk }}"{% if category.pk|stringformat:"s" in selected_category_ids %} checked{% endif %}>
+                <div class="catalog-quick-links" aria-label="Быстрый выбор категории">
+                    <a class="catalog-quick-link{% if not selected_category_ids %} is-active{% endif %}" href="{% url 'catalog:category_list' %}">
+                        <span>Все товары</span>
+                        <span class="catalog-pill">{{ total_product_count }}</span>
+                    </a>
+                    {% for category in quick_categories %}
+                        <a class="catalog-quick-link" href="{% url 'catalog:category_list' %}?categories={{ category.pk }}">
                             <span>{{ category.name }}</span>
                             <span class="catalog-pill">{{ category.active_product_count }}</span>
-                        </label>
-                    {% empty %}
-                        <p class="catalog-empty">Категории скоро появятся.</p>
+                        </a>
                     {% endfor %}
+                </div>
+
+                <div class="catalog-sidebar-block">
+                    <button class="catalog-sidebar-header" type="button" aria-expanded="true" aria-controls="catalog-category-filters">
+                        <span>Категории</span>
+                        <span class="catalog-sidebar-chevron" aria-hidden="true">⌃</span>
+                    </button>
+                    <div class="catalog-sidebar-content" id="catalog-category-filters">
+                        {% for category in categories %}
+                            <label class="catalog-filter-item">
+                                <input class="catalog-check" type="checkbox" name="categories" value="{{ category.pk }}"{% if category.pk|stringformat:"s" in selected_category_ids %} checked{% endif %}>
+                                <span>{{ category.name }}</span>
+                                <span class="catalog-pill">{{ category.active_product_count }}</span>
+                            </label>
+                        {% empty %}
+                            <p class="catalog-empty">Категории скоро появятся.</p>
+                        {% endfor %}
+                    </div>
                 </div>
 
                 <div class="catalog-sidebar-block filter-block">
-                    <h3>Цена</h3>
-                    <div class="catalog-price-fields">
-                        <label>
-                            <span>От, ₽</span>
-                            <input type="number" name="min_price" min="0" step="1" value="{{ filter_form.min_price.value|default:'' }}" placeholder="0">
-                        </label>
-                        <label>
-                            <span>До, ₽</span>
-                            <input type="number" name="max_price" min="0" step="1" value="{{ filter_form.max_price.value|default:'' }}" placeholder="25000">
-                        </label>
+                    <button class="catalog-sidebar-header" type="button" aria-expanded="true" aria-controls="catalog-price-filters">
+                        <span>Цена</span>
+                        <span class="catalog-sidebar-chevron" aria-hidden="true">⌃</span>
+                    </button>
+                    <div class="catalog-sidebar-content" id="catalog-price-filters">
+                        <div class="catalog-price-range" data-price-range>
+                            <div class="catalog-price-range-track" aria-hidden="true"></div>
+                            <input type="range" min="0" max="25000" step="100" value="{{ filter_form.min_price.value|default:'0' }}" aria-label="Минимальная цена" data-price-range-min>
+                            <input type="range" min="0" max="25000" step="100" value="{{ filter_form.max_price.value|default:'25000' }}" aria-label="Максимальная цена" data-price-range-max>
+                        </div>
+                        <div class="catalog-price-fields">
+                            <label>
+                                <span class="visually-hidden">Минимальная цена в рублях</span>
+                                <span>от <input type="number" name="min_price" min="0" max="25000" step="1" value="{{ filter_form.min_price.value|default_if_none:'' }}" placeholder="0" data-price-number-min> ₽</span>
+                            </label>
+                            <label>
+                                <span class="visually-hidden">Максимальная цена в рублях</span>
+                                <span>до <input type="number" name="max_price" min="0" max="25000" step="1" value="{{ filter_form.max_price.value|default_if_none:'' }}" placeholder="25000" data-price-number-max> ₽</span>
+                            </label>
+                        </div>
+                        {% for error in filter_form.min_price.errors %}
+                            <p class="catalog-filter-error">{{ error }}</p>
+                        {% endfor %}
+                        {% for error in filter_form.max_price.errors %}
+                            <p class="catalog-filter-error">{{ error }}</p>
+                        {% endfor %}
                     </div>
-                    {% for error in filter_form.min_price.errors %}
-                        <p class="catalog-filter-error">{{ error }}</p>
-                    {% endfor %}
-                    {% for error in filter_form.max_price.errors %}
-                        <p class="catalog-filter-error">{{ error }}</p>
-                    {% endfor %}
                 </div>
+
+                {% for filter_group in filter_groups %}
+                    <fieldset class="catalog-sidebar-block catalog-choice-filter">
+                        <legend class="visually-hidden">{{ filter_group.title }}</legend>
+                        <button class="catalog-sidebar-header" type="button" aria-expanded="false" aria-controls="catalog-filter-{{ filter_group.type }}">
+                            <span>{{ filter_group.title }}</span>
+                            <span class="catalog-sidebar-chevron" aria-hidden="true">⌄</span>
+                        </button>
+                        <div class="catalog-sidebar-content" id="catalog-filter-{{ filter_group.type }}" hidden>
+                            {% for option in filter_group.options %}
+                                <label class="catalog-filter-item">
+                                    <input class="catalog-check" type="checkbox" name="{{ filter_group.name }}" value="{{ option.value }}"{% if option.value in filter_group.selected_values %} checked{% endif %}>
+                                    <span>{{ option.label }}</span>
+                                    <span class="catalog-pill">{{ option.product_count }}</span>
+                                </label>
+                            {% empty %}
+                                <p class="catalog-filter-empty">Варианты пока не добавлены.</p>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                {% endfor %}
 
                 <button class="catalog-filter-apply" type="submit">Применить фильтры</button>
                 <a class="catalog-clear-button" href="{% url 'catalog:category_list' %}">Сбросить фильтры</a>
@@ -79,6 +124,11 @@
                         <input type="hidden" name="max_price" value="{{ filter_form.max_price.value|default:'' }}">
                         <input type="hidden" name="sort" value="{{ filter_form.sort.value|default:'popular' }}">
                         <input type="hidden" name="search_mode" value="{{ filter_form.search_mode.value|default:'all' }}">
+                        {% for filter_name, filter_values in selected_filter_values.items %}
+                            {% for filter_value in filter_values %}
+                                <input type="hidden" name="{{ filter_name }}" value="{{ filter_value }}">
+                            {% endfor %}
+                        {% endfor %}
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg>
                         <input type="search" name="query" value="{{ filter_form.query.value|default:'' }}" placeholder="Поиск" aria-label="Поиск" />
                         <button type="submit" aria-label="Искать">↵</button>
@@ -92,6 +142,11 @@
                         <input type="hidden" name="search_mode" value="{{ filter_form.search_mode.value|default:'all' }}">
                         <input type="hidden" name="min_price" value="{{ filter_form.min_price.value|default:'' }}">
                         <input type="hidden" name="max_price" value="{{ filter_form.max_price.value|default:'' }}">
+                        {% for filter_name, filter_values in selected_filter_values.items %}
+                            {% for filter_value in filter_values %}
+                                <input type="hidden" name="{{ filter_name }}" value="{{ filter_value }}">
+                            {% endfor %}
+                        {% endfor %}
                         <label for="catalog-sort">Сортировать по:</label>
                         <select id="catalog-sort" name="sort" aria-label="Сортировать товары" onchange="this.form.submit()">
                             <option value="popular"{% if filter_form.sort.value == "popular" or not filter_form.sort.value %} selected{% endif %}>по популярности</option>
@@ -178,4 +233,54 @@
             </div>
         </div>
     </section>
+    <script>
+        document.querySelectorAll(".catalog-sidebar-header").forEach((header) => {
+            header.addEventListener("click", () => {
+                const isExpanded = header.getAttribute("aria-expanded") === "true";
+                header.setAttribute("aria-expanded", String(!isExpanded));
+                document.getElementById(header.getAttribute("aria-controls")).hidden = isExpanded;
+            });
+        });
+
+        document.querySelectorAll("[data-price-range]").forEach((range) => {
+            const minRange = range.querySelector("[data-price-range-min]");
+            const maxRange = range.querySelector("[data-price-range-max]");
+            const minNumber = range.parentElement.querySelector("[data-price-number-min]");
+            const maxNumber = range.parentElement.querySelector("[data-price-number-max]");
+            const form = range.closest("form");
+
+            const updateNumbers = () => {
+                minNumber.value = minRange.value === minRange.min ? "" : minRange.value;
+                maxNumber.value = maxRange.value === maxRange.max ? "" : maxRange.value;
+            };
+            const updateRanges = () => {
+                const minValue = Math.min(Number(minNumber.value || minRange.min), Number(maxNumber.value || maxRange.max));
+                const maxValue = Math.max(Number(maxNumber.value || maxRange.max), minValue);
+                minRange.value = String(minValue);
+                maxRange.value = String(maxValue);
+            };
+
+            minRange.addEventListener("input", () => {
+                if (Number(minRange.value) > Number(maxRange.value)) {
+                    maxRange.value = minRange.value;
+                }
+                updateNumbers();
+            });
+            maxRange.addEventListener("input", () => {
+                if (Number(maxRange.value) < Number(minRange.value)) {
+                    minRange.value = maxRange.value;
+                }
+                updateNumbers();
+            });
+            minNumber.addEventListener("input", updateRanges);
+            maxNumber.addEventListener("input", updateRanges);
+            range.querySelectorAll('input[type="range"]').forEach((input) => {
+                input.addEventListener("change", () => form.requestSubmit());
+            });
+        });
+
+        document.querySelectorAll('.catalog-filter-form input[type="checkbox"]').forEach((input) => {
+            input.addEventListener("change", () => input.form.requestSubmit());
+        });
+    </script>
 {% endblock %}

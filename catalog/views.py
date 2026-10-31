@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 
 from core.calculator import DELIVERY_COSTS
 from core.models import Preorder, PreorderAttachment
+from user.models import CustomerProfile
 
 from .cart_forms import (
     COATING_OPTIONS,
@@ -24,7 +25,7 @@ from .cart_forms import (
 )
 from .favorites import get_favorite_ids
 from .forms import CatalogFilterForm
-from .models import Category, Product
+from .models import Category, Product, ProductFilterOption
 
 CART_SESSION_KEY = "cart"
 DEFAULT_PRODUCT_PRICE = Decimal("1490")
@@ -109,13 +110,21 @@ def _cart_context(request, form=None):
     subtotal = sum((item["line_total"] for item in items), Decimal("0"))
     delivery = form["delivery"].value() if form and form.is_bound else "moscow"
     delivery_cost = DELIVERY_COSTS.get(delivery, DELIVERY_COSTS["moscow"])
+    initial = {"delivery": "moscow", "payment": "card"}
+    if request.user.is_authenticated:
+        saved_address = CustomerProfile.objects.filter(user=request.user).values_list(
+            "delivery_address", flat=True
+        ).first()
+        if saved_address:
+            initial["address"] = saved_address
+
     return {
         "items": items,
         "item_count": item_count,
         "subtotal": subtotal,
         "delivery_cost": delivery_cost,
         "total": subtotal + delivery_cost,
-        "form": form or CartCheckoutForm(initial={"delivery": "moscow", "payment": "card"}),
+        "form": form or CartCheckoutForm(initial=initial),
         "size_options": SIZE_OPTIONS,
         "coating_options": COATING_OPTIONS,
         "dough_options": DOUGH_OPTIONS,
@@ -160,6 +169,7 @@ def cart(request):
             )
             with transaction.atomic():
                 preorder = Preorder.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
                     name=form.cleaned_data["name"],
                     email=form.cleaned_data["email"],
                     phone=form.cleaned_data["phone"],
@@ -176,11 +186,21 @@ def cart(request):
                     PreorderAttachment(preorder=preorder, file=file)
                     for file in form.cleaned_data["attachments"]
                 )
+                if request.user.is_authenticated and form.cleaned_data["address"]:
+                    profile, _ = CustomerProfile.objects.get_or_create(user=request.user)
+                    if profile.delivery_address != form.cleaned_data["address"]:
+                        profile.delivery_address = form.cleaned_data["address"]
+                        profile.save(update_fields=("delivery_address",))
             request.session.pop(CART_SESSION_KEY, None)
-            messages.success(request, "Заказ отправлен. Мы свяжемся с вами для подтверждения.")
+            messages.success(
+                request,
+                f"Заказ #{preorder.pk} оформлен. Мы свяжемся с вами для подтверждения.",
+            )
+            if request.user.is_authenticated:
+                return redirect("accounts:order_detail", order_id=preorder.pk)
             return redirect("catalog:cart")
     else:
-        form = CartCheckoutForm(initial={"delivery": "moscow", "payment": "card"})
+        form = None
     return render(request, "catalog/cart.html", _cart_context(request, form))
 
 
@@ -283,6 +303,14 @@ def category_list(request):
         selected_categories = filter_form.cleaned_data["categories"]
         min_price = filter_form.cleaned_data["min_price"]
         max_price = filter_form.cleaned_data["max_price"]
+        selected_options = {
+            "size": filter_form.cleaned_data["sizes"],
+            "coating": filter_form.cleaned_data["coatings"],
+            "dough": filter_form.cleaned_data["doughs"],
+            "color": filter_form.cleaned_data["colors"],
+            "occasion": filter_form.cleaned_data["occasions"],
+            "packaging": filter_form.cleaned_data["packaging"],
+        }
 
         if query:
             if search_mode == "name":
@@ -305,6 +333,14 @@ def category_list(request):
             products = products.filter(price__gte=min_price)
         if max_price is not None:
             products = products.filter(price__lte=max_price)
+        for filter_type, values in selected_options.items():
+            if values:
+                products = products.filter(
+                    filter_options__filter_type=filter_type,
+                    filter_options__value__in=values,
+                    filter_options__is_active=True,
+                )
+        products = products.distinct()
 
         sort = filter_form.cleaned_data["sort"] or "popular"
         if sort == "price_asc":
@@ -321,15 +357,46 @@ def category_list(request):
     categories = Category.objects.filter(is_active=True).annotate(
         active_product_count=Count("products", filter=Q(products__is_active=True))
     )
+    total_product_count = Product.objects.filter(
+        is_active=True,
+        category__is_active=True,
+    ).count()
+    filter_options = ProductFilterOption.objects.filter(is_active=True).annotate(
+        product_count=Count(
+            "products",
+            filter=Q(products__is_active=True, products__category__is_active=True),
+        )
+    ).distinct()
+    selected_filter_values = {
+        field: request.GET.getlist(field)
+        for field in ("sizes", "coatings", "doughs", "colors", "occasions", "packaging")
+    }
+    filter_groups = [
+        {
+            "type": filter_type,
+            "name": field_name,
+            "title": label,
+            "options": filter_options.filter(filter_type=filter_type),
+            "selected_values": selected_filter_values[field_name],
+        }
+        for (filter_type, label), field_name in zip(
+            ProductFilterOption.FilterType.choices,
+            ("sizes", "coatings", "doughs", "colors", "occasions", "packaging"),
+        )
+    ]
     return render(
         request,
         "catalog/category_list.html",
         {
             "categories": categories,
+            "quick_categories": categories[:5],
             "products": products,
+            "total_product_count": total_product_count,
+            "filter_groups": filter_groups,
             "favorite_ids": get_favorite_ids(request),
             "filter_form": filter_form,
             "selected_category_ids": request.GET.getlist("categories"),
+            "selected_filter_values": selected_filter_values,
         },
     )
 

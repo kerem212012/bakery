@@ -19,22 +19,45 @@
 
             <div class="account-content">
                 <div class="account-stats">
-                    <a class="account-stat" href="{% url 'accounts:orders' %}"><span>Мои заказы</span><strong>0</strong></a>
+                    <a class="account-stat" href="{% url 'accounts:orders' %}"><span>Мои заказы</span><strong>{{ orders_count }}</strong></a>
                     <a class="account-stat" href="{% url 'accounts:favorites' %}"><span>Избранное</span><strong>0</strong></a>
-                    <a class="account-stat" href="{% url 'accounts:addresses' %}"><span>Адрес доставки</span><strong>—</strong></a>
+                    <a class="account-stat" href="{% url 'accounts:addresses' %}"><span>Адрес доставки</span><strong>{{ saved_address_label }}</strong></a>
                 </div>
 
                 <section class="account-panel">
                     <div class="account-panel-heading">
                         <div><p class="eyebrow">История покупок</p><h2>Последние заказы</h2></div>
-                        <span class="account-count">0 заказов</span>
+                        <span class="account-count">{{ orders_count_label }}</span>
                     </div>
-                    <div class="account-empty">
-                        <span class="account-empty-mark" aria-hidden="true">◇</span>
-                        <h3>Заказов пока нет</h3>
-                        <p>Когда вы оформите заказ, здесь появится информация о его статусе.</p>
-                        <a class="button button-dark" href="{% url 'catalog:category_list' %}">Перейти в каталог</a>
-                    </div>
+                    {% if recent_orders %}
+                        <div class="account-order-list">
+                            {% for row in recent_orders %}
+                                <a class="account-order" href="{% url 'accounts:order_detail' row.order.pk %}">
+                                    <div class="account-order-heading">
+                                        <div>
+                                            <h3>Заказ #{{ row.order.pk }}</h3>
+                                            <p>{{ row.order.created_at|date:"d.m.Y, H:i" }}</p>
+                                        </div>
+                                        <span class="account-order-status">{{ row.order.get_status_display }}</span>
+                                    </div>
+                                    <p class="account-order-summary">{{ row.summary }}</p>
+                                    <div class="account-order-footer">
+                                        <span>{{ row.item_count }} шт.</span>
+                                        <strong>{{ row.order.total_price }} ₽</strong>
+                                    </div>
+                                    <span class="account-order-link">Подробнее →</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                        <p><a class="button button-dark" href="{% url 'accounts:orders' %}">Все заказы</a></p>
+                    {% else %}
+                        <div class="account-empty">
+                            <span class="account-empty-mark" aria-hidden="true">◇</span>
+                            <h3>Заказов пока нет</h3>
+                            <p>Когда вы оформите заказ, здесь появится информация о его статусе.</p>
+                            <a class="button button-dark" href="{% url 'catalog:category_list' %}">Перейти в каталог</a>
+                        </div>
+                    {% endif %}
                 </section>
             </div>
         </div>

@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=60">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=72">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -63,14 +63,14 @@
                     <a href="{% url 'about' %}">Наша история</a>
                     <a href="{% url 'about' %}">Производство</a>
                     <a href="{% url 'about' %}">Преимущества</a>
-                    <a href="mailto:hello@lukomorye.example">Сотрудничество</a>
+                    <a href="{% url 'corporate' %}">Сотрудничество</a>
                 </nav>
                 <nav class="footer-column" aria-label="Корпоративным клиентам">
                     <h2>Корпоративным клиентам</h2>
                     <a href="{% url 'corporate' %}">Подарки для бизнеса</a>
                     <a href="mailto:hello@lukomorye.example">Индивидуальные заказы</a>
                     <a href="mailto:hello@lukomorye.example">Брендирование</a>
-                    <a href="mailto:hello@lukomorye.example">Партнёрство</a>
+                    <a href="{% url 'corporate' %}">Партнёрство</a>
                 </nav>
                 <div class="footer-column footer-contact">
                     <h2>Контакты</h2>
@@ -87,7 +87,7 @@
                         <span>г. Москва,<br>ул. Пряничная, д. 12</span>
                     </div>
                 </div>
-                <a class="footer-map" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012" aria-label="Открыть карту Москвы">
+                <a class="footer-map" href="{% url 'contacts' %}" aria-label="Контакты и адрес в Москве">
                     <span class="footer-map-pin" aria-hidden="true">●</span>
                     <span class="footer-map-city">Москва</span>
                     <span class="footer-map-route"><span aria-hidden="true">⌖</span> Построить маршрут <span aria-hidden="true">→</span></span>
@@ -126,8 +126,9 @@
             {% endif %}
             <a href="{% url 'packaging' %}">Варианты упаковки</a>
             <a href="{% url 'corporate' %}">Корпоративным клиентам</a>
+            <a href="{% url 'faq' %}">FAQ</a>
             <a href="{% url 'about' %}">О нас</a>
-            <a href="{% url 'corporate' %}#corporate-contacts">Контакты</a>
+            <a href="{% url 'contacts' %}">Контакты</a>
         </div>
         <div class="mobile-menu-header">
             <a class="mobile-menu-brand" href="{% url 'home' %}" aria-label="Лукоморье — главная">
@@ -152,19 +153,38 @@
             <a href="{% url 'packaging' %}"><span class="mobile-menu-number">04</span><span>Варианты упаковки</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="{% url 'delivery' %}"><span class="mobile-menu-number">05</span><span>Доставка и самовывоз</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="{% url 'about' %}"><span class="mobile-menu-number">06</span><span>О компании</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
-            <a href="mailto:hello@lukomorye.example"><span class="mobile-menu-number">07</span><span>Сотрудничество</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
-            <a href="mailto:hello@lukomorye.example"><span class="mobile-menu-number">08</span><span>Часто задаваемые вопросы</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
-            <a href="{% url 'corporate' %}#corporate-contacts"><span class="mobile-menu-number">09</span><span>Контакты</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
-            <a href="mailto:hello@lukomorye.example"><span class="mobile-menu-number">10</span><span>Обратная связь</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'corporate' %}"><span class="mobile-menu-number">07</span><span>Сотрудничество</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'faq' %}"><span class="mobile-menu-number">08</span><span>Часто задаваемые вопросы</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'contacts' %}"><span class="mobile-menu-number">09</span><span>Контакты</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'feedback' %}"><span class="mobile-menu-number">10</span><span>Обратная связь</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
         </div>
     </nav>
     <button class="menu-backdrop" type="button" aria-label="Закрыть меню"></button>
-    <a class="telegram-float" href="https://t.me/" target="_blank" rel="noopener noreferrer" aria-label="Открыть Telegram">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M21.5 3.8 18.2 20c-.2 1.1-.9 1.4-1.8.8l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L5.6 13.5.7 12c-1.1-.3-1.1-1 .2-1.5L19.8 3c.9-.3 1.8.2 1.7.8Z"/>
-        </svg>
-        <span>Telegram</span>
-    </a>
+    <div class="contact-float" aria-label="Способы связи">
+        <div class="contact-float-menu" id="contact-float-menu" aria-label="Связаться через Telegram, WhatsApp, MAX или звонок">
+            <a class="contact-float-option contact-float-telegram" href="https://t.me/" target="_blank" rel="noopener noreferrer" aria-label="Написать в Telegram">
+                <span>Telegram</span>
+            </a>
+            <a class="contact-float-option contact-float-whatsapp" href="https://wa.me/" target="_blank" rel="noopener noreferrer" aria-label="Написать в WhatsApp">
+                <span>WhatsApp</span>
+            </a>
+            <a class="contact-float-option contact-float-max" href="https://max.ru/" target="_blank" rel="noopener noreferrer" aria-label="Написать в MAX">
+                <span>MAX</span>
+            </a>
+            <a class="contact-float-option contact-float-phone" href="tel:+74951234567" aria-label="Позвонить">
+                <span>Позвонить</span>
+            </a>
+        </div>
+        <button class="contact-float-toggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="contact-float-menu" aria-label="Открыть способы связи">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3.5c-4.8 0-8.7 3.3-8.7 7.4 0 2.2 1.1 4.1 3 5.4l-.8 4.2 4.4-2.2c.7.2 1.4.3 2.1.3 4.8 0 8.7-3.3 8.7-7.4S16.8 3.5 12 3.5Z"/>
+                <circle cx="8.2" cy="11" r="1"/>
+                <circle cx="12" cy="11" r="1"/>
+                <circle cx="15.8" cy="11" r="1"/>
+            </svg>
+            <span>Связаться</span>
+        </button>
+    </div>
     {% block entrance %}{% endblock %}
     <script>
         const menuToggle = document.querySelector(".menu-toggle");
@@ -173,6 +193,9 @@
         const menuClose = document.querySelector(".mobile-menu-close");
         const searchToggle = document.querySelector(".search-link");
         const siteSearchPanel = document.querySelector("#home-search-panel");
+        const contactFloat = document.querySelector(".contact-float");
+        const contactToggle = document.querySelector(".contact-float-toggle");
+        const contactMenu = document.querySelector(".contact-float-menu");
 
         function setNavigationOpen(isOpen) {
             menuToggle.setAttribute("aria-expanded", String(isOpen));
@@ -196,6 +219,13 @@
             if (isOpen) siteSearchPanel.querySelector('input[type="search"]').focus();
         }
 
+        function setContactMenuOpen(isOpen) {
+            if (!contactFloat || !contactToggle) return;
+            contactFloat.classList.toggle("is-open", isOpen);
+            contactToggle.setAttribute("aria-expanded", String(isOpen));
+            contactToggle.setAttribute("aria-label", isOpen ? "Закрыть способы связи" : "Открыть способы связи");
+        }
+
         menuToggle.addEventListener("click", () => {
             setNavigationOpen(menuToggle.getAttribute("aria-expanded") !== "true");
         });
@@ -207,10 +237,27 @@
         mainNavigation.querySelectorAll("a").forEach((link) => {
             link.addEventListener("click", () => setNavigationOpen(false));
         });
+        if (contactToggle) {
+            contactToggle.addEventListener("click", (event) => {
+                event.stopPropagation();
+                setContactMenuOpen(contactToggle.getAttribute("aria-expanded") !== "true");
+            });
+        }
+        if (contactMenu) {
+            contactMenu.querySelectorAll("a").forEach((link) => {
+                link.addEventListener("click", () => setContactMenuOpen(false));
+            });
+        }
+        document.addEventListener("click", (event) => {
+            if (contactFloat && !contactFloat.contains(event.target)) {
+                setContactMenuOpen(false);
+            }
+        });
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape") {
                 setNavigationOpen(false);
                 setSearchOpen(false);
+                setContactMenuOpen(false);
             }
         });
     </script>

@@ -1,0 +1,49 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}Частые вопросы — Лукоморье{% endblock %}
+
+{% block content %}
+    <div class="faq-page">
+        <header class="faq-header" aria-label="Частые вопросы">
+            <span class="faq-header-rule" aria-hidden="true"></span>
+            <h1>ЧАСТЫЕ ВОПРОСЫ</h1>
+            <span class="faq-header-rule" aria-hidden="true"></span>
+        </header>
+
+        <div class="faq-grid" aria-label="Частые вопросы">
+            {% for item in faq_items %}
+                <article class="faq-item">
+                    <button class="faq-question" type="button" aria-expanded="false">
+                        <span class="faq-number">{{ item.number }}</span>
+                        <span class="faq-text">{{ item.question }}</span>
+                        <span class="faq-toggle" aria-hidden="true">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>{{ item.answer }}</p>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.faq-question').forEach((button) => {
+            const item = button.closest('.faq-item');
+            const answer = item.querySelector('.faq-answer');
+            const toggle = button.querySelector('.faq-toggle');
+
+            answer.style.maxHeight = '0px';
+            item.classList.remove('is-open');
+            button.setAttribute('aria-expanded', 'false');
+            toggle.textContent = '+';
+
+            button.addEventListener('click', () => {
+                const isOpen = item.classList.contains('is-open');
+                item.classList.toggle('is-open', !isOpen);
+                button.setAttribute('aria-expanded', String(!isOpen));
+                toggle.textContent = isOpen ? '+' : '−';
+                answer.style.maxHeight = isOpen ? '0px' : `${answer.scrollHeight}px`;
+            });
+        });
+    </script>
+{% endblock %}

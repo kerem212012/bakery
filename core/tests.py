@@ -1,13 +1,14 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
 from catalog.models import Category, Product
 from .calculator import calculate_quote
-from .models import Preorder
+from .models import FeedbackSubmission, Preorder
 
 
 class CalculatorTests(TestCase):
@@ -74,13 +75,68 @@ class CalculatorTests(TestCase):
         self.assertContains(response, 'class="menu-backdrop"')
         self.assertContains(response, 'class="mobile-menu-number">01</span>')
         self.assertContains(response, 'class="mobile-menu-number">10</span>')
+        self.assertContains(
+            response,
+            f'href="{reverse("feedback")}"><span class="mobile-menu-number">10</span><span>Обратная связь</span>',
+        )
 
-    def test_shared_layout_renders_floating_telegram_button(self):
+    def test_feedback_page_renders_contact_form(self):
+        response = self.client.get(reverse("feedback"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<title>Обратная связь — Лукоморье</title>")
+        self.assertContains(response, 'name="name"')
+        self.assertContains(response, 'name="email"')
+        self.assertContains(response, 'name="subject"')
+        self.assertContains(response, 'name="message"')
+        self.assertContains(response, 'name="consent_given"')
+
+    def test_valid_feedback_submission_is_saved_and_redirected(self):
+        response = self.client.post(
+            reverse("feedback"),
+            {
+                "name": "Иван",
+                "email": "ivan@example.com",
+                "subject": "Вопрос о заказе",
+                "message": "Подскажите, пожалуйста, сроки изготовления.",
+                "consent_given": "on",
+            },
+        )
+
+        self.assertRedirects(response, reverse("feedback"))
+        submission = FeedbackSubmission.objects.get()
+        self.assertEqual(submission.name, "Иван")
+        self.assertEqual(submission.email, "ivan@example.com")
+        self.assertEqual(submission.status, FeedbackSubmission.Status.NEW)
+
+    def test_feedback_submission_requires_consent_and_valid_email(self):
+        response = self.client.post(
+            reverse("feedback"),
+            {
+                "name": "Иван",
+                "email": "not-an-email",
+                "subject": "Вопрос",
+                "message": "Нужна помощь.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(FeedbackSubmission.objects.exists())
+        self.assertContains(response, "Необходимо дать согласие на обработку данных.")
+
+    def test_shared_layout_renders_floating_contact_button_group(self):
         response = self.client.get("/")
 
-        self.assertContains(response, 'class="telegram-float"')
-        self.assertContains(response, 'href="https://t.me/"')
-        self.assertContains(response, 'aria-label="Открыть Telegram"')
+        self.assertContains(response, 'class="contact-float"')
+        self.assertContains(response, 'class="contact-float-menu"')
+        self.assertContains(response, 'class="contact-float-toggle"')
+        self.assertContains(response, 'aria-controls="contact-float-menu"')
+        self.assertContains(response, 'aria-label="Открыть способы связи"')
+        self.assertContains(response, '>Связаться</span>')
+        self.assertContains(response, 'WhatsApp')
+        self.assertContains(response, 'href="https://max.ru/"')
+        self.assertContains(response, 'aria-label="Написать в MAX"')
+        self.assertContains(response, 'Позвонить')
 
     def test_valid_preorder_is_saved_with_server_calculated_quote(self):
         response = self.client.post(
@@ -103,6 +159,29 @@ class CalculatorTests(TestCase):
         self.assertEqual(preorder.unit_price, Decimal("98"))
         self.assertEqual(preorder.discount_percent, 20)
         self.assertEqual(preorder.total_price, Decimal("8540.00"))
+
+    def test_authenticated_preorder_is_linked_to_the_account(self):
+        user = get_user_model().objects.create_user(
+            username="preorder_customer",
+            email="preorder-customer@example.com",
+            password="A-long-password-482!",
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            "/",
+            {
+                **self.configuration,
+                "name": "Анна",
+                "email": user.email,
+                "phone": "+7 900 000-00-00",
+                "address": "Москва",
+                "consent_given": "on",
+            },
+        )
+
+        self.assertRedirects(response, "/#calculator")
+        self.assertEqual(Preorder.objects.get().user, user)
 
     def test_preorder_accepts_supported_attachment(self):
         upload = SimpleUploadedFile("design.png", b"image-data", content_type="image/png")
@@ -191,16 +270,15 @@ class HomePageCatalogTests(TestCase):
         self.assertContains(response, 'href="mailto:hello@lukomorye.example"')
         self.assertContains(response, f'href="{reverse("about")}">О нас</a>')
 
-    def test_corporate_page_renders_order_and_contact_sections(self):
+    def test_partnership_page_renders_directions_metrics_and_navigation(self):
         response = self.client.get(reverse("corporate"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "<title>Корпоративным клиентам — Лукоморье</title>")
-        self.assertContains(response, "Взаимодействие")
-        self.assertContains(response, "Оплата")
-        self.assertContains(response, "Доставка / Самовывоз")
-        self.assertContains(response, "Калькулятор заказа")
-        self.assertContains(response, 'id="corporate-contacts"')
+        self.assertContains(response, "<title>Партнёрство с Лукоморье — Лукоморье</title>")
+        self.assertContains(response, "Направления сотрудничества")
+        self.assertContains(response, "Франшиза")
+        self.assertContains(response, "Производителям и поставщикам")
+        self.assertContains(response, "Наши успехи — ваши возможности")
         self.assertContains(response, f'href="{reverse("corporate")}">Корпоративным клиентам</a>')
 
     def test_delivery_page_renders_methods_pickup_and_useful_information(self):
