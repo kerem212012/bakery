@@ -1,14 +1,14 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Каталог подарков — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Gift catalog — Lukomorye{% else %}Каталог подарков — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
-    <section class="catalog-list-layout" aria-label="Каталог подарков">
-        <aside class="catalog-sidebar" aria-label="Фильтры каталога">
+    <section class="catalog-list-layout" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift catalog{% else %}Каталог подарков{% endif %}">
+        <aside class="catalog-sidebar" aria-label="{% if LANGUAGE_CODE == 'en' %}Catalog filters{% else %}Фильтры каталога{% endif %}">
             <div class="catalog-breadcrumb">
-                <a href="{% url 'home' %}">Главная</a>
+                <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
                 <span aria-hidden="true">›</span>
-                <span>Каталог</span>
+                <span>{% if LANGUAGE_CODE == 'en' %}Catalog{% else %}Каталог{% endif %}</span>
             </div>
 
             <form class="catalog-filter-form" method="get" action="{% url 'catalog:category_list' %}">
@@ -16,14 +16,14 @@
                 <input type="hidden" name="search_mode" value="{{ filter_form.search_mode.value|default:'all' }}">
                 <input type="hidden" name="sort" value="{{ filter_form.sort.value|default:'popular' }}">
 
-                <div class="catalog-quick-links" aria-label="Быстрый выбор категории">
+                <div class="catalog-quick-links" aria-label="{% if LANGUAGE_CODE == 'en' %}Quick category selection{% else %}Быстрый выбор категории{% endif %}">
                     <a class="catalog-quick-link{% if not selected_category_ids %} is-active{% endif %}" href="{% url 'catalog:category_list' %}">
-                        <span>Все товары</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}All products{% else %}Все товары{% endif %}</span>
                         <span class="catalog-pill">{{ total_product_count }}</span>
                     </a>
                     {% for category in quick_categories %}
                         <a class="catalog-quick-link" href="{% url 'catalog:category_list' %}?categories={{ category.pk }}">
-                            <span>{{ category.name }}</span>
+                            <span>{{ category.localized_name }}</span>
                             <span class="catalog-pill">{{ category.active_product_count }}</span>
                         </a>
                     {% endfor %}
@@ -31,41 +31,41 @@
 
                 <div class="catalog-sidebar-block">
                     <button class="catalog-sidebar-header" type="button" aria-expanded="true" aria-controls="catalog-category-filters">
-                        <span>Категории</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Categories{% else %}Категории{% endif %}</span>
                         <span class="catalog-sidebar-chevron" aria-hidden="true">⌃</span>
                     </button>
                     <div class="catalog-sidebar-content" id="catalog-category-filters">
                         {% for category in categories %}
                             <label class="catalog-filter-item">
                                 <input class="catalog-check" type="checkbox" name="categories" value="{{ category.pk }}"{% if category.pk|stringformat:"s" in selected_category_ids %} checked{% endif %}>
-                                <span>{{ category.name }}</span>
+                                <span>{{ category.localized_name }}</span>
                                 <span class="catalog-pill">{{ category.active_product_count }}</span>
                             </label>
                         {% empty %}
-                            <p class="catalog-empty">Категории скоро появятся.</p>
+                            <p class="catalog-empty">{% if LANGUAGE_CODE == 'en' %}Categories coming soon.{% else %}Категории скоро появятся.{% endif %}</p>
                         {% endfor %}
                     </div>
                 </div>
 
                 <div class="catalog-sidebar-block filter-block">
                     <button class="catalog-sidebar-header" type="button" aria-expanded="true" aria-controls="catalog-price-filters">
-                        <span>Цена</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Price{% else %}Цена{% endif %}</span>
                         <span class="catalog-sidebar-chevron" aria-hidden="true">⌃</span>
                     </button>
                     <div class="catalog-sidebar-content" id="catalog-price-filters">
                         <div class="catalog-price-range" data-price-range>
                             <div class="catalog-price-range-track" aria-hidden="true"></div>
-                            <input type="range" min="0" max="25000" step="100" value="{{ filter_form.min_price.value|default:'0' }}" aria-label="Минимальная цена" data-price-range-min>
-                            <input type="range" min="0" max="25000" step="100" value="{{ filter_form.max_price.value|default:'25000' }}" aria-label="Максимальная цена" data-price-range-max>
+                            <input type="range" min="0" max="25000" step="100" value="{{ filter_form.min_price.value|default:'0' }}" aria-label="{% if LANGUAGE_CODE == 'en' %}Minimum price{% else %}Минимальная цена{% endif %}" data-price-range-min>
+                            <input type="range" min="0" max="25000" step="100" value="{{ filter_form.max_price.value|default:'25000' }}" aria-label="{% if LANGUAGE_CODE == 'en' %}Maximum price{% else %}Максимальная цена{% endif %}" data-price-range-max>
                         </div>
                         <div class="catalog-price-fields">
                             <label>
-                                <span class="visually-hidden">Минимальная цена в рублях</span>
-                                <span>от <input type="number" name="min_price" min="0" max="25000" step="1" value="{{ filter_form.min_price.value|default_if_none:'' }}" placeholder="0" data-price-number-min> ₽</span>
+                                <span class="visually-hidden">{% if LANGUAGE_CODE == 'en' %}Minimum price in rubles{% else %}Минимальная цена в рублях{% endif %}</span>
+                                <span>{% if LANGUAGE_CODE == 'en' %}from{% else %}от{% endif %} <input type="number" name="min_price" min="0" max="25000" step="1" value="{{ filter_form.min_price.value|default_if_none:'' }}" placeholder="0" data-price-number-min> ₽</span>
                             </label>
                             <label>
-                                <span class="visually-hidden">Максимальная цена в рублях</span>
-                                <span>до <input type="number" name="max_price" min="0" max="25000" step="1" value="{{ filter_form.max_price.value|default_if_none:'' }}" placeholder="25000" data-price-number-max> ₽</span>
+                                <span class="visually-hidden">{% if LANGUAGE_CODE == 'en' %}Maximum price in rubles{% else %}Максимальная цена в рублях{% endif %}</span>
+                                <span>{% if LANGUAGE_CODE == 'en' %}to{% else %}до{% endif %} <input type="number" name="max_price" min="0" max="25000" step="1" value="{{ filter_form.max_price.value|default_if_none:'' }}" placeholder="25000" data-price-number-max> ₽</span>
                             </label>
                         </div>
                         {% for error in filter_form.min_price.errors %}
@@ -88,18 +88,18 @@
                             {% for option in filter_group.options %}
                                 <label class="catalog-filter-item">
                                     <input class="catalog-check" type="checkbox" name="{{ filter_group.name }}" value="{{ option.value }}"{% if option.value in filter_group.selected_values %} checked{% endif %}>
-                                    <span>{{ option.label }}</span>
+                                    <span>{{ option.localized_label }}</span>
                                     <span class="catalog-pill">{{ option.product_count }}</span>
                                 </label>
                             {% empty %}
-                                <p class="catalog-filter-empty">Варианты пока не добавлены.</p>
+                                <p class="catalog-filter-empty">{% if LANGUAGE_CODE == 'en' %}No options have been added yet.{% else %}Варианты пока не добавлены.{% endif %}</p>
                             {% endfor %}
                         </div>
                     </fieldset>
                 {% endfor %}
 
-                <button class="catalog-filter-apply" type="submit">Применить фильтры</button>
-                <a class="catalog-clear-button" href="{% url 'catalog:category_list' %}">Сбросить фильтры</a>
+                <button class="catalog-filter-apply" type="submit">{% if LANGUAGE_CODE == 'en' %}Apply filters{% else %}Применить фильтры{% endif %}</button>
+                <a class="catalog-clear-button" href="{% url 'catalog:category_list' %}">{% if LANGUAGE_CODE == 'en' %}Reset filters{% else %}Сбросить фильтры{% endif %}</a>
             </form>
         </aside>
 
@@ -107,12 +107,12 @@
             <div class="catalog-toolbar">
                 <div class="catalog-heading-wrap">
                     <div class="catalog-breadcrumb desktop-only">
-                        <a href="{% url 'home' %}">Главная</a>
+                        <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
                         <span aria-hidden="true">›</span>
-                        <span>Каталог</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Catalog{% else %}Каталог{% endif %}</span>
                     </div>
-                    <h1>Каталог</h1>
-                    <a class="catalog-category-overview-link" href="{% url 'catalog:categories' %}">Все категории</a>
+                    <h1>{% if LANGUAGE_CODE == 'en' %}Catalog{% else %}Каталог{% endif %}</h1>
+                    <a class="catalog-category-overview-link" href="{% url 'catalog:categories' %}">{% if LANGUAGE_CODE == 'en' %}All categories{% else %}Все категории{% endif %}</a>
                 </div>
 
                 <div class="catalog-toolbar-actions">
@@ -130,8 +130,8 @@
                             {% endfor %}
                         {% endfor %}
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg>
-                        <input type="search" name="query" value="{{ filter_form.query.value|default:'' }}" placeholder="Поиск" aria-label="Поиск" />
-                        <button type="submit" aria-label="Искать">↵</button>
+                        <input type="search" name="query" value="{{ filter_form.query.value|default:'' }}" placeholder="{% if LANGUAGE_CODE == 'en' %}Search{% else %}Поиск{% endif %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Search{% else %}Поиск{% endif %}" />
+                        <button type="submit" aria-label="{% if LANGUAGE_CODE == 'en' %}Search{% else %}Искать{% endif %}">↵</button>
                     </form>
 
                     <form class="catalog-sort" method="get" action="{% url 'catalog:category_list' %}">
@@ -147,18 +147,18 @@
                                 <input type="hidden" name="{{ filter_name }}" value="{{ filter_value }}">
                             {% endfor %}
                         {% endfor %}
-                        <label for="catalog-sort">Сортировать по:</label>
-                        <select id="catalog-sort" name="sort" aria-label="Сортировать товары" onchange="this.form.submit()">
-                            <option value="popular"{% if filter_form.sort.value == "popular" or not filter_form.sort.value %} selected{% endif %}>по популярности</option>
-                            <option value="price_asc"{% if filter_form.sort.value == "price_asc" %} selected{% endif %}>сначала недорогие</option>
-                            <option value="price_desc"{% if filter_form.sort.value == "price_desc" %} selected{% endif %}>сначала дорогие</option>
-                            <option value="name"{% if filter_form.sort.value == "name" %} selected{% endif %}>по названию</option>
+                        <label for="catalog-sort">{% if LANGUAGE_CODE == 'en' %}Sort by:{% else %}Сортировать по:{% endif %}</label>
+                        <select id="catalog-sort" name="sort" aria-label="{% if LANGUAGE_CODE == 'en' %}Sort products{% else %}Сортировать товары{% endif %}" onchange="this.form.submit()">
+                            <option value="popular"{% if filter_form.sort.value == "popular" or not filter_form.sort.value %} selected{% endif %}>{% if LANGUAGE_CODE == 'en' %}Most popular{% else %}по популярности{% endif %}</option>
+                            <option value="price_asc"{% if filter_form.sort.value == "price_asc" %} selected{% endif %}>{% if LANGUAGE_CODE == 'en' %}Price: low to high{% else %}сначала недорогие{% endif %}</option>
+                            <option value="price_desc"{% if filter_form.sort.value == "price_desc" %} selected{% endif %}>{% if LANGUAGE_CODE == 'en' %}Price: high to low{% else %}сначала дорогие{% endif %}</option>
+                            <option value="name"{% if filter_form.sort.value == "name" %} selected{% endif %}>{% if LANGUAGE_CODE == 'en' %}Name{% else %}по названию{% endif %}</option>
                         </select>
                     </form>
 
-                    <div class="catalog-view-switch" role="group" aria-label="Вид каталога">
-                        <button type="button" aria-label="Сетка" aria-pressed="true" class="is-active" data-catalog-view="grid">▦</button>
-                        <button type="button" aria-label="Список" aria-pressed="false" data-catalog-view="list">☰</button>
+                    <div class="catalog-view-switch" role="group" aria-label="{% if LANGUAGE_CODE == 'en' %}Catalog view{% else %}Вид каталога{% endif %}">
+                        <button type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Grid{% else %}Сетка{% endif %}" aria-pressed="true" class="is-active" data-catalog-view="grid">▦</button>
+                        <button type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}List{% else %}Список{% endif %}" aria-pressed="false" data-catalog-view="list">☰</button>
                     </div>
                 </div>
             </div>
@@ -169,23 +169,23 @@
                         <div class="catalog-product-image-wrap">
                             <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}" class="catalog-product-link-wrapper">
                                 {% if product.image_url %}
-                                    <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+                                    <img src="{{ product.image_url }}" alt="{{ product.localized_name }}" loading="lazy">
                                 {% else %}
-                                    <div class="catalog-product-placeholder" aria-label="{{ product.name }}"></div>
+                                    <div class="catalog-product-placeholder" aria-label="{{ product.localized_name }}"></div>
                                 {% endif %}
                             </a>
                             <form class="favorite-toggle-form" method="post" action="{% url 'catalog:toggle_favorite' product.pk %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                <button class="catalog-favorite{% if product.pk in favorite_ids %} is-active{% endif %}" type="submit" aria-label="{% if product.pk in favorite_ids %}Убрать из избранного{% else %}Добавить в избранное{% endif %}" aria-pressed="{% if product.pk in favorite_ids %}true{% else %}false{% endif %}">{% if product.pk in favorite_ids %}♥{% else %}♡{% endif %}</button>
+                                <button class="catalog-favorite{% if product.pk in favorite_ids %} is-active{% endif %}" type="submit" aria-label="{% if LANGUAGE_CODE == 'en' %}{% if product.pk in favorite_ids %}Remove from favorites{% else %}Add to favorites{% endif %}{% else %}{% if product.pk in favorite_ids %}Убрать из избранного{% else %}Добавить в избранное{% endif %}{% endif %}" aria-pressed="{% if product.pk in favorite_ids %}true{% else %}false{% endif %}">{% if product.pk in favorite_ids %}♥{% else %}♡{% endif %}</button>
                             </form>
                         </div>
 
                         <div class="catalog-product-body">
                             <div class="catalog-product-header-row">
-                                <h2><a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">{{ product.name }}</a></h2>
+                                <h2><a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">{{ product.localized_name }}</a></h2>
                             </div>
-                            <p class="catalog-product-price">от <span data-size-price data-base-price="{{ product.price|default:'1490' }}">{{ product.price|default:"1490" }}</span> ₽ / 1 шт</p>
+                            <p class="catalog-product-price">{% if LANGUAGE_CODE == 'en' %}from{% else %}от{% endif %} <span data-size-price data-base-price="{{ product.price|default:'1490'|floatformat:'2u' }}">{{ product.price|default:"1490"|floatformat:"2u" }}</span> ₽ / 1 {% if LANGUAGE_CODE == 'en' %}pc{% else %}шт{% endif %}</p>
 
                             <form class="catalog-cart-form" method="post" action="{% url 'catalog:add_to_cart' product.pk %}">
                                 {% csrf_token %}
@@ -193,42 +193,42 @@
                                 <input type="hidden" name="quantity" value="1">
                                 <div class="catalog-product-meta">
                                     <div class="meta-row">
-                                        <span>Размер</span>
-                                        <select name="size" data-size-price-control aria-label="Выбрать размер для {{ product.name }}">
-                                            <option value="8" selected>8 см</option>
-                                            <option value="10">10 см</option>
-                                            <option value="12">12 см</option>
-                                            <option value="15">15 см</option>
+                                        <span>{% if LANGUAGE_CODE == 'en' %}Size{% else %}Размер{% endif %}</span>
+                                        <select name="size" data-size-price-control aria-label="{% if LANGUAGE_CODE == 'en' %}Select size for{% else %}Выбрать размер для{% endif %} {{ product.localized_name }}">
+                                            <option value="8" selected>8 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</option>
+                                            <option value="10">10 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</option>
+                                            <option value="12">12 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</option>
+                                            <option value="15">15 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</option>
                                         </select>
                                     </div>
                                     <div class="meta-row">
-                                        <span>Покрытие</span>
-                                        <select name="coating" aria-label="Выбрать покрытие для {{ product.name }}">
-                                            <option value="painting">Роспись на айсинге</option>
-                                            <option value="printing">Печать на айсинге</option>
-                                            <option value="classic">Классическое</option>
+                                        <span>{% if LANGUAGE_CODE == 'en' %}Icing{% else %}Покрытие{% endif %}</span>
+                                        <select name="coating" aria-label="{% if LANGUAGE_CODE == 'en' %}Select icing for{% else %}Выбрать покрытие для{% endif %} {{ product.localized_name }}">
+                                            <option value="painting">{% if LANGUAGE_CODE == 'en' %}Hand-painted icing{% else %}Роспись на айсинге{% endif %}</option>
+                                            <option value="printing">{% if LANGUAGE_CODE == 'en' %}Printed icing{% else %}Печать на айсинге{% endif %}</option>
+                                            <option value="classic">{% if LANGUAGE_CODE == 'en' %}Classic{% else %}Классическое{% endif %}</option>
                                         </select>
                                     </div>
                                     <div class="meta-row">
-                                        <span>Вид теста</span>
-                                        <select name="dough" aria-label="Выбрать тесто для {{ product.name }}">
-                                            <option value="classic">Классическое</option>
-                                            <option value="chocolate">Шоколадное</option>
-                                            <option value="vanilla">Ванильное</option>
+                                        <span>{% if LANGUAGE_CODE == 'en' %}Dough{% else %}Вид теста{% endif %}</span>
+                                        <select name="dough" aria-label="{% if LANGUAGE_CODE == 'en' %}Select dough for{% else %}Выбрать тесто для{% endif %} {{ product.localized_name }}">
+                                            <option value="classic">{% if LANGUAGE_CODE == 'en' %}Classic{% else %}Классическое{% endif %}</option>
+                                            <option value="chocolate">{% if LANGUAGE_CODE == 'en' %}Chocolate{% else %}Шоколадное{% endif %}</option>
+                                            <option value="vanilla">{% if LANGUAGE_CODE == 'en' %}Vanilla{% else %}Ванильное{% endif %}</option>
                                         </select>
                                     </div>
                                 </div>
                                 <input type="hidden" name="packaging" value="gift_box">
                                 {% if user.is_authenticated %}
-                                    <button class="catalog-cart-button" type="submit">В корзину</button>
+                                    <button class="catalog-cart-button" type="submit">{% if LANGUAGE_CODE == 'en' %}Add to cart{% else %}В корзину{% endif %}</button>
                                 {% else %}
-                                    <a class="catalog-cart-button" href="{% url 'accounts:login' %}?next={{ request.get_full_path }}">Войти, чтобы добавить</a>
+                                    <a class="catalog-cart-button" href="{% url 'accounts:login' %}?next={{ request.get_full_path }}">{% if LANGUAGE_CODE == 'en' %}Sign in to add{% else %}Войти, чтобы добавить{% endif %}</a>
                                 {% endif %}
                             </form>
                         </div>
                     </article>
                 {% empty %}
-                    <p class="catalog-empty catalog-empty-wide">По выбранным фильтрам товары не найдены.</p>
+                    <p class="catalog-empty catalog-empty-wide">{% if LANGUAGE_CODE == 'en' %}No products match the selected filters.{% else %}По выбранным фильтрам товары не найдены.{% endif %}</p>
                 {% endfor %}
             </div>
         </div>

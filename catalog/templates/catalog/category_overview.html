@@ -1,35 +1,35 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Все категории — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}All categories — Lukomorye{% else %}Все категории — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <section class="catalog-intro">
-        <a class="catalog-back-link" href="{% url 'catalog:category_list' %}">← В каталог</a>
-        <p class="eyebrow">Каталог подарков</p>
-        <h1>Все категории</h1>
-        <p>Выберите категорию, чтобы посмотреть подходящие подарки.</p>
+        <a class="catalog-back-link" href="{% url 'catalog:category_list' %}">← {% if LANGUAGE_CODE == 'en' %}Catalog{% else %}В каталог{% endif %}</a>
+        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Gift catalog{% else %}Каталог подарков{% endif %}</p>
+        <h1>{% if LANGUAGE_CODE == 'en' %}All categories{% else %}Все категории{% endif %}</h1>
+        <p>{% if LANGUAGE_CODE == 'en' %}Choose a category to explore suitable gifts.{% else %}Выберите категорию, чтобы посмотреть подходящие подарки.{% endif %}</p>
     </section>
 
-    <section class="catalog-category-grid" aria-label="Все категории товаров">
+    <section class="catalog-category-grid" aria-label="{% if LANGUAGE_CODE == 'en' %}All product categories{% else %}Все категории товаров{% endif %}">
         {% for category in categories %}
             <a class="catalog-category-card" href="{% url 'catalog:category_detail' category.slug %}">
                 {% if category.image_url %}
-                    <img src="{{ category.image_url }}" alt="{{ category.name }}" loading="lazy">
+                    <img src="{{ category.image_url }}" alt="{{ category.localized_name }}" loading="lazy">
                 {% else %}
-                    <span class="catalog-category-placeholder" role="img" aria-label="{{ category.name }}"></span>
+                    <span class="catalog-category-placeholder" role="img" aria-label="{{ category.localized_name }}"></span>
                 {% endif %}
                 <span class="catalog-category-copy">
-                    <span class="catalog-category-name">{{ category.name }}</span>
-                    {% if category.description %}
-                        <span class="catalog-category-description">{{ category.description }}</span>
+                    <span class="catalog-category-name">{{ category.localized_name }}</span>
+                        {% if category.localized_description %}
+                            <span class="catalog-category-description">{{ category.localized_description }}</span>
                     {% endif %}
                     <span class="catalog-category-link">
-                        {{ category.active_product_count }} товаров <span aria-hidden="true">→</span>
+                        {{ category.active_product_count }} {% if LANGUAGE_CODE == 'en' %}products{% else %}товаров{% endif %} <span aria-hidden="true">→</span>
                     </span>
                 </span>
             </a>
         {% empty %}
-            <p class="catalog-empty">Категории скоро появятся.</p>
+            <p class="catalog-empty">{% if LANGUAGE_CODE == 'en' %}Categories coming soon.{% else %}Категории скоро появятся.{% endif %}</p>
         {% endfor %}
     </section>
 {% endblock %}

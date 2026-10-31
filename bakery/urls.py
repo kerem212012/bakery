@@ -20,6 +20,7 @@ from django.conf.urls.static import static
 from django.urls import include, path
 
 urlpatterns = [
+    path("i18n/", include("django.conf.urls.i18n")),
     path('account/', include('user.urls')),
     path('catalog/', include('catalog.urls')),
     path('', include('core.urls')),

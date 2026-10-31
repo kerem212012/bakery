@@ -2,6 +2,7 @@ from pathlib import Path
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils.translation import get_language
 
 from .calculator import (
     COATING_CHOICES,
@@ -11,6 +12,7 @@ from .calculator import (
     PAYMENT_CHOICES,
     SHAPE_CHOICES,
     SIZE_CHOICES,
+    localized_choices,
 )
 
 MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024
@@ -30,15 +32,30 @@ class MultipleFileField(forms.FileField):
             return []
         files = data if isinstance(data, (list, tuple)) else [data]
         if len(files) > MAX_ATTACHMENT_COUNT:
-            raise ValidationError(f"Можно загрузить не более {MAX_ATTACHMENT_COUNT} файлов.")
+            message = (
+                f"You can upload no more than {MAX_ATTACHMENT_COUNT} files."
+                if get_language() == "en"
+                else f"Можно загрузить не более {MAX_ATTACHMENT_COUNT} файлов."
+            )
+            raise ValidationError(message)
         cleaned_files = []
         for uploaded_file in files:
             cleaned_file = super().clean(uploaded_file, initial)
             extension = Path(cleaned_file.name).suffix.lower()
             if extension not in ALLOWED_ATTACHMENT_EXTENSIONS:
-                raise ValidationError("Допустимы изображения JPG, PNG, WEBP и документы PDF.")
+                message = (
+                    "Allowed file types are JPG, PNG, WEBP, and PDF."
+                    if get_language() == "en"
+                    else "Допустимы изображения JPG, PNG, WEBP и документы PDF."
+                )
+                raise ValidationError(message)
             if cleaned_file.size > MAX_ATTACHMENT_SIZE:
-                raise ValidationError("Размер каждого файла не должен превышать 10 МБ.")
+                message = (
+                    "Each file must be no larger than 10 MB."
+                    if get_language() == "en"
+                    else "Размер каждого файла не должен превышать 10 МБ."
+                )
+                raise ValidationError(message)
             cleaned_files.append(cleaned_file)
         return cleaned_files
 
@@ -84,6 +101,18 @@ class PreorderForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        for field_name, group in (
+            ("flavor", "flavor"),
+            ("shape", "shape"),
+            ("coating", "coating"),
+            ("packaging", "packaging"),
+            ("delivery", "delivery"),
+            ("payment", "payment"),
+        ):
+            self.fields[field_name].choices = localized_choices(
+                self.fields[field_name].choices,
+                group,
+            )
         self.fields["name"].widget.attrs["placeholder"] = "Как к вам обращаться"
         self.fields["flavor"].initial = "classic"
         self.fields["quantity"].initial = 100
@@ -93,6 +122,15 @@ class PreorderForm(forms.Form):
         self.fields["packaging"].initial = "ribbon"
         self.fields["delivery"].initial = "moscow"
         self.fields["payment"].initial = "organization"
+        if get_language() == "en":
+            self.fields["consent_given"].error_messages["required"] = (
+                "You must agree to the processing of your personal data."
+            )
+        if get_language() == "en":
+            self.fields["name"].widget.attrs["placeholder"] = "Your name"
+            self.fields["email"].widget.attrs["placeholder"] = "Enter your email"
+            self.fields["address"].widget.attrs["placeholder"] = "Address and preferred time"
+            self.fields["comment"].widget.attrs["placeholder"] = "Add a comment"
 
     def clean(self):
         cleaned_data = super().clean()
@@ -100,7 +138,12 @@ class PreorderForm(forms.Form):
             cleaned_data.get("delivery") != "pickup"
             and not cleaned_data.get("address")
         ):
-            self.add_error("address", "Укажите адрес доставки.")
+            message = (
+                "Enter a delivery address."
+                if get_language() == "en"
+                else "Укажите адрес доставки."
+            )
+            self.add_error("address", message)
         return cleaned_data
 
 
@@ -131,3 +174,22 @@ class FeedbackForm(forms.Form):
         label="Согласен(на) на обработку персональных данных",
         error_messages={"required": "Необходимо дать согласие на обработку данных."},
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if get_language() == "en":
+            labels = {
+                "name": "Your name",
+                "email": "Email",
+                "subject": "Subject",
+                "message": "Message",
+                "consent_given": "I agree to the processing of my personal data",
+            }
+            for field_name, label in labels.items():
+                self.fields[field_name].label = label
+            self.fields["name"].widget.attrs["placeholder"] = "Your name"
+            self.fields["subject"].widget.attrs["placeholder"] = "For example, a question about an order"
+            self.fields["message"].widget.attrs["placeholder"] = "Tell us how we can help"
+            self.fields["consent_given"].error_messages["required"] = (
+                "You must agree to the processing of your personal data."
+            )

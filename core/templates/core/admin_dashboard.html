@@ -1,0 +1,155 @@
+{% extends "core/base.html" %}
+
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Admin dashboard — Lukomorye{% else %}Панель управления — Лукоморье{% endif %}{% endblock %}
+{% block shell_class %} admin-dashboard-shell{% endblock %}
+
+{% block content %}
+    <section class="admin-dashboard">
+        <header class="admin-dashboard-heading">
+            <div>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Lukomorye management{% else %}Управление Лукоморьем{% endif %}</p>
+                <h1>{% if LANGUAGE_CODE == 'en' %}Admin dashboard{% else %}Панель управления{% endif %}</h1>
+                <p>{% if LANGUAGE_CODE == 'en' %}Manage your catalog, orders, and customer messages from one place.{% else %}Управляйте каталогом, заказами и обращениями клиентов в одном месте.{% endif %}</p>
+            </div>
+            <div class="admin-dashboard-heading-actions">
+                {% if can_view_orders or can_view_feedback %}
+                    <a class="admin-dashboard-site-link" href="{% url 'manager_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Manager workspace{% else %}Кабинет менеджера{% endif %}</a>
+                {% endif %}
+                <a class="admin-dashboard-site-link" href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}View website{% else %}Открыть сайт{% endif %} ↗</a>
+            </div>
+        </header>
+
+        <div class="admin-dashboard-stats">
+            {% if can_view_products %}
+                <a class="admin-dashboard-stat" href="{% url 'admin:catalog_product_changelist' %}">
+                    <span>{% if LANGUAGE_CODE == 'en' %}Products{% else %}Товары{% endif %}</span>
+                    <strong>{{ product_count }}</strong>
+                    <small>{% if LANGUAGE_CODE == 'en' %}{{ active_product_count }} published{% else %}{{ active_product_count }} опубликовано{% endif %}</small>
+                </a>
+            {% endif %}
+            {% if can_view_categories %}
+                <a class="admin-dashboard-stat" href="{% url 'admin:catalog_category_changelist' %}">
+                    <span>{% if LANGUAGE_CODE == 'en' %}Categories{% else %}Категории{% endif %}</span>
+                    <strong>{{ category_count }}</strong>
+                    <small>{% if LANGUAGE_CODE == 'en' %}Catalog structure{% else %}Структура каталога{% endif %}</small>
+                </a>
+            {% endif %}
+            {% if can_view_orders %}
+                <a class="admin-dashboard-stat{% if new_order_count %} has-pending{% endif %}" href="{% url 'admin:core_preorder_changelist' %}">
+                    <span>{% if LANGUAGE_CODE == 'en' %}New orders{% else %}Новые заказы{% endif %}</span>
+                    <strong>{{ new_order_count }}</strong>
+                    <small>{% if LANGUAGE_CODE == 'en' %}Awaiting review{% else %}Ожидают обработки{% endif %}</small>
+                </a>
+            {% endif %}
+            {% if can_view_feedback %}
+                <a class="admin-dashboard-stat{% if new_feedback_count %} has-pending{% endif %}" href="{% url 'admin:core_feedbacksubmission_changelist' %}">
+                    <span>{% if LANGUAGE_CODE == 'en' %}New messages{% else %}Новые обращения{% endif %}</span>
+                    <strong>{{ new_feedback_count }}</strong>
+                    <small>{% if LANGUAGE_CODE == 'en' %}Customer feedback{% else %}Сообщения клиентов{% endif %}</small>
+                </a>
+            {% endif %}
+            {% if can_view_customers %}
+                <a class="admin-dashboard-stat" href="{% url 'admin:user_customerprofile_changelist' %}">
+                    <span>{% if LANGUAGE_CODE == 'en' %}Customers{% else %}Клиенты{% endif %}</span>
+                    <strong>{{ customer_count }}</strong>
+                    <small>{% if LANGUAGE_CODE == 'en' %}Customer profiles{% else %}Профили клиентов{% endif %}</small>
+                </a>
+            {% endif %}
+        </div>
+
+        <section class="admin-dashboard-section">
+            <div class="admin-dashboard-section-heading">
+                <div>
+                    <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Workspace{% else %}Рабочее пространство{% endif %}</p>
+                    <h2>{% if LANGUAGE_CODE == 'en' %}Management{% else %}Управление{% endif %}</h2>
+                </div>
+                <a href="{% url 'admin:index' %}">{% if LANGUAGE_CODE == 'en' %}Full admin{% else %}Все разделы админки{% endif %} →</a>
+            </div>
+            <div class="admin-dashboard-links">
+                {% if can_view_products %}
+                    <a class="admin-dashboard-card" href="{% url 'admin:catalog_product_changelist' %}">
+                        <span class="admin-dashboard-card-icon" aria-hidden="true">◇</span>
+                        <span><strong>{% if LANGUAGE_CODE == 'en' %}Products{% else %}Товары{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Edit names, prices, photos, and availability.{% else %}Названия, цены, фотографии и публикация.{% endif %}</small></span>
+                        <span class="admin-dashboard-card-arrow" aria-hidden="true">→</span>
+                    </a>
+                {% endif %}
+                {% if can_add_products %}
+                    <a class="admin-dashboard-card" href="{% url 'admin:catalog_product_add' %}">
+                        <span class="admin-dashboard-card-icon" aria-hidden="true">＋</span>
+                        <span><strong>{% if LANGUAGE_CODE == 'en' %}Add a product{% else %}Добавить товар{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Create a catalog item in Russian and English.{% else %}Создайте товар на русском и английском.{% endif %}</small></span>
+                        <span class="admin-dashboard-card-arrow" aria-hidden="true">→</span>
+                    </a>
+                {% endif %}
+                {% if can_view_categories %}
+                    <a class="admin-dashboard-card" href="{% url 'admin:catalog_category_changelist' %}">
+                        <span class="admin-dashboard-card-icon" aria-hidden="true">▤</span>
+                        <span><strong>{% if LANGUAGE_CODE == 'en' %}Categories{% else %}Категории{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Organize and publish catalog categories.{% else %}Настройте категории и их публикацию.{% endif %}</small></span>
+                        <span class="admin-dashboard-card-arrow" aria-hidden="true">→</span>
+                    </a>
+                {% endif %}
+                {% if can_add_categories %}
+                    <a class="admin-dashboard-card" href="{% url 'admin:catalog_category_add' %}">
+                        <span class="admin-dashboard-card-icon" aria-hidden="true">＋</span>
+                        <span><strong>{% if LANGUAGE_CODE == 'en' %}Add a category{% else %}Добавить категорию{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Create a new section for your products.{% else %}Создайте новый раздел каталога.{% endif %}</small></span>
+                        <span class="admin-dashboard-card-arrow" aria-hidden="true">→</span>
+                    </a>
+                {% endif %}
+                {% if can_view_filter_options %}
+                    <a class="admin-dashboard-card" href="{% url 'admin:catalog_productfilteroption_changelist' %}">
+                        <span class="admin-dashboard-card-icon" aria-hidden="true">☷</span>
+                        <span><strong>{% if LANGUAGE_CODE == 'en' %}Product filters{% else %}Фильтры товаров{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Manage sizes, flavors, colors, and packaging.{% else %}Размеры, вкусы, цвета и варианты упаковки.{% endif %}</small></span>
+                        <span class="admin-dashboard-card-arrow" aria-hidden="true">→</span>
+                    </a>
+                {% endif %}
+                {% if can_view_orders %}
+                    <a class="admin-dashboard-card" href="{% url 'admin:core_preorder_changelist' %}">
+                        <span class="admin-dashboard-card-icon" aria-hidden="true">▧</span>
+                        <span><strong>{% if LANGUAGE_CODE == 'en' %}Orders{% else %}Заказы{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Review requests and update their status.{% else %}Просматривайте заказы и меняйте их статус.{% endif %}</small></span>
+                        <span class="admin-dashboard-card-arrow" aria-hidden="true">→</span>
+                    </a>
+                {% endif %}
+                {% if can_view_customers %}
+                    <a class="admin-dashboard-card" href="{% url 'admin:user_customerprofile_changelist' %}">
+                        <span class="admin-dashboard-card-icon" aria-hidden="true">♙</span>
+                        <span><strong>{% if LANGUAGE_CODE == 'en' %}Customers{% else %}Клиенты{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}View customer and business profiles.{% else %}Профили частных и корпоративных клиентов.{% endif %}</small></span>
+                        <span class="admin-dashboard-card-arrow" aria-hidden="true">→</span>
+                    </a>
+                {% endif %}
+                {% if can_view_feedback %}
+                    <a class="admin-dashboard-card" href="{% url 'admin:core_feedbacksubmission_changelist' %}">
+                        <span class="admin-dashboard-card-icon" aria-hidden="true">✉</span>
+                        <span><strong>{% if LANGUAGE_CODE == 'en' %}Customer messages{% else %}Обращения клиентов{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Read and track contact form submissions.{% else %}Читайте и обрабатывайте сообщения из формы связи.{% endif %}</small></span>
+                        <span class="admin-dashboard-card-arrow" aria-hidden="true">→</span>
+                    </a>
+                {% endif %}
+            </div>
+        </section>
+
+        {% if can_view_orders %}
+            <section class="admin-dashboard-section admin-dashboard-orders">
+                <div class="admin-dashboard-section-heading">
+                    <div>
+                        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Latest activity{% else %}Последние события{% endif %}</p>
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Recent orders{% else %}Последние заказы{% endif %}</h2>
+                    </div>
+                    <a href="{% url 'admin:core_preorder_changelist' %}">{% if LANGUAGE_CODE == 'en' %}All orders{% else %}Все заказы{% endif %} →</a>
+                </div>
+                {% if recent_orders %}
+                    <div class="admin-dashboard-order-list">
+                        {% for order in recent_orders %}
+                            <a class="admin-dashboard-order" href="{% url 'admin:core_preorder_change' order.pk %}">
+                                <span class="admin-dashboard-order-id">#{{ order.pk }}</span>
+                                <span class="admin-dashboard-order-customer"><strong>{{ order.name }}</strong><small>{{ order.email }}</small></span>
+                                <span class="admin-dashboard-order-date">{{ order.created_at|date:"d.m.Y, H:i" }}</span>
+                                <span class="admin-dashboard-order-status status-{{ order.status }}">{{ order.get_status_display }}</span>
+                                <strong class="admin-dashboard-order-price">{{ order.total_price }} ₽</strong>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="admin-dashboard-empty">{% if LANGUAGE_CODE == 'en' %}No orders yet.{% else %}Заказов пока нет.{% endif %}</p>
+                {% endif %}
+            </section>
+        {% endif %}
+    </section>
+{% endblock %}

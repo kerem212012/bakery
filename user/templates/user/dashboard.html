@@ -1,13 +1,13 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Личный кабинет — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}My account — Lukomorye{% else %}Личный кабинет — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <section class="account-page">
         <div class="account-heading">
-            <p class="eyebrow">Ваше пространство</p>
-            <h1>Личный кабинет</h1>
-            <p>Здравствуйте{% if user.first_name %}, {{ user.first_name }}{% endif %}! Здесь собрана информация о вашем аккаунте.</p>
+            <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Your account{% else %}Ваше пространство{% endif %}</p>
+            <h1>{% if LANGUAGE_CODE == 'en' %}My account{% else %}Личный кабинет{% endif %}</h1>
+            <p>{% if LANGUAGE_CODE == 'en' %}Hello{% else %}Здравствуйте{% endif %}{% if user.first_name %}, {{ user.first_name }}{% endif %}! {% if LANGUAGE_CODE == 'en' %}Here is your account information.{% else %}Здесь собрана информация о вашем аккаунте.{% endif %}</p>
         </div>
 
         {% include "user/_account_messages.html" %}
@@ -19,14 +19,14 @@
 
             <div class="account-content">
                 <div class="account-stats">
-                    <a class="account-stat" href="{% url 'accounts:orders' %}"><span>Мои заказы</span><strong>{{ orders_count }}</strong></a>
-                    <a class="account-stat" href="{% url 'accounts:favorites' %}"><span>Избранное</span><strong>0</strong></a>
-                    <a class="account-stat" href="{% url 'accounts:addresses' %}"><span>Адрес доставки</span><strong>{{ saved_address_label }}</strong></a>
+                    <a class="account-stat" href="{% url 'accounts:orders' %}"><span>{% if LANGUAGE_CODE == 'en' %}My orders{% else %}Мои заказы{% endif %}</span><strong>{{ orders_count }}</strong></a>
+                    <a class="account-stat" href="{% url 'accounts:favorites' %}"><span>{% if LANGUAGE_CODE == 'en' %}Favorites{% else %}Избранное{% endif %}</span><strong>0</strong></a>
+                    <a class="account-stat" href="{% url 'accounts:addresses' %}"><span>{% if LANGUAGE_CODE == 'en' %}Delivery address{% else %}Адрес доставки{% endif %}</span><strong>{{ saved_address_label }}</strong></a>
                 </div>
 
                 <section class="account-panel">
                     <div class="account-panel-heading">
-                        <div><p class="eyebrow">История покупок</p><h2>Последние заказы</h2></div>
+                        <div><p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Order history{% else %}История покупок{% endif %}</p><h2>{% if LANGUAGE_CODE == 'en' %}Recent orders{% else %}Последние заказы{% endif %}</h2></div>
                         <span class="account-count">{{ orders_count_label }}</span>
                     </div>
                     {% if recent_orders %}
@@ -35,27 +35,27 @@
                                 <a class="account-order" href="{% url 'accounts:order_detail' row.order.pk %}">
                                     <div class="account-order-heading">
                                         <div>
-                                            <h3>Заказ #{{ row.order.pk }}</h3>
+                                            <h3>{% if LANGUAGE_CODE == 'en' %}Order{% else %}Заказ{% endif %} #{{ row.order.pk }}</h3>
                                             <p>{{ row.order.created_at|date:"d.m.Y, H:i" }}</p>
                                         </div>
-                                        <span class="account-order-status">{{ row.order.get_status_display }}</span>
+                                        <span class="account-order-status">{{ row.status_label }}</span>
                                     </div>
                                     <p class="account-order-summary">{{ row.summary }}</p>
                                     <div class="account-order-footer">
-                                        <span>{{ row.item_count }} шт.</span>
+                                        <span>{{ row.item_count }} {% if LANGUAGE_CODE == 'en' %}items{% else %}шт.{% endif %}</span>
                                         <strong>{{ row.order.total_price }} ₽</strong>
                                     </div>
-                                    <span class="account-order-link">Подробнее →</span>
+                                    <span class="account-order-link">{% if LANGUAGE_CODE == 'en' %}Details{% else %}Подробнее{% endif %} →</span>
                                 </a>
                             {% endfor %}
                         </div>
-                        <p><a class="button button-dark" href="{% url 'accounts:orders' %}">Все заказы</a></p>
+                        <p><a class="button button-dark" href="{% url 'accounts:orders' %}">{% if LANGUAGE_CODE == 'en' %}All orders{% else %}Все заказы{% endif %}</a></p>
                     {% else %}
                         <div class="account-empty">
                             <span class="account-empty-mark" aria-hidden="true">◇</span>
-                            <h3>Заказов пока нет</h3>
-                            <p>Когда вы оформите заказ, здесь появится информация о его статусе.</p>
-                            <a class="button button-dark" href="{% url 'catalog:category_list' %}">Перейти в каталог</a>
+                            <h3>{% if LANGUAGE_CODE == 'en' %}No orders yet{% else %}Заказов пока нет{% endif %}</h3>
+                            <p>{% if LANGUAGE_CODE == 'en' %}Once you place an order, its status will appear here.{% else %}Когда вы оформите заказ, здесь появится информация о его статусе.{% endif %}</p>
+                            <a class="button button-dark" href="{% url 'catalog:category_list' %}">{% if LANGUAGE_CODE == 'en' %}Browse catalog{% else %}Перейти в каталог{% endif %}</a>
                         </div>
                     {% endif %}
                 </section>

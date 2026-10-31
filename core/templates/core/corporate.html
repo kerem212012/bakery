@@ -1,42 +1,42 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Партнёрство с Лукоморье — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Partner with Lukomorye{% else %}Партнёрство с Лукоморье — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <div class="partnership-page">
-        <nav class="about-breadcrumbs" aria-label="Хлебные крошки">
-            <a href="{% url 'home' %}">Главная</a>
+        <nav class="about-breadcrumbs" aria-label="{% if LANGUAGE_CODE == 'en' %}Breadcrumbs{% else %}Хлебные крошки{% endif %}">
+            <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
             <span aria-hidden="true">/</span>
-            <span aria-current="page">Партнёрство</span>
+            <span aria-current="page">{% if LANGUAGE_CODE == 'en' %}Partnership{% else %}Партнёрство{% endif %}</span>
         </nav>
 
         <section class="partnership-hero" aria-labelledby="partnership-heading">
             <div class="partnership-hero-copy">
-                <p class="partnership-kicker">Главная / Партнёрство</p>
-                <h1 id="partnership-heading">Партнёрство с Лукоморье</h1>
-                <p class="partnership-subtitle">Открыты к сотрудничеству<br>и новым возможностям</p>
-                <p class="partnership-description">Мы ценим интерес к нашему бренду и всегда открыты к сотрудничеству. Заполните форму, и наш менеджер свяжется с вами для обсуждения перспектив партнёрства.</p>
+                <p class="partnership-kicker">{% if LANGUAGE_CODE == 'en' %}Home / Partnership{% else %}Главная / Партнёрство{% endif %}</p>
+                <h1 id="partnership-heading">{% if LANGUAGE_CODE == 'en' %}Partner with Lukomorye{% else %}Партнёрство с Лукоморье{% endif %}</h1>
+                <p class="partnership-subtitle">{% if LANGUAGE_CODE == 'en' %}Open to collaboration<br>and new opportunities{% else %}Открыты к сотрудничеству<br>и новым возможностям{% endif %}</p>
+                <p class="partnership-description">{% if LANGUAGE_CODE == 'en' %}We value your interest in our brand and welcome new partnerships. Get in touch, and our manager will discuss the opportunities with you.{% else %}Мы ценим интерес к нашему бренду и всегда открыты к сотрудничеству. Заполните форму, и наш менеджер свяжется с вами для обсуждения перспектив партнёрства.{% endif %}</p>
                 <a class="button button-dark" href="mailto:hello@lukomorye.example?subject=Стать%20партнёром">
-                    Стать партнёром <span aria-hidden="true">→</span>
+                    {% if LANGUAGE_CODE == 'en' %}Become a partner{% else %}Стать партнёром{% endif %} <span aria-hidden="true">→</span>
                 </a>
             </div>
-            <div class="partnership-hero-media" role="img" aria-label="Подарочные наборы с пряниками в коробке"></div>
+            <div class="partnership-hero-media" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift boxes with gingerbread{% else %}Подарочные наборы с пряниками в коробке{% endif %}"></div>
         </section>
 
         <section class="partnership-directions" aria-labelledby="partnership-directions-heading">
             <header class="partnership-section-heading">
                 <span class="partnership-section-rule" aria-hidden="true"></span>
-                <h2 id="partnership-directions-heading">Направления сотрудничества</h2>
+                <h2 id="partnership-directions-heading">{% if LANGUAGE_CODE == 'en' %}Partnership opportunities{% else %}Направления сотрудничества{% endif %}</h2>
                 <span class="partnership-section-rule" aria-hidden="true"></span>
             </header>
-            <p class="partnership-section-copy">Мы предлагаем гибкие условия и открыты к разным форматам партнёрства.</p>
+            <p class="partnership-section-copy">{% if LANGUAGE_CODE == 'en' %}We offer flexible terms and welcome different types of partnerships.{% else %}Мы предлагаем гибкие условия и открыты к разным форматам партнёрства.{% endif %}</p>
 
             <div class="partnership-card-grid">
                 <article class="partnership-card">
                     <div class="partnership-card-visual partnership-visual-franchise"></div>
                     <div class="partnership-card-content">
-                        <h3>Франшиза</h3>
-                        <p>Готовая бизнес-модель и поддержка на всех этапах запуска.</p>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Franchise{% else %}Франшиза{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}A proven business model and support at every stage of launch.{% else %}Готовая бизнес-модель и поддержка на всех этапах запуска.{% endif %}</p>
                     </div>
                     <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
@@ -44,8 +44,8 @@
                 <article class="partnership-card">
                     <div class="partnership-card-visual partnership-visual-ad"></div>
                     <div class="partnership-card-content">
-                        <h3>Реклама и сотрудничество</h3>
-                        <p>Совместные проекты, размещение рекламы и интеграции в события.</p>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Advertising and collaboration{% else %}Реклама и сотрудничество{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}Joint projects, advertising placements, and event partnerships.{% else %}Совместные проекты, размещение рекламы и интеграции в события.{% endif %}</p>
                     </div>
                     <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
@@ -53,8 +53,8 @@
                 <article class="partnership-card">
                     <div class="partnership-card-visual partnership-visual-space"></div>
                     <div class="partnership-card-content">
-                        <h3>Предложение коммерческих площадей</h3>
-                        <p>Рассматриваем размещение в ТЦ, магазинах и других торговых точках.</p>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Commercial spaces{% else %}Предложение коммерческих площадей{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}We consider locations in shopping centers, stores, and other retail spaces.{% else %}Рассматриваем размещение в ТЦ, магазинах и других торговых точках.{% endif %}</p>
                     </div>
                     <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
@@ -62,8 +62,8 @@
                 <article class="partnership-card">
                     <div class="partnership-card-visual partnership-visual-bloggers"></div>
                     <div class="partnership-card-content">
-                        <h3>Блогерам и стилистам</h3>
-                        <p>Проводим совместные коллекции, продукты и специальные предложения.</p>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Creators and stylists{% else %}Блогерам и стилистам{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}We create joint collections, products, and special offers.{% else %}Проводим совместные коллекции, продукты и специальные предложения.{% endif %}</p>
                     </div>
                     <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
@@ -71,8 +71,8 @@
                 <article class="partnership-card">
                     <div class="partnership-card-visual partnership-visual-suppliers"></div>
                     <div class="partnership-card-content">
-                        <h3>Производителям и поставщикам</h3>
-                        <p>Рассматриваем сотрудничество с сырьём, упаковкой и оборудованием.</p>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Manufacturers and suppliers{% else %}Производителям и поставщикам{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}We welcome partners in ingredients, packaging, and equipment.{% else %}Рассматриваем сотрудничество с сырьём, упаковкой и оборудованием.{% endif %}</p>
                     </div>
                     <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
@@ -80,8 +80,8 @@
                 <article class="partnership-card">
                     <div class="partnership-card-visual partnership-visual-logistics"></div>
                     <div class="partnership-card-content">
-                        <h3>Курьерским и логистическим службам</h3>
-                        <p>Открыты к партнёрству в сфере доставки по Москве, России и за рубеж.</p>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Courier and logistics services{% else %}Курьерским и логистическим службам{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}We welcome delivery partnerships in Moscow, across Russia, and internationally.{% else %}Открыты к партнёрству в сфере доставки по Москве, России и за рубеж.{% endif %}</p>
                     </div>
                     <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
@@ -91,43 +91,42 @@
         <section class="partnership-success" aria-labelledby="partnership-success-heading">
             <header class="partnership-section-heading">
                 <span class="partnership-section-rule" aria-hidden="true"></span>
-                <h2 id="partnership-success-heading">Наши успехи — ваши возможности</h2>
+                <h2 id="partnership-success-heading">{% if LANGUAGE_CODE == 'en' %}Our success creates opportunities{% else %}Наши успехи — ваши возможности{% endif %}</h2>
                 <span class="partnership-section-rule" aria-hidden="true"></span>
             </header>
-            <p class="partnership-section-copy">Мы не останавливаемся на достигнутом и развиваем бренд вместе с партнёрами.</p>
+            <p class="partnership-section-copy">{% if LANGUAGE_CODE == 'en' %}We keep growing and building our brand together with our partners.{% else %}Мы не останавливаемся на достигнутом и развиваем бренд вместе с партнёрами.{% endif %}</p>
 
             <div class="partnership-stats">
                 <div class="partnership-stat">
                     <strong>3+</strong>
-                    <span>миллиона человек<br>уже вовлечены в социальные сети</span>
+                    <span>{% if LANGUAGE_CODE == 'en' %}million people<br>engaged on social media{% else %}миллиона человек<br>уже вовлечены в социальные сети{% endif %}</span>
                 </div>
                 <div class="partnership-stat">
                     <strong>10 000+</strong>
-                    <span>ежедневных посетителей<br>на нашем сайте</span>
+                    <span>{% if LANGUAGE_CODE == 'en' %}daily visitors<br>to our website{% else %}ежедневных посетителей<br>на нашем сайте{% endif %}</span>
                 </div>
                 <div class="partnership-stat">
-                    <strong>в 2 раза</strong>
-                    <span>растёт выручка в России<br>уже год</span>
+                    <strong>{% if LANGUAGE_CODE == 'en' %}2×{% else %}в 2 раза{% endif %}</strong>
+                    <span>{% if LANGUAGE_CODE == 'en' %}revenue growth in Russia<br>over the past year{% else %}растёт выручка в России<br>уже год{% endif %}</span>
                 </div>
                 <div class="partnership-stat">
                     <strong>15%</strong>
-                    <span>в среднем увеличивается<br>чек при совместных проектах</span>
+                    <span>{% if LANGUAGE_CODE == 'en' %}average increase in<br>spend on joint projects{% else %}в среднем увеличивается<br>чек при совместных проектах{% endif %}</span>
                 </div>
             </div>
 
-            <p class="partnership-summary">Многолетний опыт в работе с брендами, высокий уровень качества и постоянный интерес к новому формату партнёрства — всё это делает сотрудничество с Лукоморье выгодным и перспективным.</p>
+            <p class="partnership-summary">{% if LANGUAGE_CODE == 'en' %}Our experience working with brands, high quality standards, and openness to new ideas make a partnership with Lukomorye promising and rewarding.{% else %}Многолетний опыт в работе с брендами, высокий уровень качества и постоянный интерес к новому формату партнёрства — всё это делает сотрудничество с Лукоморье выгодным и перспективным.{% endif %}</p>
 
             <div class="partnership-cta-wrap">
                 <a class="button button-dark partnership-button" href="mailto:hello@lukomorye.example?subject=Стать%20партнёром">
-                    Стать партнёром <span aria-hidden="true">→</span>
+                    {% if LANGUAGE_CODE == 'en' %}Become a partner{% else %}Стать партнёром{% endif %} <span aria-hidden="true">→</span>
                 </a>
             </div>
         </section>
 
         <div class="partnership-note">
             <span class="partnership-note-icon" aria-hidden="true">✦</span>
-            <p>Персональные предложения, выгодный доступ к новым коллекциям и скидка 5% на первые заказы при подготовке и запуске сотрудничества.</p>
+            <p>{% if LANGUAGE_CODE == 'en' %}Enjoy exclusive offers, early access to new collections, and 5% off your first orders when we launch our partnership.{% else %}Персональные предложения, выгодный доступ к новым коллекциям и скидка 5% на первые заказы при подготовке и запуске сотрудничества.{% endif %}</p>
         </div>
     </div>
 {% endblock %}
-

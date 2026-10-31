@@ -1,13 +1,13 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Мои данные — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}My details — Lukomorye{% else %}Мои данные — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <section class="account-page">
         <div class="account-heading">
-            <p class="eyebrow">Ваше пространство</p>
-            <h1>Мои данные</h1>
-            <p>Управляйте именем и контактной информацией вашего аккаунта.</p>
+            <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Your account{% else %}Ваше пространство{% endif %}</p>
+            <h1>{% if LANGUAGE_CODE == 'en' %}My details{% else %}Мои данные{% endif %}</h1>
+            <p>{% if LANGUAGE_CODE == 'en' %}Manage your name and contact information.{% else %}Управляйте именем и контактной информацией вашего аккаунта.{% endif %}</p>
         </div>
 
         {% include "user/_account_messages.html" %}
@@ -17,7 +17,7 @@
             <div class="account-content">
                 <section class="account-panel">
                     <div class="account-panel-heading">
-                        <div><p class="eyebrow">Личные данные</p><h2>Мой профиль</h2></div>
+                        <div><p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Personal details{% else %}Личные данные{% endif %}</p><h2>{% if LANGUAGE_CODE == 'en' %}My profile{% else %}Мой профиль{% endif %}</h2></div>
                     </div>
                     <form method="post" class="account-form profile-form">
                         {% csrf_token %}
@@ -28,7 +28,7 @@
                                 {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
                             </div>
                         {% endfor %}
-                        <button class="button button-dark" type="submit">Сохранить изменения</button>
+                        <button class="button button-dark" type="submit">{% if LANGUAGE_CODE == 'en' %}Save changes{% else %}Сохранить изменения{% endif %}</button>
                     </form>
                 </section>
             </div>

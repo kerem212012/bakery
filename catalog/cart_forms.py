@@ -1,6 +1,11 @@
 from django import forms
+from django.utils.translation import get_language
 
-from core.calculator import DELIVERY_CHOICES, PAYMENT_CHOICES
+from core.calculator import (
+    DELIVERY_CHOICES,
+    PAYMENT_CHOICES,
+    localized_choices,
+)
 from core.forms import MultipleFileField
 
 
@@ -12,6 +17,7 @@ COATING_OPTIONS = (
     ("chocolate", "Шоколадное"),
     ("none", "Без покрытия"),
 )
+
 DOUGH_OPTIONS = (
     ("classic", "Классическое"),
     ("chocolate", "Шоколадное"),
@@ -26,6 +32,36 @@ PACKAGING_OPTIONS = (
 )
 
 
+def localized_cart_options(options, group):
+    translations = {
+        "coating": {
+            "painting": "Hand-painted icing",
+            "printing": "Printed icing",
+            "classic": "Classic",
+            "chocolate": "Chocolate",
+            "none": "No coating",
+        },
+        "dough": {
+            "classic": "Classic",
+            "chocolate": "Chocolate",
+            "vanilla": "Vanilla",
+            "spiced": "Spiced",
+        },
+        "packaging": {
+            "gift_box": "Gift box",
+            "kraft_box": "Kraft box",
+            "individual": "Custom packaging",
+            "none": "No packaging",
+        },
+    }
+    if get_language() != "en":
+        return options
+    return tuple(
+        (value, translations[group].get(value, label))
+        for value, label in options
+    )
+
+
 class CartItemForm(forms.Form):
     quantity = forms.IntegerField(min_value=1, max_value=99, initial=1)
     size = forms.ChoiceField(
@@ -35,6 +71,19 @@ class CartItemForm(forms.Form):
     coating = forms.ChoiceField(choices=COATING_OPTIONS, initial="painting")
     dough = forms.ChoiceField(choices=DOUGH_OPTIONS, initial="classic")
     packaging = forms.ChoiceField(choices=PACKAGING_OPTIONS, initial="gift_box")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if get_language() == "en":
+            self.fields["size"].choices = tuple(
+                (size, f"{size} cm") for size in SIZE_OPTIONS
+            )
+        self.fields["coating"].choices = localized_cart_options(COATING_OPTIONS, "coating")
+        self.fields["dough"].choices = localized_cart_options(DOUGH_OPTIONS, "dough")
+        self.fields["packaging"].choices = localized_cart_options(
+            PACKAGING_OPTIONS,
+            "packaging",
+        )
 
 
 class CartCheckoutForm(forms.Form):
@@ -64,5 +113,23 @@ class CartCheckoutForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         if cleaned_data.get("delivery") != "pickup" and not cleaned_data.get("address"):
-            self.add_error("address", "Укажите адрес доставки.")
+            message = (
+                "Enter a delivery address."
+                if get_language() == "en"
+                else "Укажите адрес доставки."
+            )
+            self.add_error("address", message)
         return cleaned_data
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["delivery"].choices = localized_choices(DELIVERY_CHOICES, "delivery")
+        self.fields["payment"].choices = localized_choices(PAYMENT_CHOICES, "payment")
+        if get_language() == "en":
+            self.fields["consent_given"].error_messages["required"] = (
+                "You must agree to the processing of your personal data."
+            )
+            self.fields["name"].widget.attrs["placeholder"] = "Your name"
+            self.fields["email"].widget.attrs["placeholder"] = "Enter your email"
+            self.fields["address"].widget.attrs["placeholder"] = "Address and preferred time"
+            self.fields["comment"].widget.attrs["placeholder"] = "Add a comment"

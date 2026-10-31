@@ -1,53 +1,53 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Варианты упаковки — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Packaging options — Lukomorye{% else %}Варианты упаковки — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <div class="packaging-page">
-        <nav class="about-breadcrumbs" aria-label="Хлебные крошки">
-            <a href="{% url 'home' %}">Главная</a>
+        <nav class="about-breadcrumbs" aria-label="{% if LANGUAGE_CODE == 'en' %}Breadcrumbs{% else %}Хлебные крошки{% endif %}">
+            <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
             <span aria-hidden="true">/</span>
-            <span aria-current="page">Варианты упаковки</span>
+            <span aria-current="page">{% if LANGUAGE_CODE == 'en' %}Packaging options{% else %}Варианты упаковки{% endif %}</span>
         </nav>
 
         <section class="packaging-hero" aria-labelledby="packaging-heading">
             <div class="packaging-hero-copy">
-                <h1 id="packaging-heading">Варианты упаковки</h1>
-                <p>Подбираем упаковку под ваш повод, формат заказа и фирменный стиль.</p>
+                <h1 id="packaging-heading">{% if LANGUAGE_CODE == 'en' %}Packaging options{% else %}Варианты упаковки{% endif %}</h1>
+                <p>{% if LANGUAGE_CODE == 'en' %}We choose packaging to suit your occasion, order, and brand style.{% else %}Подбираем упаковку под ваш повод, формат заказа и фирменный стиль.{% endif %}</p>
             </div>
-            <div class="packaging-hero-image" role="img" aria-label="Набор подарочных пряников в мягкой романтической упаковке"></div>
+            <div class="packaging-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift gingerbread set in elegant packaging{% else %}Набор подарочных пряников в мягкой романтической упаковке{% endif %}"></div>
         </section>
 
         <section class="packaging-section" aria-labelledby="packaging-main-heading">
             <header class="packaging-section-header">
-                <h2 id="packaging-main-heading">Основные варианты упаковки</h2>
+                <h2 id="packaging-main-heading">{% if LANGUAGE_CODE == 'en' %}Packaging options{% else %}Основные варианты упаковки{% endif %}</h2>
             </header>
             <div class="packaging-grid">
                 <article class="packaging-card">
-                    <div class="packaging-preview packaging-preview-individual" role="img" aria-label="Индивидуальная упаковка"></div>
+                    <div class="packaging-preview packaging-preview-individual" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Custom packaging{% else %}Индивидуальная упаковка{% endif %}"></div>
                     <div class="packaging-card-copy">
-                        <h3>Индивидуальная упаковка</h3>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Custom packaging{% else %}Индивидуальная упаковка{% endif %}</h3>
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
                 <article class="packaging-card">
-                    <div class="packaging-preview packaging-preview-craft" role="img" aria-label="Крафтовая коробка"></div>
+                    <div class="packaging-preview packaging-preview-craft" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Kraft box{% else %}Крафтовая коробка{% endif %}"></div>
                     <div class="packaging-card-copy">
-                        <h3>Крафтовая коробка</h3>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Kraft box{% else %}Крафтовая коробка{% endif %}</h3>
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
                 <article class="packaging-card">
-                    <div class="packaging-preview packaging-preview-box" role="img" aria-label="Коробка с окном"></div>
+                    <div class="packaging-preview packaging-preview-box" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Window box{% else %}Коробка с окном{% endif %}"></div>
                     <div class="packaging-card-copy">
-                        <h3>Коробка с окном</h3>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Window box{% else %}Коробка с окном{% endif %}</h3>
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
                 <article class="packaging-card">
-                    <div class="packaging-preview packaging-preview-premium" role="img" aria-label="Премиальная коробка"></div>
+                    <div class="packaging-preview packaging-preview-premium" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Premium box{% else %}Премиальная коробка{% endif %}"></div>
                     <div class="packaging-card-copy">
-                        <h3>Премиальная коробка</h3>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Premium box{% else %}Премиальная коробка{% endif %}</h3>
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
@@ -56,28 +56,28 @@
 
         <section class="packaging-section" aria-labelledby="packaging-named-heading">
             <header class="packaging-section-header">
-                <h2 id="packaging-named-heading">Упаковка для наборов</h2>
-                <p>Собираем подарочные наборы в различных вариантах упаковки с учётом ваших пожеланий и формата мероприятия.</p>
+                <h2 id="packaging-named-heading">{% if LANGUAGE_CODE == 'en' %}Packaging for gift sets{% else %}Упаковка для наборов{% endif %}</h2>
+                <p>{% if LANGUAGE_CODE == 'en' %}We prepare gift sets in a range of packaging options to suit your wishes and event.{% else %}Собираем подарочные наборы в различных вариантах упаковки с учётом ваших пожеланий и формата мероприятия.{% endif %}</p>
             </header>
             <div class="packaging-grid">
                 <article class="packaging-card">
-                    <div class="packaging-preview packaging-preview-round" role="img" aria-label="Круглая коробка"></div>
+                    <div class="packaging-preview packaging-preview-round" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Round box{% else %}Круглая коробка{% endif %}"></div>
                     <div class="packaging-card-copy">
-                        <h3>Круглая коробка</h3>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Round box{% else %}Круглая коробка{% endif %}</h3>
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
                 <article class="packaging-card">
-                    <div class="packaging-preview packaging-preview-gift" role="img" aria-label="Подарочный набор"></div>
+                    <div class="packaging-preview packaging-preview-gift" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift set{% else %}Подарочный набор{% endif %}"></div>
                     <div class="packaging-card-copy">
-                        <h3>Подарочный набор</h3>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Gift set{% else %}Подарочный набор{% endif %}</h3>
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
                 <article class="packaging-card">
-                    <div class="packaging-preview packaging-preview-transport" role="img" aria-label="Транспортная упаковка"></div>
+                    <div class="packaging-preview packaging-preview-transport" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Shipping packaging{% else %}Транспортная упаковка{% endif %}"></div>
                     <div class="packaging-card-copy">
-                        <h3>Транспортная упаковка</h3>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Shipping packaging{% else %}Транспортная упаковка{% endif %}</h3>
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
@@ -86,27 +86,27 @@
 
         <section class="packaging-section packaging-section-last" aria-labelledby="packaging-extra-heading">
             <header class="packaging-section-header">
-                <h2 id="packaging-extra-heading">Дополнительные варианты</h2>
+                <h2 id="packaging-extra-heading">{% if LANGUAGE_CODE == 'en' %}Additional options{% else %}Дополнительные варианты{% endif %}</h2>
             </header>
             <div class="packaging-grid">
                 <article class="packaging-card">
-                    <div class="packaging-preview packaging-preview-brand" role="img" aria-label="Коробка с брендированием"></div>
+                    <div class="packaging-preview packaging-preview-brand" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Branded box{% else %}Коробка с брендированием{% endif %}"></div>
                     <div class="packaging-card-copy">
-                        <h3>Коробка с брендированием</h3>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Branded box{% else %}Коробка с брендированием{% endif %}</h3>
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
                 <article class="packaging-card">
-                    <div class="packaging-preview packaging-preview-plain" role="img" aria-label="Узкая коробка"></div>
+                    <div class="packaging-preview packaging-preview-plain" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Slim box{% else %}Узкая коробка{% endif %}"></div>
                     <div class="packaging-card-copy">
-                        <h3>Узкая коробка</h3>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Slim box{% else %}Узкая коробка{% endif %}</h3>
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
                 <article class="packaging-card">
-                    <div class="packaging-preview packaging-preview-mini" role="img" aria-label="Мини-коробка"></div>
+                    <div class="packaging-preview packaging-preview-mini" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Mini box{% else %}Мини-коробка{% endif %}"></div>
                     <div class="packaging-card-copy">
-                        <h3>Мини-коробка</h3>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Mini box{% else %}Мини-коробка{% endif %}</h3>
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>

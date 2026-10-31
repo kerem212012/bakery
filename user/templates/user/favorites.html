@@ -1,17 +1,27 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Избранное — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Favorites — Lukomorye{% else %}Избранное — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
-    <section class="favorites-page" aria-label="Избранное">
+    <section class="account-page">
+        <div class="account-heading">
+            <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Your account{% else %}Ваше пространство{% endif %}</p>
+            <h1>{% if LANGUAGE_CODE == 'en' %}Favorites{% else %}Избранное{% endif %}</h1>
+        </div>
+        {% include "user/_account_messages.html" %}
+        <div class="account-layout">
+            {% with account_active="favorites" %}
+                {% include "user/_account_sidebar.html" %}
+            {% endwith %}
+            <div class="account-content">
+                <section class="favorites-page" aria-label="{% if LANGUAGE_CODE == 'en' %}Favorites{% else %}Избранное{% endif %}">
         <header class="favorites-header">
-            <h1>Избранное</h1>
-            <span>{{ favorites|length }} товара</span>
+            <span>{{ favorites|length }} {% if LANGUAGE_CODE == 'en' %}items{% else %}товара{% endif %}</span>
         </header>
 
-        <div class="favorites-toolbar" aria-label="Поиск в избранном">
+        <div class="favorites-toolbar" aria-label="{% if LANGUAGE_CODE == 'en' %}Search favorites{% else %}Поиск в избранном{% endif %}">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg>
-            <input type="search" placeholder="Поиск в избранном" aria-label="Поиск в избранном" />
+            <input type="search" placeholder="{% if LANGUAGE_CODE == 'en' %}Search favorites{% else %}Поиск в избранном{% endif %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Search favorites{% else %}Поиск в избранном{% endif %}" />
         </div>
 
         <div class="favorites-grid">
@@ -20,7 +30,7 @@
                     <div class="favorite-image-wrap">
                         <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">
                             {% if product.image_url %}
-                                <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+                                <img src="{{ product.image_url }}" alt="{{ product.localized_name }}" loading="lazy">
                             {% else %}
                                 <span class="catalog-product-placeholder" aria-hidden="true"></span>
                             {% endif %}
@@ -28,39 +38,39 @@
                         <form class="favorite-toggle-form" method="post" action="{% url 'catalog:toggle_favorite' product.pk %}">
                             {% csrf_token %}
                             <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <button class="favorite-heart is-active" type="submit" aria-label="Убрать из избранного" aria-pressed="true">♥</button>
+                            <button class="favorite-heart is-active" type="submit" aria-label="{% if LANGUAGE_CODE == 'en' %}Remove from favorites{% else %}Убрать из избранного{% endif %}" aria-pressed="true">♥</button>
                         </form>
                     </div>
 
                     <div class="favorite-card-body">
-                        <h2><a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">{{ product.name }}</a></h2>
-                        <p class="favorite-price">от <span data-size-price data-base-price="{{ product.price|default:'1490' }}">{{ product.price|default:"1490" }}</span> ₽ / 1 шт</p>
+                        <h2><a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">{{ product.localized_name }}</a></h2>
+                        <p class="favorite-price">{% if LANGUAGE_CODE == 'en' %}from{% else %}от{% endif %} <span data-size-price data-base-price="{{ product.price|default:'1490'|floatformat:'2u' }}">{{ product.price|default:"1490"|floatformat:"2u" }}</span> ₽ / 1 {% if LANGUAGE_CODE == 'en' %}pc{% else %}шт{% endif %}</p>
 
                         <form class="favorite-add-form" method="post" action="{% url 'catalog:add_to_cart' product.pk %}">
                             {% csrf_token %}
                             <div class="favorite-meta">
                             <div class="favorite-row">
-                                <span>Размер</span>
-                                <select name="size" data-size-price-control aria-label="Выбрать размер для {{ product.name }}">
-                                    <option value="8" selected>8 см</option>
-                                    <option value="10">10 см</option>
-                                    <option value="12">12 см</option>
-                                    <option value="15">15 см</option>
+                                <span>{% if LANGUAGE_CODE == 'en' %}Size{% else %}Размер{% endif %}</span>
+                                <select name="size" data-size-price-control aria-label="{% if LANGUAGE_CODE == 'en' %}Select size for{% else %}Выберите размер для{% endif %} {{ product.localized_name }}">
+                                    <option value="8" selected>8 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</option>
+                                    <option value="10">10 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</option>
+                                    <option value="12">12 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</option>
+                                    <option value="15">15 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</option>
                                 </select>
                             </div>
                             <div class="favorite-row">
-                                <span>Покрытие</span>
-                                <select name="coating" aria-label="Выбрать покрытие для {{ product.name }}">
-                                    <option value="painting">Роспись на айсинге</option>
-                                    <option value="printing">Печать на айсинге</option>
-                                    <option value="classic">Классическое</option>
+                                <span>{% if LANGUAGE_CODE == 'en' %}Icing{% else %}Покрытие{% endif %}</span>
+                                <select name="coating" aria-label="{% if LANGUAGE_CODE == 'en' %}Select icing for{% else %}Выберите покрытие для{% endif %} {{ product.localized_name }}">
+                                    <option value="painting">{% if LANGUAGE_CODE == 'en' %}Hand-painted icing{% else %}Роспись на айсинге{% endif %}</option>
+                                    <option value="printing">{% if LANGUAGE_CODE == 'en' %}Printed icing{% else %}Печать на айсинге{% endif %}</option>
+                                    <option value="classic">{% if LANGUAGE_CODE == 'en' %}Classic{% else %}Классическое{% endif %}</option>
                                 </select>
                             </div>
                             <div class="favorite-row">
-                                <span>Вид теста</span>
-                                <select name="dough" aria-label="Выбрать вид теста для {{ product.name }}">
-                                    <option value="classic">Классическое</option>
-                                    <option value="chocolate">Шоколадное</option>
+                                <span>{% if LANGUAGE_CODE == 'en' %}Dough{% else %}Вид теста{% endif %}</span>
+                                <select name="dough" aria-label="{% if LANGUAGE_CODE == 'en' %}Select dough for{% else %}Выберите тесто для{% endif %} {{ product.localized_name }}">
+                                    <option value="classic">{% if LANGUAGE_CODE == 'en' %}Classic{% else %}Классическое{% endif %}</option>
+                                    <option value="chocolate">{% if LANGUAGE_CODE == 'en' %}Chocolate{% else %}Шоколадное{% endif %}</option>
                                 </select>
                             </div>
                         </div>
@@ -68,17 +78,20 @@
                         <div class="favorite-bottom-row">
                             <input type="hidden" name="packaging" value="gift_box">
                             <label class="favorite-qty">
-                                <span class="visually-hidden">Количество товара</span>
+                                <span class="visually-hidden">{% if LANGUAGE_CODE == 'en' %}Product quantity{% else %}Количество товара{% endif %}</span>
                                 <input type="number" name="quantity" min="1" max="99" value="1">
                             </label>
-                            <button class="favorite-cart" type="submit">В корзину</button>
+                            <button class="favorite-cart" type="submit">{% if LANGUAGE_CODE == 'en' %}Add to cart{% else %}В корзину{% endif %}</button>
                         </div>
                         </form>
                     </div>
                 </article>
             {% empty %}
-                <p class="favorites-empty">В избранном пока пусто. Нажмите на сердечко в каталоге, чтобы сохранить товар.</p>
+                <p class="favorites-empty">{% if LANGUAGE_CODE == 'en' %}Your favorites are empty. Tap the heart in the catalog to save a product.{% else %}В избранном пока пусто. Нажмите на сердечко в каталоге, чтобы сохранить товар.{% endif %}</p>
             {% endfor %}
+        </div>
+                </section>
+            </div>
         </div>
     </section>
 {% endblock %}

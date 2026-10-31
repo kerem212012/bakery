@@ -8,6 +8,7 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.translation import get_language
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
@@ -22,6 +23,7 @@ from .cart_forms import (
     SIZE_OPTIONS,
     CartCheckoutForm,
     CartItemForm,
+    localized_cart_options,
 )
 from .favorites import get_favorite_ids
 from .forms import CatalogFilterForm
@@ -53,9 +55,9 @@ def _cart_items(request):
     items = []
     stale_ids = []
     labels = {
-        "coating": dict(COATING_OPTIONS),
-        "dough": dict(DOUGH_OPTIONS),
-        "packaging": dict(PACKAGING_OPTIONS),
+        "coating": dict(localized_cart_options(COATING_OPTIONS, "coating")),
+        "dough": dict(localized_cart_options(DOUGH_OPTIONS, "dough")),
+        "packaging": dict(localized_cart_options(PACKAGING_OPTIONS, "packaging")),
     }
 
     for item_id, item in cart.items():
@@ -131,7 +133,7 @@ def _cart_context(request, form=None):
         "packaging_options": PACKAGING_OPTIONS,
         "delivery_options": tuple(
             (value, label, DELIVERY_COSTS[value])
-            for value, label in CartCheckoutForm.base_fields["delivery"].choices
+            for value, label in (form or CartCheckoutForm()).fields["delivery"].choices
         ),
     }
 
@@ -150,7 +152,7 @@ def cart(request):
                 "items": [
                     {
                         "product_id": item["product"].pk,
-                        "name": item["product"].name,
+                        "name": item["product"].localized_name,
                         "quantity": item["quantity"],
                         "size": item["size"],
                         "coating": item["coating"],
@@ -317,16 +319,26 @@ def category_list(request):
                 if connection.vendor == "sqlite":
                     matching_ids = [
                         product_id
-                        for product_id, name in products.values_list("pk", "name")
-                        if query.casefold() in name.casefold()
+                        for product_id, name, english_name in products.values_list(
+                            "pk", "name", "name_en"
+                        )
+                        if query.casefold()
+                        in (english_name if get_language() == "en" and english_name else name).casefold()
                     ]
                     products = products.filter(pk__in=matching_ids)
                 else:
-                    products = products.filter(name__icontains=query)
+                    products = products.filter(
+                        Q(name_en__icontains=query)
+                        if get_language() == "en"
+                        else Q(name__icontains=query)
+                    )
             else:
-                products = products.filter(
-                    Q(name__icontains=query) | Q(description__icontains=query)
-                )
+                search_fields = Q(name__icontains=query) | Q(description__icontains=query)
+                if get_language() == "en":
+                    search_fields |= Q(name_en__icontains=query) | Q(
+                        description_en__icontains=query
+                    )
+                products = products.filter(search_fields)
         if selected_categories:
             products = products.filter(category__in=selected_categories)
         if min_price is not None:
@@ -371,15 +383,25 @@ def category_list(request):
         field: request.GET.getlist(field)
         for field in ("sizes", "coatings", "doughs", "colors", "occasions", "packaging")
     }
+    filter_type_labels = dict(ProductFilterOption.FilterType.choices)
+    if get_language() == "en":
+        filter_type_labels = {
+            "size": "Size",
+            "coating": "Icing",
+            "dough": "Dough",
+            "color": "Color",
+            "occasion": "Occasion",
+            "packaging": "Packaging",
+        }
     filter_groups = [
         {
             "type": filter_type,
             "name": field_name,
-            "title": label,
+            "title": filter_type_labels[filter_type],
             "options": filter_options.filter(filter_type=filter_type),
             "selected_values": selected_filter_values[field_name],
         }
-        for (filter_type, label), field_name in zip(
+        for (filter_type, _label), field_name in zip(
             ProductFilterOption.FilterType.choices,
             ("sizes", "coatings", "doughs", "colors", "occasions", "packaging"),
         )

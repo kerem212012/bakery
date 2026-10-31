@@ -1,13 +1,13 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Вход — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Sign in — Lukomorye{% else %}Вход — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <section class="auth-layout">
         <div class="auth-card">
-            <p class="eyebrow">Рады видеть вас снова</p>
-            <h1>Войти в аккаунт</h1>
-            <p class="auth-intro">Войдите, чтобы посмотреть заказы и настройки профиля.</p>
+            <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Welcome back{% else %}Рады видеть вас снова{% endif %}</p>
+            <h1>{% if LANGUAGE_CODE == 'en' %}Sign in to your account{% else %}Войти в аккаунт{% endif %}</h1>
+            <p class="auth-intro">{% if LANGUAGE_CODE == 'en' %}Sign in to view your orders and profile settings.{% else %}Войдите, чтобы посмотреть заказы и настройки профиля.{% endif %}</p>
             {% if form.non_field_errors %}
                 <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
             {% endif %}
@@ -21,9 +21,9 @@
                         {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
                     </div>
                 {% endfor %}
-                <button class="button button-dark auth-submit" type="submit">Войти</button>
+                <button class="button button-dark auth-submit" type="submit">{% if LANGUAGE_CODE == 'en' %}Sign in{% else %}Войти{% endif %}</button>
             </form>
-            <p class="auth-switch">Ещё нет аккаунта? <a href="{% url 'accounts:register' %}">Зарегистрироваться</a></p>
+            <p class="auth-switch">{% if LANGUAGE_CODE == 'en' %}Don't have an account yet?{% else %}Ещё нет аккаунта?{% endif %} <a href="{% url 'accounts:register' %}">{% if LANGUAGE_CODE == 'en' %}Create one{% else %}Зарегистрироваться{% endif %}</a></p>
         </div>
     </section>
 {% endblock %}

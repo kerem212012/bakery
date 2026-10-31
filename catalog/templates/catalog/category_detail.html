@@ -1,47 +1,47 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}{{ category.name }} — каталог Лукоморья{% endblock %}
+{% block title %}{{ category.localized_name }} — {% if LANGUAGE_CODE == 'en' %}Lukomorye catalog{% else %}каталог Лукоморья{% endif %}{% endblock %}
 
 {% block content %}
     <section class="catalog-intro">
-        <a class="catalog-back-link" href="{% url 'catalog:categories' %}">← Все категории</a>
-        <p class="eyebrow">Каталог подарков</p>
-        <h1>{{ category.name }}</h1>
-        {% if category.description %}
-            <p>{{ category.description }}</p>
+        <a class="catalog-back-link" href="{% url 'catalog:categories' %}">← {% if LANGUAGE_CODE == 'en' %}All categories{% else %}Все категории{% endif %}</a>
+        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Gift catalog{% else %}Каталог подарков{% endif %}</p>
+        <h1>{{ category.localized_name }}</h1>
+        {% if category.localized_description %}
+            <p>{{ category.localized_description }}</p>
         {% endif %}
     </section>
 
-    <section class="catalog-product-grid" aria-label="Товары категории {{ category.name }}">
+    <section class="catalog-product-grid" aria-label="{% if LANGUAGE_CODE == 'en' %}{{ category.localized_name }} products{% else %}Товары категории {{ category.localized_name }}{% endif %}">
         {% for product in products %}
             <article class="catalog-product-card catalog-product-link">
                 <div class="catalog-product-image-wrap">
                     <a href="{% url 'catalog:product_detail' category.slug product.slug %}">
                         {% if product.image_url %}
-                            <img class="catalog-product-image" src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+                            <img class="catalog-product-image" src="{{ product.image_url }}" alt="{{ product.localized_name }}" loading="lazy">
                         {% else %}
-                            <div class="catalog-product-image catalog-product-placeholder" role="img" aria-label="{{ product.name }}"></div>
+                            <div class="catalog-product-image catalog-product-placeholder" role="img" aria-label="{{ product.localized_name }}"></div>
                         {% endif %}
                     </a>
                     <form class="favorite-toggle-form" method="post" action="{% url 'catalog:toggle_favorite' product.pk %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button class="catalog-favorite{% if product.pk in favorite_ids %} is-active{% endif %}" type="submit" aria-label="{% if product.pk in favorite_ids %}Убрать из избранного{% else %}Добавить в избранное{% endif %}" aria-pressed="{% if product.pk in favorite_ids %}true{% else %}false{% endif %}">{% if product.pk in favorite_ids %}♥{% else %}♡{% endif %}</button>
+                        <button class="catalog-favorite{% if product.pk in favorite_ids %} is-active{% endif %}" type="submit" aria-label="{% if LANGUAGE_CODE == 'en' %}{% if product.pk in favorite_ids %}Remove from favorites{% else %}Add to favorites{% endif %}{% else %}{% if product.pk in favorite_ids %}Убрать из избранного{% else %}Добавить в избранное{% endif %}{% endif %}" aria-pressed="{% if product.pk in favorite_ids %}true{% else %}false{% endif %}">{% if product.pk in favorite_ids %}♥{% else %}♡{% endif %}</button>
                     </form>
                 </div>
                 <div class="catalog-product-copy">
-                    <p class="eyebrow">{{ category.name }}</p>
-                    <h2><a href="{% url 'catalog:product_detail' category.slug product.slug %}">{{ product.name }}</a></h2>
-                    {% if product.description %}
-                        <p>{{ product.description }}</p>
+                    <p class="eyebrow">{{ category.localized_name }}</p>
+                    <h2><a href="{% url 'catalog:product_detail' category.slug product.slug %}">{{ product.localized_name }}</a></h2>
+                    {% if product.localized_description %}
+                        <p>{{ product.localized_description }}</p>
                     {% endif %}
                     {% if product.price %}
-                        <strong class="catalog-product-price">{{ product.price }} ₽</strong>
+                        <strong class="catalog-product-price">{{ product.price|floatformat:"2u" }} ₽</strong>
                     {% endif %}
                 </div>
             </article>
         {% empty %}
-            <p class="catalog-empty">В этой категории пока нет товаров.</p>
+            <p class="catalog-empty">{% if LANGUAGE_CODE == 'en' %}There are no products in this category yet.{% else %}В этой категории пока нет товаров.{% endif %}</p>
         {% endfor %}
     </section>
 {% endblock %}

@@ -5,17 +5,24 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
-from catalog.cart_forms import COATING_OPTIONS, DOUGH_OPTIONS, PACKAGING_OPTIONS
+from catalog.cart_forms import (
+    COATING_OPTIONS,
+    DOUGH_OPTIONS,
+    PACKAGING_OPTIONS,
+    localized_cart_options,
+)
 from catalog.favorites import get_favorite_ids
 from catalog.models import Product
-from core.calculator import DELIVERY_CHOICES, PAYMENT_CHOICES
+from core.calculator import DELIVERY_CHOICES, PAYMENT_CHOICES, localized_choices
 from core.models import Preorder
 
 from .forms import AccountProfileForm, DeliveryAddressForm, RegistrationForm
 from .models import CustomerProfile
 
 
-def _orders_count_label(count):
+def _orders_count_label(count, language_code="ru"):
+    if language_code == "en":
+        return f"{count} {'order' if count == 1 else 'orders'}"
     last_two_digits = count % 100
     last_digit = count % 10
     if 11 <= last_two_digits <= 14:
@@ -29,14 +36,26 @@ def _orders_count_label(count):
     return f"{count} {noun}"
 
 
-def _order_row(order):
+def _order_row(order, language_code="ru"):
     configuration = order.configuration if isinstance(order.configuration, dict) else {}
     items = configuration.get("items")
     if isinstance(items, list) and items:
+        order_items = [item for item in items if isinstance(item, dict)]
+        if language_code == "en":
+            product_ids = [
+                item.get("product_id")
+                for item in order_items
+                if isinstance(item.get("product_id"), int)
+            ]
+            products_by_id = {
+                product.pk: product
+                for product in Product.objects.filter(pk__in=product_ids)
+            }
+        else:
+            products_by_id = {}
         summary = ", ".join(
-            f'{item.get("name", "Товар")} × {item.get("quantity", 1)}'
-            for item in items
-            if isinstance(item, dict)
+            f'{products_by_id[item["product_id"]].localized_name if item.get("product_id") in products_by_id else item.get("name", "Product" if language_code == "en" else "Товар")} × {item.get("quantity", 1)}'
+            for item in order_items
         )
         item_count = sum(
             item.get("quantity", 1)
@@ -44,12 +63,32 @@ def _order_row(order):
             if isinstance(item, dict) and isinstance(item.get("quantity", 1), int)
         )
     else:
-        details = [f'{configuration.get("quantity", 1)} шт.']
+        quantity_label = "pcs" if language_code == "en" else "шт."
+        details = [f'{configuration.get("quantity", 1)} {quantity_label}']
         if configuration.get("size"):
-            details.append(f'{configuration["size"]} см')
+            size_unit = "cm" if language_code == "en" else "см"
+            details.append(f'{configuration["size"]} {size_unit}')
         summary = " · ".join(details)
         item_count = configuration.get("quantity", 1)
-    return {"order": order, "summary": summary, "item_count": item_count}
+    status_labels = {
+        "new": "Received",
+        "contacted": "Confirmed",
+        "confirmed": "Confirmed",
+        "production": "In production",
+        "shipping": "On the way",
+        "completed": "Delivered",
+        "cancelled": "Cancelled",
+    }
+    return {
+        "order": order,
+        "summary": summary,
+        "item_count": item_count,
+        "status_label": (
+            status_labels.get(order.status, order.get_status_display())
+            if language_code == "en"
+            else order.get_status_display()
+        ),
+    }
 
 
 def register(request):
@@ -60,7 +99,12 @@ def register(request):
     if request.method == "POST" and form.is_valid():
         user = form.save()
         login(request, user)
-        messages.success(request, "Аккаунт создан. Добро пожаловать!")
+        message = (
+            "Your account has been created. Welcome!"
+            if request.LANGUAGE_CODE == "en"
+            else "Аккаунт создан. Добро пожаловать!"
+        )
+        messages.success(request, message)
         return redirect("accounts:dashboard")
 
     return render(request, "user/register.html", {"form": form})
@@ -70,7 +114,7 @@ def register(request):
 def dashboard(request):
     orders = request.user.preorders.all()
     orders_count = orders.count()
-    recent_orders = [_order_row(order) for order in orders[:3]]
+    recent_orders = [_order_row(order, request.LANGUAGE_CODE) for order in orders[:3]]
     saved_address = CustomerProfile.objects.filter(user=request.user).values_list(
         "delivery_address", flat=True
     ).first()
@@ -79,9 +123,13 @@ def dashboard(request):
         "user/dashboard.html",
         {
             "orders_count": orders_count,
-            "orders_count_label": _orders_count_label(orders_count),
+            "orders_count_label": _orders_count_label(orders_count, request.LANGUAGE_CODE),
             "recent_orders": recent_orders,
-            "saved_address_label": "Сохранён" if saved_address else "—",
+            "saved_address_label": (
+                ("Saved" if request.LANGUAGE_CODE == "en" else "Сохранён")
+                if saved_address
+                else "—"
+            ),
         },
     )
 
@@ -96,11 +144,18 @@ def orders(request):
         {
             "account_active": "orders",
             "section_key": "orders",
-            "section_title": "Мои заказы",
-            "section_intro": "История ваших покупок и статусы заказов.",
-            "order_rows": [_order_row(order) for order in user_orders],
+            "section_title": "My orders" if request.LANGUAGE_CODE == "en" else "Мои заказы",
+            "section_intro": (
+                "Your purchase history and order statuses."
+                if request.LANGUAGE_CODE == "en"
+                else "История ваших покупок и статусы заказов."
+            ),
+            "order_rows": [
+                _order_row(order, request.LANGUAGE_CODE)
+                for order in user_orders
+            ],
             "orders_count": orders_count,
-            "orders_count_label": _orders_count_label(orders_count),
+            "orders_count_label": _orders_count_label(orders_count, request.LANGUAGE_CODE),
         },
     )
 
@@ -115,9 +170,9 @@ def order_detail(request, order_id):
     configuration = order.configuration if isinstance(order.configuration, dict) else {}
     configured_items = configuration.get("items")
     items = []
-    coating_labels = dict(COATING_OPTIONS)
-    dough_labels = dict(DOUGH_OPTIONS)
-    packaging_labels = dict(PACKAGING_OPTIONS)
+    coating_labels = dict(localized_cart_options(COATING_OPTIONS, "coating"))
+    dough_labels = dict(localized_cart_options(DOUGH_OPTIONS, "dough"))
+    packaging_labels = dict(localized_cart_options(PACKAGING_OPTIONS, "packaging"))
     if isinstance(configured_items, list) and configured_items:
         for configured_item in configured_items:
             if not isinstance(configured_item, dict):
@@ -129,9 +184,22 @@ def order_detail(request, order_id):
                 unit_price = Decimal(str(configured_item.get("unit_price", order.unit_price)))
             except (InvalidOperation, TypeError, ValueError):
                 unit_price = order.unit_price
+            product = (
+                Product.objects.filter(pk=configured_item.get("product_id")).first()
+                if request.LANGUAGE_CODE == "en"
+                and isinstance(configured_item.get("product_id"), int)
+                else None
+            )
             items.append(
                 {
-                    "name": configured_item.get("name", "Товар"),
+                    "name": (
+                        product.localized_name
+                        if product
+                        else configured_item.get(
+                            "name",
+                            "Product" if request.LANGUAGE_CODE == "en" else "Товар",
+                        )
+                    ),
                     "quantity": quantity,
                     "size": configured_item.get("size", ""),
                     "coating": coating_labels.get(
@@ -156,7 +224,11 @@ def order_detail(request, order_id):
             quantity = 1
         items.append(
             {
-                "name": "Индивидуальный заказ",
+                "name": (
+                    "Custom order"
+                    if request.LANGUAGE_CODE == "en"
+                    else "Индивидуальный заказ"
+                ),
                 "quantity": quantity,
                 "size": configuration.get("size", ""),
                 "coating": configuration.get("coating", ""),
@@ -168,11 +240,21 @@ def order_detail(request, order_id):
         )
 
     status_stages = (
-        (Preorder.Status.NEW, "Принят"),
-        (Preorder.Status.CONTACTED, "Подтверждён"),
-        (Preorder.Status.PRODUCTION, "В производстве"),
-        (Preorder.Status.SHIPPING, "В пути"),
-        (Preorder.Status.COMPLETED, "Доставлен"),
+        (
+            (Preorder.Status.NEW, "Received"),
+            (Preorder.Status.CONTACTED, "Confirmed"),
+            (Preorder.Status.PRODUCTION, "In production"),
+            (Preorder.Status.SHIPPING, "On the way"),
+            (Preorder.Status.COMPLETED, "Delivered"),
+        )
+        if request.LANGUAGE_CODE == "en"
+        else (
+            (Preorder.Status.NEW, "Принят"),
+            (Preorder.Status.CONTACTED, "Подтверждён"),
+            (Preorder.Status.PRODUCTION, "В производстве"),
+            (Preorder.Status.SHIPPING, "В пути"),
+            (Preorder.Status.COMPLETED, "Доставлен"),
+        )
     )
     legacy_status = {
         "contacted": Preorder.Status.CONTACTED,
@@ -182,8 +264,21 @@ def order_detail(request, order_id):
         (index for index, (status, _) in enumerate(status_stages) if status == legacy_status),
         0,
     )
-    delivery_label = dict(DELIVERY_CHOICES).get(configuration.get("delivery"), "Не указана")
-    payment_label = dict(PAYMENT_CHOICES).get(configuration.get("payment"), "Не указан")
+    delivery_label = dict(
+        localized_choices(DELIVERY_CHOICES, "delivery")
+    ).get(configuration.get("delivery"), "Not specified" if request.LANGUAGE_CODE == "en" else "Не указана")
+    payment_label = dict(
+        localized_choices(PAYMENT_CHOICES, "payment")
+    ).get(configuration.get("payment"), "Not specified" if request.LANGUAGE_CODE == "en" else "Не указан")
+    order_status_label = {
+        "new": "Received",
+        "contacted": "Confirmed",
+        "confirmed": "Confirmed",
+        "production": "In production",
+        "shipping": "On the way",
+        "completed": "Delivered",
+        "cancelled": "Cancelled",
+    }.get(order.status, order.get_status_display()) if request.LANGUAGE_CODE == "en" else order.get_status_display()
 
     return render(
         request,
@@ -195,6 +290,7 @@ def order_detail(request, order_id):
             "item_count": sum(item["quantity"] for item in items),
             "delivery_label": delivery_label,
             "payment_label": payment_label,
+            "order_status_label": order_status_label,
             "status_stages": [
                 {
                     "label": label,
@@ -228,9 +324,19 @@ def addresses(request):
     if request.method == "POST":
         if form.is_valid():
             form.save()
-            messages.success(request, "Адрес доставки сохранён.")
+            message = (
+                "Delivery address saved."
+                if request.LANGUAGE_CODE == "en"
+                else "Адрес доставки сохранён."
+            )
+            messages.success(request, message)
             return redirect("accounts:addresses")
-        messages.error(request, "Не удалось сохранить адрес. Проверьте поле и попробуйте снова.")
+        message = (
+            "Could not save the address. Check the field and try again."
+            if request.LANGUAGE_CODE == "en"
+            else "Не удалось сохранить адрес. Проверьте поле и попробуйте снова."
+        )
+        messages.error(request, message)
 
     return render(
         request,
@@ -238,8 +344,12 @@ def addresses(request):
         {
             "account_active": "addresses",
             "section_key": "addresses",
-            "section_title": "Адрес доставки",
-            "section_intro": "Адреса для будущих заказов.",
+            "section_title": "Delivery addresses" if request.LANGUAGE_CODE == "en" else "Адрес доставки",
+            "section_intro": (
+                "Addresses for future orders."
+                if request.LANGUAGE_CODE == "en"
+                else "Адреса для будущих заказов."
+            ),
             "address_form": form,
         },
     )
@@ -255,9 +365,19 @@ def profile(request):
     if request.method == "POST":
         if form.is_valid():
             form.save()
-            messages.success(request, "Данные профиля сохранены.")
+            message = (
+                "Profile details saved."
+                if request.LANGUAGE_CODE == "en"
+                else "Данные профиля сохранены."
+            )
+            messages.success(request, message)
             return redirect("accounts:profile")
-        messages.error(request, "Проверьте данные профиля и попробуйте ещё раз.")
+        message = (
+            "Please check your profile details and try again."
+            if request.LANGUAGE_CODE == "en"
+            else "Проверьте данные профиля и попробуйте ещё раз."
+        )
+        messages.error(request, message)
 
     return render(
         request,

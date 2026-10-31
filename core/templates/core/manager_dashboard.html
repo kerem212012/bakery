@@ -1,0 +1,135 @@
+{% extends "core/base.html" %}
+
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Manager workspace — Lukomorye{% else %}Кабинет менеджера — Лукоморье{% endif %}{% endblock %}
+{% block shell_class %} manager-dashboard-shell{% endblock %}
+
+{% block content %}
+    <section class="manager-dashboard">
+        <header class="manager-dashboard-heading">
+            <div>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Lukomorye team{% else %}Команда Лукоморья{% endif %}</p>
+                <h1>{% if LANGUAGE_CODE == 'en' %}Manager workspace{% else %}Кабинет менеджера{% endif %}</h1>
+                <p>{% if LANGUAGE_CODE == 'en' %}Review new orders, keep customers informed, and follow up on messages.{% else %}Обрабатывайте заказы, информируйте клиентов и отвечайте на обращения.{% endif %}</p>
+            </div>
+            <a class="manager-dashboard-site-link" href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}View website{% else %}Открыть сайт{% endif %} ↗</a>
+        </header>
+
+        {% include "user/_account_messages.html" %}
+
+        <div class="manager-dashboard-stats">
+            {% if can_view_orders %}
+                <a class="manager-dashboard-stat is-highlighted" href="#manager-orders">
+                    <span>{% if LANGUAGE_CODE == 'en' %}New orders{% else %}Новые заказы{% endif %}</span>
+                    <strong>{{ order_counts.new|default:0 }}</strong>
+                    <small>{% if LANGUAGE_CODE == 'en' %}Awaiting a response{% else %}Ждут ответа{% endif %}</small>
+                </a>
+                <a class="manager-dashboard-stat" href="#manager-orders">
+                    <span>{% if LANGUAGE_CODE == 'en' %}In production{% else %}В производстве{% endif %}</span>
+                    <strong>{{ order_counts.production|default:0 }}</strong>
+                    <small>{% if LANGUAGE_CODE == 'en' %}Being prepared{% else %}Готовятся к отправке{% endif %}</small>
+                </a>
+                <a class="manager-dashboard-stat" href="#manager-orders">
+                    <span>{% if LANGUAGE_CODE == 'en' %}On the way{% else %}В пути{% endif %}</span>
+                    <strong>{{ order_counts.shipping|default:0 }}</strong>
+                    <small>{% if LANGUAGE_CODE == 'en' %}Out for delivery{% else %}Переданы в доставку{% endif %}</small>
+                </a>
+            {% endif %}
+            {% if can_view_feedback %}
+                <a class="manager-dashboard-stat{% if new_feedback_count %} is-highlighted{% endif %}" href="#manager-messages">
+                    <span>{% if LANGUAGE_CODE == 'en' %}New messages{% else %}Новые обращения{% endif %}</span>
+                    <strong>{{ new_feedback_count }}</strong>
+                    <small>{% if LANGUAGE_CODE == 'en' %}Need a follow-up{% else %}Требуют ответа{% endif %}</small>
+                </a>
+            {% endif %}
+        </div>
+
+        {% if can_view_orders %}
+            <section class="manager-dashboard-section" id="manager-orders">
+                <div class="manager-dashboard-section-heading">
+                    <div>
+                        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Customer orders{% else %}Заказы клиентов{% endif %}</p>
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Order queue{% else %}Очередь заказов{% endif %}</h2>
+                    </div>
+                    <a href="{% url 'admin:core_preorder_changelist' %}">{% if LANGUAGE_CODE == 'en' %}Full order list{% else %}Все заказы{% endif %} →</a>
+                </div>
+
+                {% if orders %}
+                    <div class="manager-order-list">
+                        {% for order in orders %}
+                            <article class="manager-order-card">
+                                <div class="manager-order-topline">
+                                    <span class="manager-order-id">#{{ order.pk }}</span>
+                                    <time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d.m.Y, H:i" }}</time>
+                                    <span class="manager-order-status status-{{ order.status }}">{{ order.manager_status_label }}</span>
+                                </div>
+                                <div class="manager-order-main">
+                                    <div class="manager-order-customer">
+                                        <h3>{{ order.name }}</h3>
+                                        <a href="tel:{{ order.phone }}">{{ order.phone }}</a>
+                                        <a href="mailto:{{ order.email }}">{{ order.email }}</a>
+                                    </div>
+                                    <div class="manager-order-summary">
+                                        <span>{% if LANGUAGE_CODE == 'en' %}Order total{% else %}Сумма заказа{% endif %}</span>
+                                        <strong>{{ order.total_price }} ₽</strong>
+                                        {% if order.delivery_date %}<small>{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}: {{ order.delivery_date|date:"d.m.Y" }}</small>{% endif %}
+                                    </div>
+                                </div>
+                                {% if order.comment %}
+                                    <p class="manager-order-comment">{{ order.comment }}</p>
+                                {% endif %}
+                                <div class="manager-order-actions">
+                                    {% if can_change_orders %}
+                                        <form method="post" action="{% url 'manager_update_order_status' order.pk %}" class="manager-order-status-form">
+                                            {% csrf_token %}
+                                            <label for="order-status-{{ order.pk }}">{% if LANGUAGE_CODE == 'en' %}Update status{% else %}Изменить статус{% endif %}</label>
+                                            <select id="order-status-{{ order.pk }}" name="status">
+                                                {% for value, label in order_status_choices %}
+                                                    <option value="{{ value }}"{% if order.status == value %} selected{% endif %}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit">{% if LANGUAGE_CODE == 'en' %}Save status{% else %}Сохранить статус{% endif %}</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if can_change_orders %}
+                                        <a class="manager-order-details" href="{% url 'admin:core_preorder_change' order.pk %}">{% if LANGUAGE_CODE == 'en' %}Order details{% else %}Подробности заказа{% endif %} →</a>
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="manager-dashboard-empty">{% if LANGUAGE_CODE == 'en' %}No orders to show yet.{% else %}Заказов пока нет.{% endif %}</p>
+                {% endif %}
+            </section>
+        {% endif %}
+
+        {% if can_view_feedback %}
+            <section class="manager-dashboard-section" id="manager-messages">
+                <div class="manager-dashboard-section-heading">
+                    <div>
+                        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Contact requests{% else %}Сообщения клиентов{% endif %}</p>
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Recent messages{% else %}Последние обращения{% endif %}</h2>
+                    </div>
+                    <a href="{% url 'admin:core_feedbacksubmission_changelist' %}">{% if LANGUAGE_CODE == 'en' %}All messages{% else %}Все обращения{% endif %} →</a>
+                </div>
+                {% if feedback_items %}
+                    <div class="manager-message-list">
+                        {% for item in feedback_items %}
+                            <article class="manager-message-card">
+                                <div>
+                                    <h3>{{ item.subject }}</h3>
+                                    <p>{{ item.message|truncatechars:180 }}</p>
+                                    <a href="mailto:{{ item.email }}">{{ item.name }} · {{ item.email }}</a>
+                                </div>
+                                <span class="manager-message-status status-{{ item.status }}">{{ item.manager_status_label }}</span>
+                                <time datetime="{{ item.created_at|date:'c' }}">{{ item.created_at|date:"d.m.Y" }}</time>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="manager-dashboard-empty">{% if LANGUAGE_CODE == 'en' %}No customer messages yet.{% else %}Обращений пока нет.{% endif %}</p>
+                {% endif %}
+            </section>
+        {% endif %}
+    </section>
+{% endblock %}

@@ -1,13 +1,13 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Заказ #{{ order.pk }} — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Order #{{ order.pk }} — Lukomorye{% else %}Заказ #{{ order.pk }} — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <section class="account-page">
         <div class="account-heading">
-            <p class="eyebrow">Ваше пространство</p>
-            <h1>Заказ #{{ order.pk }}</h1>
-            <p>Оформлен {{ order.created_at|date:"d.m.Y" }} в {{ order.created_at|date:"H:i" }}</p>
+            <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Your account{% else %}Ваше пространство{% endif %}</p>
+            <h1>{% if LANGUAGE_CODE == 'en' %}Order{% else %}Заказ{% endif %} #{{ order.pk }}</h1>
+            <p>{% if LANGUAGE_CODE == 'en' %}Placed{% else %}Оформлен{% endif %} {{ order.created_at|date:"d.m.Y" }} {% if LANGUAGE_CODE == 'en' %}at{% else %}в{% endif %} {{ order.created_at|date:"H:i" }}</p>
         </div>
 
         {% include "user/_account_messages.html" %}
@@ -15,35 +15,35 @@
         <div class="account-layout">
             {% include "user/_account_sidebar.html" %}
             <div class="account-content">
-                <a class="account-order-back" href="{% url 'accounts:orders' %}">← Все заказы</a>
+                <a class="account-order-back" href="{% url 'accounts:orders' %}">← {% if LANGUAGE_CODE == 'en' %}All orders{% else %}Все заказы{% endif %}</a>
 
                 <div class="account-order-overview">
                     <section class="account-order-summary-card">
-                        <span>Сумма заказа</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Order total{% else %}Сумма заказа{% endif %}</span>
                         <strong>{{ order.total_price }} ₽</strong>
-                        <a href="#order-items">Подробнее о заказе ↓</a>
+                        <a href="#order-items">{% if LANGUAGE_CODE == 'en' %}Order details{% else %}Подробнее о заказе{% endif %} ↓</a>
                     </section>
                     <section class="account-order-summary-card">
-                        <span>Срок доставки</span>
-                        <strong>{% if order.delivery_date %}{{ order.delivery_date|date:"d E Y" }}{% else %}Уточняется{% endif %}</strong>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Delivery date{% else %}Срок доставки{% endif %}</span>
+                        <strong>{% if order.delivery_date %}{{ order.delivery_date|date:"d E Y" }}{% else %}{% if LANGUAGE_CODE == 'en' %}To be confirmed{% else %}Уточняется{% endif %}{% endif %}</strong>
                     </section>
                     <section class="account-order-summary-card">
-                        <span>Адрес доставки</span>
-                        <strong>{% if delivery_label == "Самовывоз" %}Самовывоз{% else %}{{ order.address|default:"Уточняется" }}{% endif %}</strong>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Delivery address{% else %}Адрес доставки{% endif %}</span>
+                        <strong>{% if delivery_label == "Pickup" or delivery_label == "Самовывоз" %}{{ delivery_label }}{% else %}{{ order.address|default:"To be confirmed" }}{% endif %}</strong>
                     </section>
                     <section class="account-order-summary-card">
-                        <span>Заказчик</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Customer{% else %}Заказчик{% endif %}</span>
                         <strong>{{ order.name }}</strong>
                     </section>
                 </div>
 
                 <section class="account-panel account-order-tracking">
                     <div class="account-panel-heading">
-                        <div><p class="eyebrow">Выполнение заказа</p><h2>Статус заказа</h2></div>
-                        <span class="account-order-status">{{ order.get_status_display }}</span>
+                        <div><p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Order progress{% else %}Выполнение заказа{% endif %}</p><h2>{% if LANGUAGE_CODE == 'en' %}Order status{% else %}Статус заказа{% endif %}</h2></div>
+                        <span class="account-order-status">{{ order_status_label }}</span>
                     </div>
                     {% if is_cancelled %}
-                        <p class="account-order-cancelled">Этот заказ отменён. Если это произошло по ошибке, свяжитесь с нами.</p>
+                        <p class="account-order-cancelled">{% if LANGUAGE_CODE == 'en' %}This order has been cancelled. If you think this is an error, please contact us.{% else %}Этот заказ отменён. Если это произошло по ошибке, свяжитесь с нами.{% endif %}</p>
                     {% else %}
                         <ol class="account-order-steps">
                             {% for stage in status_stages %}
@@ -61,8 +61,8 @@
                 <div class="account-order-detail-grid">
                     <section class="account-panel account-order-products" id="order-items">
                         <div class="account-panel-heading">
-                            <div><p class="eyebrow">Ваш заказ</p><h2>Состав заказа</h2></div>
-                            <span class="account-count">{{ item_count }} шт.</span>
+                            <div><p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Your order{% else %}Ваш заказ{% endif %}</p><h2>{% if LANGUAGE_CODE == 'en' %}Order contents{% else %}Состав заказа{% endif %}</h2></div>
+                            <span class="account-count">{{ item_count }} {% if LANGUAGE_CODE == 'en' %}items{% else %}шт.{% endif %}</span>
                         </div>
                         <div class="account-order-product-list">
                             {% for item in items %}
@@ -70,12 +70,12 @@
                                     <div class="account-order-product-mark" aria-hidden="true">❧</div>
                                     <div class="account-order-product-copy">
                                         <h3>{{ item.name }}</h3>
-                                        <p>{{ item.quantity }} шт.{% if item.size %} · {{ item.size }} см{% endif %}</p>
+                                        <p>{{ item.quantity }} {% if LANGUAGE_CODE == 'en' %}items{% else %}шт.{% endif %}{% if item.size %} · {{ item.size }} {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}{% endif %}</p>
                                         {% if item.coating or item.dough or item.packaging %}
                                             <small>
-                                                {% if item.coating %}Покрытие: {{ item.coating }}{% endif %}
-                                                {% if item.dough %}{% if item.coating %} · {% endif %}Тесто: {{ item.dough }}{% endif %}
-                                                {% if item.packaging %}{% if item.coating or item.dough %} · {% endif %}Упаковка: {{ item.packaging }}{% endif %}
+                                                {% if item.coating %}{% if LANGUAGE_CODE == 'en' %}Icing:{% else %}Покрытие:{% endif %} {{ item.coating }}{% endif %}
+                                                {% if item.dough %}{% if item.coating %} · {% endif %}{% if LANGUAGE_CODE == 'en' %}Dough:{% else %}Тесто:{% endif %} {{ item.dough }}{% endif %}
+                                                {% if item.packaging %}{% if item.coating or item.dough %} · {% endif %}{% if LANGUAGE_CODE == 'en' %}Packaging:{% else %}Упаковка:{% endif %} {{ item.packaging }}{% endif %}
                                             </small>
                                         {% endif %}
                                     </div>
@@ -86,23 +86,23 @@
                     </section>
 
                     <section class="account-panel account-order-facts">
-                        <p class="eyebrow">Заказ #{{ order.pk }}</p>
-                        <h2>Информация о заказе</h2>
+                        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Order{% else %}Заказ{% endif %} #{{ order.pk }}</p>
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Order information{% else %}Информация о заказе{% endif %}</h2>
                         <dl>
-                            <div><dt>Номер заказа</dt><dd>#{{ order.pk }}</dd></div>
-                            <div><dt>Дата оформления</dt><dd>{{ order.created_at|date:"d.m.Y, H:i" }}</dd></div>
-                            <div><dt>Сумма заказа</dt><dd>{{ order.total_price }} ₽</dd></div>
-                            <div><dt>Способ оплаты</dt><dd>{{ payment_label }}</dd></div>
-                            <div><dt>Способ доставки</dt><dd>{{ delivery_label }}</dd></div>
-                            <div><dt>Получатель</dt><dd>{{ order.name }}</dd></div>
-                            <div><dt>Телефон</dt><dd>{{ order.phone }}</dd></div>
+                            <div><dt>{% if LANGUAGE_CODE == 'en' %}Order number{% else %}Номер заказа{% endif %}</dt><dd>#{{ order.pk }}</dd></div>
+                            <div><dt>{% if LANGUAGE_CODE == 'en' %}Order date{% else %}Дата оформления{% endif %}</dt><dd>{{ order.created_at|date:"d.m.Y, H:i" }}</dd></div>
+                            <div><dt>{% if LANGUAGE_CODE == 'en' %}Order total{% else %}Сумма заказа{% endif %}</dt><dd>{{ order.total_price }} ₽</dd></div>
+                            <div><dt>{% if LANGUAGE_CODE == 'en' %}Payment method{% else %}Способ оплаты{% endif %}</dt><dd>{{ payment_label }}</dd></div>
+                            <div><dt>{% if LANGUAGE_CODE == 'en' %}Delivery method{% else %}Способ доставки{% endif %}</dt><dd>{{ delivery_label }}</dd></div>
+                            <div><dt>{% if LANGUAGE_CODE == 'en' %}Recipient{% else %}Получатель{% endif %}</dt><dd>{{ order.name }}</dd></div>
+                            <div><dt>{% if LANGUAGE_CODE == 'en' %}Phone{% else %}Телефон{% endif %}</dt><dd>{{ order.phone }}</dd></div>
                         </dl>
                     </section>
                 </div>
                 <a class="account-order-support" href="{% url 'contacts' %}">
                     <span class="account-order-support-mark" aria-hidden="true">♡</span>
-                    <span><strong>Остались вопросы?</strong><small>Свяжитесь с нами — поможем с заказом.</small></span>
-                    <span class="account-order-support-action">Контакты →</span>
+                    <span><strong>{% if LANGUAGE_CODE == 'en' %}Have questions?{% else %}Остались вопросы?{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Contact us and we will help with your order.{% else %}Свяжитесь с нами — поможем с заказом.{% endif %}</small></span>
+                    <span class="account-order-support-action">{% if LANGUAGE_CODE == 'en' %}Contact{% else %}Контакты{% endif %} →</span>
                 </a>
             </div>
         </div>

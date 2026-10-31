@@ -1,11 +1,11 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}{{ section_title }} — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}{% if section_key == "orders" %}My orders{% else %}Delivery addresses{% endif %} — Lukomorye{% else %}{{ section_title }} — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <section class="account-page">
         <div class="account-heading">
-            <p class="eyebrow">Ваше пространство</p>
+            <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Your account{% else %}Ваше пространство{% endif %}</p>
             <h1>{{ section_title }}</h1>
             <p>{{ section_intro }}</p>
         </div>
@@ -18,7 +18,7 @@
                 <section class="account-panel account-section-panel">
                     {% if section_key == "orders" %}
                         <div class="account-panel-heading">
-                            <div><p class="eyebrow">История покупок</p><h2>Ваши заказы</h2></div>
+                            <div><p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Order history{% else %}История покупок{% endif %}</p><h2>{% if LANGUAGE_CODE == 'en' %}Your orders{% else %}Ваши заказы{% endif %}</h2></div>
                             <span class="account-count">{{ orders_count_label }}</span>
                         </div>
                         {% if order_rows %}
@@ -27,38 +27,38 @@
                                     <a class="account-order" href="{% url 'accounts:order_detail' row.order.pk %}">
                                         <div class="account-order-heading">
                                             <div>
-                                                <h3>Заказ #{{ row.order.pk }}</h3>
+                                                <h3>{% if LANGUAGE_CODE == 'en' %}Order{% else %}Заказ{% endif %} #{{ row.order.pk }}</h3>
                                                 <p>{{ row.order.created_at|date:"d.m.Y, H:i" }}</p>
                                             </div>
-                                            <span class="account-order-status">{{ row.order.get_status_display }}</span>
+                                            <span class="account-order-status">{{ row.status_label }}</span>
                                         </div>
                                         <p class="account-order-summary">{{ row.summary }}</p>
                                         <div class="account-order-footer">
-                                            <span>{{ row.item_count }} шт.</span>
+                                            <span>{{ row.item_count }} {% if LANGUAGE_CODE == 'en' %}items{% else %}шт.{% endif %}</span>
                                             <strong>{{ row.order.total_price }} ₽</strong>
                                         </div>
-                                        <span class="account-order-link">Подробнее →</span>
+                                        <span class="account-order-link">{% if LANGUAGE_CODE == 'en' %}Details{% else %}Подробнее{% endif %} →</span>
                                     </a>
                                 {% endfor %}
                             </div>
                         {% else %}
                             <div class="account-empty">
                                 <span class="account-empty-mark" aria-hidden="true">◇</span>
-                                <h3>Заказов пока нет</h3>
-                                <p>После оформления покупки здесь появятся ваши заказы и информация об их статусе.</p>
-                                <a class="button button-dark" href="{% url 'catalog:category_list' %}">Перейти в каталог</a>
+                                <h3>{% if LANGUAGE_CODE == 'en' %}No orders yet{% else %}Заказов пока нет{% endif %}</h3>
+                                <p>{% if LANGUAGE_CODE == 'en' %}Your orders and their status will appear here after checkout.{% else %}После оформления покупки здесь появятся ваши заказы и информация об их статусе.{% endif %}</p>
+                                <a class="button button-dark" href="{% url 'catalog:category_list' %}">{% if LANGUAGE_CODE == 'en' %}Browse catalog{% else %}Перейти в каталог{% endif %}</a>
                             </div>
                         {% endif %}
                     {% elif section_key == "favorites" %}
                         <div class="account-empty">
                             <span class="account-empty-mark" aria-hidden="true">♡</span>
-                            <h3>В избранном пока пусто</h3>
-                            <p>Добавляйте понравившиеся товары в избранное, чтобы быстро найти их позже.</p>
-                            <a class="button button-dark" href="{% url 'catalog:category_list' %}">Найти что-то особенное</a>
+                            <h3>{% if LANGUAGE_CODE == 'en' %}Your favorites are empty{% else %}В избранном пока пусто{% endif %}</h3>
+                            <p>{% if LANGUAGE_CODE == 'en' %}Save products you like to find them quickly later.{% else %}Добавляйте понравившиеся товары в избранное, чтобы быстро найти их позже.{% endif %}</p>
+                            <a class="button button-dark" href="{% url 'catalog:category_list' %}">{% if LANGUAGE_CODE == 'en' %}Find something special{% else %}Найти что-то особенное{% endif %}</a>
                         </div>
                     {% elif section_key == "addresses" %}
                         <div class="account-panel-heading">
-                            <div><p class="eyebrow">Доставка</p><h2>Сохранённые адреса</h2></div>
+                            <div><p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</p><h2>{% if LANGUAGE_CODE == 'en' %}Saved addresses{% else %}Сохранённые адреса{% endif %}</h2></div>
                         </div>
                         <form method="post" class="account-form saved-address-form">
                             {% csrf_token %}
@@ -69,8 +69,8 @@
                             {% for error in address_form.delivery_address.errors %}
                                 <p class="account-form-error">{{ error }}</p>
                             {% endfor %}
-                            <p class="saved-address-help">Этот адрес будет автоматически подставляться при следующем оформлении заказа. Вы сможете изменить его в корзине.</p>
-                            <button class="button button-dark" type="submit">Сохранить адрес</button>
+                            <p class="saved-address-help">{% if LANGUAGE_CODE == 'en' %}This address will be filled in automatically at checkout. You can change it in your cart.{% else %}Этот адрес будет автоматически подставляться при следующем оформлении заказа. Вы сможете изменить его в корзине.{% endif %}</p>
+                            <button class="button button-dark" type="submit">{% if LANGUAGE_CODE == 'en' %}Save address{% else %}Сохранить адрес{% endif %}</button>
                         </form>
                     {% else %}
                     {% endif %}

@@ -1,16 +1,16 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Частые вопросы — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}FAQ — Lukomorye{% else %}Частые вопросы — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <div class="faq-page">
-        <header class="faq-header" aria-label="Частые вопросы">
+        <header class="faq-header" aria-label="{% if LANGUAGE_CODE == 'en' %}Frequently asked questions{% else %}Частые вопросы{% endif %}">
             <span class="faq-header-rule" aria-hidden="true"></span>
-            <h1>ЧАСТЫЕ ВОПРОСЫ</h1>
+            <h1>{% if LANGUAGE_CODE == 'en' %}FREQUENTLY ASKED QUESTIONS{% else %}ЧАСТЫЕ ВОПРОСЫ{% endif %}</h1>
             <span class="faq-header-rule" aria-hidden="true"></span>
         </header>
 
-        <div class="faq-grid" aria-label="Частые вопросы">
+        <div class="faq-grid" aria-label="{% if LANGUAGE_CODE == 'en' %}Frequently asked questions{% else %}Частые вопросы{% endif %}">
             {% for item in faq_items %}
                 <article class="faq-item">
                     <button class="faq-question" type="button" aria-expanded="false">

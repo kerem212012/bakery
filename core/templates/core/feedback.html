@@ -1,29 +1,29 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Обратная связь — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Feedback — Lukomorye{% else %}Обратная связь — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <div class="feedback-page">
-        <nav class="about-breadcrumbs" aria-label="Хлебные крошки">
-            <a href="{% url 'home' %}">Главная</a>
+        <nav class="about-breadcrumbs" aria-label="{% if LANGUAGE_CODE == 'en' %}Breadcrumbs{% else %}Хлебные крошки{% endif %}">
+            <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
             <span aria-hidden="true">/</span>
-            <span aria-current="page">Обратная связь</span>
+            <span aria-current="page">{% if LANGUAGE_CODE == 'en' %}Feedback{% else %}Обратная связь{% endif %}</span>
         </nav>
 
         <section class="feedback-hero" aria-labelledby="feedback-heading">
             <div class="feedback-hero-copy">
-                <p class="eyebrow">Мы на связи</p>
-                <h1 id="feedback-heading">Обратная связь</h1>
-                <p>Есть вопрос или идея? Напишите нам — мы внимательно прочитаем ваше сообщение и ответим по электронной почте.</p>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}We're here to help{% else %}Мы на связи{% endif %}</p>
+                <h1 id="feedback-heading">{% if LANGUAGE_CODE == 'en' %}Feedback{% else %}Обратная связь{% endif %}</h1>
+                <p>{% if LANGUAGE_CODE == 'en' %}Have a question or an idea? Send us a message. We will read it carefully and reply by email.{% else %}Есть вопрос или идея? Напишите нам — мы внимательно прочитаем ваше сообщение и ответим по электронной почте.{% endif %}</p>
             </div>
-            <div class="feedback-hero-image" role="img" aria-label="Подарочный набор с расписными пряниками"></div>
+            <div class="feedback-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift set with decorated gingerbread{% else %}Подарочный набор с расписными пряниками{% endif %}"></div>
         </section>
 
         <div class="feedback-content">
             <section class="feedback-form-card" aria-labelledby="feedback-form-heading">
                 <header class="feedback-form-heading">
-                    <h2 id="feedback-form-heading">Напишите нам</h2>
-                    <p>Поля, отмеченные звёздочкой, обязательны для заполнения.</p>
+                    <h2 id="feedback-form-heading">{% if LANGUAGE_CODE == 'en' %}Write to us{% else %}Напишите нам{% endif %}</h2>
+                    <p>{% if LANGUAGE_CODE == 'en' %}Fields marked with an asterisk are required.{% else %}Поля, отмеченные звёздочкой, обязательны для заполнения.{% endif %}</p>
                 </header>
 
                 {% if messages %}
@@ -42,22 +42,22 @@
                     {% csrf_token %}
                     <div class="feedback-fields">
                         <div class="feedback-field">
-                            <label for="{{ form.name.id_for_label }}">Ваше имя <span>*</span></label>
+                            <label for="{{ form.name.id_for_label }}">{% if LANGUAGE_CODE == 'en' %}Your name{% else %}Ваше имя{% endif %} <span>*</span></label>
                             {{ form.name }}
                             {{ form.name.errors }}
                         </div>
                         <div class="feedback-field">
-                            <label for="{{ form.email.id_for_label }}">Электронная почта <span>*</span></label>
+                            <label for="{{ form.email.id_for_label }}">{% if LANGUAGE_CODE == 'en' %}Email{% else %}Электронная почта{% endif %} <span>*</span></label>
                             {{ form.email }}
                             {{ form.email.errors }}
                         </div>
                         <div class="feedback-field feedback-field-full">
-                            <label for="{{ form.subject.id_for_label }}">Тема обращения <span>*</span></label>
+                            <label for="{{ form.subject.id_for_label }}">{% if LANGUAGE_CODE == 'en' %}Subject{% else %}Тема обращения{% endif %} <span>*</span></label>
                             {{ form.subject }}
                             {{ form.subject.errors }}
                         </div>
                         <div class="feedback-field feedback-field-full">
-                            <label for="{{ form.message.id_for_label }}">Сообщение <span>*</span></label>
+                            <label for="{{ form.message.id_for_label }}">{% if LANGUAGE_CODE == 'en' %}Message{% else %}Сообщение{% endif %} <span>*</span></label>
                             {{ form.message }}
                             {{ form.message.errors }}
                         </div>
@@ -70,15 +70,15 @@
                         {{ form.consent_given.errors }}
                     </div>
                     <button class="button button-dark feedback-submit" type="submit">
-                        Отправить сообщение <span aria-hidden="true">→</span>
+                        {% if LANGUAGE_CODE == 'en' %}Send message{% else %}Отправить сообщение{% endif %} <span aria-hidden="true">→</span>
                     </button>
                 </form>
             </section>
 
-            <aside class="feedback-aside" aria-label="Другие способы связи">
+            <aside class="feedback-aside" aria-label="{% if LANGUAGE_CODE == 'en' %}Other ways to contact us{% else %}Другие способы связи{% endif %}">
                 <span class="contacts-detail-icon" aria-hidden="true">✉</span>
-                <h2>Предпочитаете написать напрямую?</h2>
-                <p>Свяжитесь с нами по электронной почте, и мы ответим в течение рабочего дня.</p>
+                <h2>{% if LANGUAGE_CODE == 'en' %}Prefer to email us directly?{% else %}Предпочитаете написать напрямую?{% endif %}</h2>
+                <p>{% if LANGUAGE_CODE == 'en' %}Email us and we will reply within one business day.{% else %}Свяжитесь с нами по электронной почте, и мы ответим в течение рабочего дня.{% endif %}</p>
                 <a href="mailto:hello@lukomorye.example">hello@lukomorye.example</a>
                 <a class="feedback-phone" href="tel:+74951234567">+7 495 123-45-67</a>
             </aside>

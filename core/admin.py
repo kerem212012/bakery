@@ -23,6 +23,10 @@ class PreorderAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "created_at")
     search_fields = ("name", "email", "phone", "user__username")
+    date_hierarchy = "created_at"
+    list_select_related = ("user",)
+    list_per_page = 50
+    save_on_top = True
     readonly_fields = (
         "configuration",
         "unit_price",

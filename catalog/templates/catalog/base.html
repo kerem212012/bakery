@@ -23,7 +23,7 @@
             });
         });
 
-        const formatPrice = (amount) => new Intl.NumberFormat("ru-RU", {
+        const formatPrice = (amount) => new Intl.NumberFormat(document.documentElement.lang === "en" ? "en-US" : "ru-RU", {
             maximumFractionDigits: 0
         }).format(amount);
 
@@ -84,7 +84,7 @@
                 const deliveryCost = Number(deliverySelect.selectedOptions[0]?.dataset.cost || 0);
                 const deliveryElement = document.querySelector("[data-cart-delivery]");
                 const totalElement = document.querySelector("[data-cart-total]");
-                const priceFormat = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 });
+                const priceFormat = new Intl.NumberFormat(document.documentElement.lang === "en" ? "en-US" : "ru-RU", { maximumFractionDigits: 0 });
                 if (deliveryElement) deliveryElement.textContent = `${priceFormat.format(deliveryCost)} ₽`;
                 if (totalElement) totalElement.textContent = `${priceFormat.format(subtotal + deliveryCost)} ₽`;
             };

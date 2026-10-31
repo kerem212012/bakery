@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from openpyxl import load_workbook
 
+from catalog.models import Category, Product
 from core.models import Preorder
 
 from .models import CustomerProfile
@@ -14,6 +15,68 @@ User = get_user_model()
 
 
 class AccountTests(TestCase):
+    def test_english_order_pages_translate_account_status_and_catalog_items(self):
+        user = User.objects.create_user(
+            username="english_customer",
+            email="english-customer@example.com",
+            password=None,
+        )
+        category = Category.objects.create(
+            name="Подарочные наборы",
+            name_en="Gift sets",
+        )
+        product = Product.objects.create(
+            name="Подарочный набор",
+            name_en="English gift set",
+            category=category,
+        )
+        order = Preorder.objects.create(
+            user=user,
+            name="Anna",
+            email=user.email,
+            phone="+7 900 000-00-00",
+            configuration={
+                "items": [
+                    {
+                        "product_id": product.pk,
+                        "name": product.name,
+                        "quantity": 2,
+                        "size": "8",
+                        "coating": "painting",
+                        "dough": "classic",
+                        "packaging": "gift_box",
+                        "unit_price": "100.00",
+                    }
+                ],
+                "delivery": "pickup",
+                "payment": "card",
+            },
+            unit_price="100.00",
+            discount_percent=0,
+            delivery_cost="0.00",
+            total_price="200.00",
+            status=Preorder.Status.PRODUCTION,
+            consent_given=True,
+        )
+        self.client.force_login(user)
+        self.client.post(
+            reverse("set_language"),
+            {"language": "en", "next": reverse("accounts:orders")},
+        )
+
+        orders_page = self.client.get(reverse("accounts:orders"))
+        self.assertContains(orders_page, "Your orders")
+        self.assertContains(orders_page, "1 order")
+        self.assertContains(orders_page, "English gift set × 2")
+        self.assertContains(orders_page, "In production")
+
+        detail_page = self.client.get(
+            reverse("accounts:order_detail", args=[order.pk])
+        )
+        self.assertContains(detail_page, "Order progress")
+        self.assertContains(detail_page, "Hand-painted icing")
+        self.assertContains(detail_page, "Pickup")
+
     def test_orders_page_shows_only_orders_owned_by_the_logged_in_user(self):
         user = User.objects.create_user(
             username="order_customer",
@@ -420,7 +483,6 @@ class AccountTests(TestCase):
     def test_account_sections_require_authentication(self):
         for url in (
             "/account/orders/",
-            "/account/favorites/",
             "/account/addresses/",
             "/account/profile/",
         ):

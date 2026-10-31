@@ -24,6 +24,56 @@ class CatalogModelTests(TestCase):
         self.assertEqual(product.category, first_category)
 
 
+class CatalogAdminTests(TestCase):
+    def setUp(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="catalog_admin",
+            email="catalog-admin@example.com",
+            password="Secure-admin-password-482!",
+        )
+        self.client.force_login(admin_user)
+        self.category = Category.objects.create(
+            name="Подарочные наборы",
+            name_en="Gift sets",
+        )
+
+    def test_admin_can_create_product_with_english_catalog_content(self):
+        response = self.client.post(
+            reverse("admin:catalog_product_add"),
+            {
+                "name": "Пряничный набор",
+                "name_en": "Gingerbread gift set",
+                "slug": "",
+                "category": str(self.category.pk),
+                "description": "Набор ручной работы",
+                "description_en": "A handmade gift set",
+                "price": "2500.00",
+                "image_url": "",
+                "filter_options": [],
+                "is_active": "on",
+                "is_featured": "on",
+                "display_order": "0",
+                "_save": "Save",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        product = Product.objects.get(name="Пряничный набор")
+        self.assertEqual(product.name_en, "Gingerbread gift set")
+        self.assertEqual(product.description_en, "A handmade gift set")
+        self.assertEqual(product.category, self.category)
+        self.assertTrue(product.is_featured)
+
+    def test_admin_dashboard_links_to_catalog_and_orders(self):
+        response = self.client.get(reverse("admin:index"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Лукоморье — управление сайтом")
+        self.assertContains(response, reverse("admin:catalog_product_changelist"))
+        self.assertContains(response, reverse("admin:catalog_category_changelist"))
+        self.assertContains(response, reverse("admin:core_preorder_changelist"))
+
+
 class CatalogPageTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(
@@ -110,6 +160,25 @@ class CatalogPageTests(TestCase):
             reverse("catalog:category_detail", args=[self.category.slug]),
         )
         self.assertNotContains(response, inactive_category.name)
+
+    def test_english_catalog_uses_translated_category_and_product_fields(self):
+        self.category.name_en = "Corporate gifts"
+        self.category.description_en = "Gifts for colleagues and partners"
+        self.category.save(update_fields=("name_en", "description_en"))
+        self.product.name_en = "Gift set"
+        self.product.description_en = "A curated gift"
+        self.product.save(update_fields=("name_en", "description_en"))
+        self.client.post(
+            reverse("set_language"),
+            {"language": "en", "next": reverse("catalog:category_list")},
+        )
+
+        response = self.client.get(reverse("catalog:category_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Corporate gifts")
+        self.assertContains(response, "Gift set")
+        self.assertContains(response, "Apply filters")
 
     def test_catalog_filters_by_category_and_price(self):
         affordable_product = Product.objects.create(

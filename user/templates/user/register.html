@@ -1,13 +1,13 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Регистрация — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Create an account — Lukomorye{% else %}Регистрация — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <section class="auth-layout">
         <div class="auth-card">
-            <p class="eyebrow">Станьте частью Лукоморья</p>
-            <h1>Создать аккаунт</h1>
-            <p class="auth-intro">Сохраняйте данные профиля и следите за своими заказами.</p>
+            <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Join Lukomorye{% else %}Станьте частью Лукоморья{% endif %}</p>
+            <h1>{% if LANGUAGE_CODE == 'en' %}Create an account{% else %}Создать аккаунт{% endif %}</h1>
+            <p class="auth-intro">{% if LANGUAGE_CODE == 'en' %}Save your profile details and keep track of your orders.{% else %}Сохраняйте данные профиля и следите за своими заказами.{% endif %}</p>
             <form method="post" class="account-form" id="registration-form">
                 {% csrf_token %}
                 {% if form.non_field_errors %}
@@ -28,9 +28,9 @@
                     </div>
                     {% if field.name == "phone" %}</div>{% endif %}
                 {% endfor %}
-                <button class="button button-dark auth-submit" type="submit">Зарегистрироваться</button>
+                <button class="button button-dark auth-submit" type="submit">{% if LANGUAGE_CODE == 'en' %}Create account{% else %}Зарегистрироваться{% endif %}</button>
             </form>
-            <p class="auth-switch">Уже есть аккаунт? <a href="{% url 'accounts:login' %}">Войти</a></p>
+            <p class="auth-switch">{% if LANGUAGE_CODE == 'en' %}Already have an account?{% else %}Уже есть аккаунт?{% endif %} <a href="{% url 'accounts:login' %}">{% if LANGUAGE_CODE == 'en' %}Sign in{% else %}Войти{% endif %}</a></p>
         </div>
     </section>
     <script>

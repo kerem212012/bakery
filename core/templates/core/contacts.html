@@ -1,30 +1,30 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}Контакты — Лукоморье{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Contact — Lukomorye{% else %}Контакты — Лукоморье{% endif %}{% endblock %}
 
 {% block content %}
     <div class="contacts-page">
-        <nav class="about-breadcrumbs" aria-label="Хлебные крошки">
-            <a href="{% url 'home' %}">Главная</a>
+        <nav class="about-breadcrumbs" aria-label="{% if LANGUAGE_CODE == 'en' %}Breadcrumbs{% else %}Хлебные крошки{% endif %}">
+            <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
             <span aria-hidden="true">/</span>
-            <span aria-current="page">Контакты</span>
+            <span aria-current="page">{% if LANGUAGE_CODE == 'en' %}Contact{% else %}Контакты{% endif %}</span>
         </nav>
 
         <section class="contacts-hero" aria-labelledby="contacts-heading">
             <div class="contacts-hero-copy">
-                <h1 id="contacts-heading">Контакты</h1>
-                <p>Мы всегда на связи и рады ответить на ваши вопросы, помочь с выбором и обсудить заказ.</p>
+                <h1 id="contacts-heading">{% if LANGUAGE_CODE == 'en' %}Contact{% else %}Контакты{% endif %}</h1>
+                <p>{% if LANGUAGE_CODE == 'en' %}We are always happy to answer your questions, help you choose, and discuss your order.{% else %}Мы всегда на связи и рады ответить на ваши вопросы, помочь с выбором и обсудить заказ.{% endif %}</p>
             </div>
-            <div class="contacts-hero-image" role="img" aria-label="Пряники ручной работы с цветочным декором"></div>
+            <div class="contacts-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Handmade gingerbread with floral decoration{% else %}Пряники ручной работы с цветочным декором{% endif %}"></div>
         </section>
 
-        <section class="contacts-details" aria-label="Контактная информация">
+        <section class="contacts-details" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact information{% else %}Контактная информация{% endif %}">
             <a class="contacts-detail" href="tel:+74951234567">
                 <span class="contacts-detail-icon" aria-hidden="true">♧</span>
                 <span class="contacts-detail-copy">
-                    <strong>Телефон</strong>
+                    <strong>{% if LANGUAGE_CODE == 'en' %}Phone{% else %}Телефон{% endif %}</strong>
                     <span>+7 495 123-45-67</span>
-                    <small>Ежедневно с 9:00 до 21:00</small>
+                    <small>{% if LANGUAGE_CODE == 'en' %}Daily, 9:00 am–9:00 pm{% else %}Ежедневно с 9:00 до 21:00{% endif %}</small>
                 </span>
             </a>
             <a class="contacts-detail" href="mailto:hello@lukomorye.example">
@@ -32,37 +32,37 @@
                 <span class="contacts-detail-copy">
                     <strong>E-mail</strong>
                     <span>hello@lukomorye.example</span>
-                    <small>Ответим в течение дня</small>
+                    <small>{% if LANGUAGE_CODE == 'en' %}We reply within one business day{% else %}Ответим в течение дня{% endif %}</small>
                 </span>
             </a>
             <a class="contacts-detail" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201" target="_blank" rel="noopener noreferrer">
                 <span class="contacts-detail-icon" aria-hidden="true">⌖</span>
                 <span class="contacts-detail-copy">
-                    <strong>Адрес</strong>
-                    <span>г. Москва, ул. Пряничная, д. 12,<br>стр. 1 (Бизнес-центр «Пример»)</span>
+                    <strong>{% if LANGUAGE_CODE == 'en' %}Address{% else %}Адрес{% endif %}</strong>
+                    <span>{% if LANGUAGE_CODE == 'en' %}12 Pryanichnaya St., building 1,<br>Moscow (Primer Business Center){% else %}г. Москва, ул. Пряничная, д. 12,<br>стр. 1 (Бизнес-центр «Пример»){% endif %}</span>
                 </span>
             </a>
         </section>
 
-        <a class="contacts-map" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201" target="_blank" rel="noopener noreferrer" aria-label="Открыть карту Москвы и построить маршрут">
-            <span class="contacts-map-area contacts-map-area-one">ТВЕРСКОЙ</span>
-            <span class="contacts-map-area contacts-map-area-two">АРБАТ</span>
-            <span class="contacts-map-area contacts-map-area-three">КИТАЙ-ГОРОД</span>
-            <span class="contacts-map-area contacts-map-area-four">ЗАМОСКВОРЕЧЬЕ</span>
-            <span class="contacts-map-city">Москва</span>
+        <a class="contacts-map" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Open map and get directions in Moscow{% else %}Открыть карту Москвы и построить маршрут{% endif %}">
+            <span class="contacts-map-area contacts-map-area-one">{% if LANGUAGE_CODE == 'en' %}TVERSKOY{% else %}ТВЕРСКОЙ{% endif %}</span>
+            <span class="contacts-map-area contacts-map-area-two">{% if LANGUAGE_CODE == 'en' %}ARBAT{% else %}АРБАТ{% endif %}</span>
+            <span class="contacts-map-area contacts-map-area-three">{% if LANGUAGE_CODE == 'en' %}KITAI-GOROD{% else %}КИТАЙ-ГОРОД{% endif %}</span>
+            <span class="contacts-map-area contacts-map-area-four">{% if LANGUAGE_CODE == 'en' %}ZAMOSKVORECHYE{% else %}ЗАМОСКВОРЕЧЬЕ{% endif %}</span>
+            <span class="contacts-map-city">{% if LANGUAGE_CODE == 'en' %}Moscow{% else %}Москва{% endif %}</span>
             <span class="contacts-map-pin" aria-hidden="true">❧</span>
             <span class="contacts-map-zoom" aria-hidden="true"><span>+</span><span>−</span></span>
-            <span class="contacts-map-hint">Открыть карту <span aria-hidden="true">↗</span></span>
+            <span class="contacts-map-hint">{% if LANGUAGE_CODE == 'en' %}Open map{% else %}Открыть карту{% endif %} <span aria-hidden="true">↗</span></span>
         </a>
 
         <section class="contacts-requisites" aria-labelledby="requisites-heading">
             <div class="contacts-requisites-details">
-                <h2 id="requisites-heading">Реквизиты</h2>
-                <p>Для получения реквизитов и документов, пожалуйста, свяжитесь с нами по электронной почте.</p>
+                <h2 id="requisites-heading">{% if LANGUAGE_CODE == 'en' %}Company details{% else %}Реквизиты{% endif %}</h2>
+                <p>{% if LANGUAGE_CODE == 'en' %}Please email us to request company details and documents.{% else %}Для получения реквизитов и документов, пожалуйста, свяжитесь с нами по электронной почте.{% endif %}</p>
             </div>
             <a class="contacts-requisites-link" href="mailto:hello@lukomorye.example?subject=Запрос%20реквизитов">
                 <span class="contacts-detail-icon" aria-hidden="true">▤</span>
-                <span><strong>Запросить реквизиты</strong><small>Напишите нам — отправим документы</small></span>
+                <span><strong>{% if LANGUAGE_CODE == 'en' %}Request company details{% else %}Запросить реквизиты{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Email us and we will send the documents{% else %}Напишите нам — отправим документы{% endif %}</small></span>
                 <span class="contacts-requisites-arrow" aria-hidden="true">→</span>
             </a>
         </section>

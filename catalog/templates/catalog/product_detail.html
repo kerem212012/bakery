@@ -1,132 +1,132 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}{{ product.name }} — {{ category.name }}{% endblock %}
+{% block title %}{{ product.localized_name }} — {{ category.localized_name }}{% endblock %}
 
 {% block content %}
-    <section class="product-page" aria-label="Карточка товара">
-        <div class="product-breadcrumbs" aria-label="Хлебные крошки">
-            <a href="{% url 'home' %}">Главная</a>
+    <section class="product-page" aria-label="{% if LANGUAGE_CODE == 'en' %}Product details{% else %}Карточка товара{% endif %}">
+        <div class="product-breadcrumbs" aria-label="{% if LANGUAGE_CODE == 'en' %}Breadcrumbs{% else %}Хлебные крошки{% endif %}">
+            <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
             <span aria-hidden="true">›</span>
-            <a href="{% url 'catalog:category_list' %}">Каталог</a>
+            <a href="{% url 'catalog:category_list' %}">{% if LANGUAGE_CODE == 'en' %}Catalog{% else %}Каталог{% endif %}</a>
             <span aria-hidden="true">›</span>
-            <a href="{% url 'catalog:category_detail' category.slug %}">{{ category.name }}</a>
+            <a href="{% url 'catalog:category_detail' category.slug %}">{{ category.localized_name }}</a>
             <span aria-hidden="true">›</span>
-            <span>{{ product.name }}</span>
+            <span>{{ product.localized_name }}</span>
         </div>
 
         <div class="product-main-layout">
             <div class="product-gallery-panel">
-                <div class="product-thumb-column" aria-label="Выбор фото товара">
-                    <button class="product-thumb is-active" type="button" aria-label="Основное фото">
+                <div class="product-thumb-column" aria-label="{% if LANGUAGE_CODE == 'en' %}Product image selection{% else %}Выбор фото товара{% endif %}">
+                    <button class="product-thumb is-active" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Main image{% else %}Основное фото{% endif %}">
                         {% if product.image_url %}
-                            <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                            <img src="{{ product.image_url }}" alt="{{ product.localized_name }}">
                         {% else %}
                             <span class="thumb-placeholder" aria-hidden="true"></span>
                         {% endif %}
                     </button>
-                    <button class="product-thumb" type="button" aria-label="Другой вариант фото">
+                    <button class="product-thumb" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Alternative image{% else %}Другой вариант фото{% endif %}">
                         {% if product.image_url %}
-                            <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                            <img src="{{ product.image_url }}" alt="{{ product.localized_name }}">
                         {% else %}
                             <span class="thumb-placeholder" aria-hidden="true"></span>
                         {% endif %}
                     </button>
-                    <button class="product-thumb" type="button" aria-label="Ещё вариант фото">
+                    <button class="product-thumb" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Another image{% else %}Ещё вариант фото{% endif %}">
                         {% if product.image_url %}
-                            <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                            <img src="{{ product.image_url }}" alt="{{ product.localized_name }}">
                         {% else %}
                             <span class="thumb-placeholder" aria-hidden="true"></span>
                         {% endif %}
                     </button>
-                    <button class="product-thumb" type="button" aria-label="Предпросмотр видео">
+                    <button class="product-thumb" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Video preview{% else %}Предпросмотр видео{% endif %}">
                         <span class="product-video-mark" aria-hidden="true">▶</span>
                     </button>
                 </div>
 
                 <div class="product-image-stage">
                     {% if product.image_url %}
-                        <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                        <img src="{{ product.image_url }}" alt="{{ product.localized_name }}">
                     {% else %}
-                        <div class="product-image-placeholder" aria-label="{{ product.name }}"></div>
+                        <div class="product-image-placeholder" aria-label="{{ product.localized_name }}"></div>
                     {% endif %}
-                    <button class="product-zoom" type="button" aria-label="Увеличить фото">◌</button>
+                    <button class="product-zoom" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Enlarge image{% else %}Увеличить фото{% endif %}">◌</button>
                 </div>
             </div>
 
             <div class="product-detail-panel">
                 <div class="product-header-row">
-                    <h1>{{ product.name }}</h1>
+                    <h1>{{ product.localized_name }}</h1>
                     <form class="favorite-toggle-form" method="post" action="{% url 'catalog:toggle_favorite' product.pk %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button class="product-like{% if is_favorite %} is-active{% endif %}" type="submit" aria-label="{% if is_favorite %}Убрать из избранного{% else %}Добавить в избранное{% endif %}" aria-pressed="{% if is_favorite %}true{% else %}false{% endif %}">{% if is_favorite %}♥{% else %}♡{% endif %}</button>
+                        <button class="product-like{% if is_favorite %} is-active{% endif %}" type="submit" aria-label="{% if LANGUAGE_CODE == 'en' %}{% if is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}{% else %}{% if is_favorite %}Убрать из избранного{% else %}Добавить в избранное{% endif %}{% endif %}" aria-pressed="{% if is_favorite %}true{% else %}false{% endif %}">{% if is_favorite %}♥{% else %}♡{% endif %}</button>
                     </form>
                 </div>
 
-                <p class="product-summary">{{ product.description|default:"Нежные пряники ручной работы с изысканной росписью. Идеальный подарок для особых моментов." }}</p>
+                <p class="product-summary">{{ product.localized_description|default_if_none:"" }}{% if not product.localized_description %}{% if LANGUAGE_CODE == 'en' %}Delicate handmade gingerbread with exquisite decoration, perfect for special occasions.{% else %}Нежные пряники ручной работы с изысканной росписью. Идеальный подарок для особых моментов.{% endif %}{% endif %}</p>
 
                 <div class="product-rating-row">
-                    <div class="stars" aria-label="Рейтинг 4.9 из 5">★★★★★</div>
+                    <div class="stars" aria-label="{% if LANGUAGE_CODE == 'en' %}Rating 4.9 out of 5{% else %}Рейтинг 4.9 из 5{% endif %}">★★★★★</div>
                     <span class="rating-value">4.9</span>
-                    <span class="rating-meta">(32 отзыва)</span>
-                    <span class="product-article">Артикул: 00123</span>
+                    <span class="rating-meta">{% if LANGUAGE_CODE == 'en' %}(32 reviews){% else %}(32 отзыва){% endif %}</span>
+                    <span class="product-article">{% if LANGUAGE_CODE == 'en' %}SKU:{% else %}Артикул:{% endif %} 00123</span>
                 </div>
 
                 <div class="product-price-row">
-                    <span class="price-prefix">от</span>
-                    <strong data-size-price data-base-price="{{ product.price|default:'1490' }}">{{ product.price|default:1490 }}</strong>
+                    <span class="price-prefix">{% if LANGUAGE_CODE == 'en' %}from{% else %}от{% endif %}</span>
+                    <strong data-size-price data-base-price="{{ product.price|default:'1490'|floatformat:'2u' }}">{{ product.price|default:1490|floatformat:"2u" }}</strong>
                     <span>₽</span>
-                    <span class="price-unit">/ 1 шт</span>
+                    <span class="price-unit">/ 1 {% if LANGUAGE_CODE == 'en' %}pc{% else %}шт{% endif %}</span>
                 </div>
 
                 <form class="product-cart-form" method="post" action="{% url 'catalog:add_to_cart' product.pk %}">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.get_full_path }}">
                     <div class="product-quantity-box">
-                        <label class="quantity-label" for="product-qty">Количество</label>
-                        <div class="quantity-picker" aria-label="Выбор количества">
-                            <button type="button" aria-label="Уменьшить количество" data-quantity-step="-1">−</button>
+                        <label class="quantity-label" for="product-qty">{% if LANGUAGE_CODE == 'en' %}Quantity{% else %}Количество{% endif %}</label>
+                        <div class="quantity-picker" aria-label="{% if LANGUAGE_CODE == 'en' %}Choose quantity{% else %}Выбор количества{% endif %}">
+                            <button type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Decrease quantity{% else %}Уменьшить количество{% endif %}" data-quantity-step="-1">−</button>
                             <input id="product-qty" name="quantity" type="number" value="1" min="1" max="99" />
-                            <button type="button" aria-label="Увеличить количество" data-quantity-step="1">+</button>
+                            <button type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Increase quantity{% else %}Увеличить количество{% endif %}" data-quantity-step="1">+</button>
                         </div>
                     </div>
 
                     <div class="size-group">
                     <div class="option-label-row">
-                        <span>Размер</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Size{% else %}Размер{% endif %}</span>
                         <span class="help-mark">?</span>
                     </div>
-                    <div class="option-pills" aria-label="Размеры">
-                        <button type="button" class="option-pill" data-size-cm="6" aria-pressed="false">6 см</button>
-                        <button type="button" class="option-pill is-selected" data-size-cm="8" aria-pressed="true">8 см</button>
-                        <button type="button" class="option-pill" data-size-cm="10" aria-pressed="false">10 см</button>
-                        <button type="button" class="option-pill" data-size-cm="12" aria-pressed="false">12 см</button>
-                        <button type="button" class="option-pill" data-size-cm="15" aria-pressed="false">15 см</button>
+                    <div class="option-pills" aria-label="{% if LANGUAGE_CODE == 'en' %}Sizes{% else %}Размеры{% endif %}">
+                        <button type="button" class="option-pill" data-size-cm="6" aria-pressed="false">6 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</button>
+                        <button type="button" class="option-pill is-selected" data-size-cm="8" aria-pressed="true">8 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</button>
+                        <button type="button" class="option-pill" data-size-cm="10" aria-pressed="false">10 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</button>
+                        <button type="button" class="option-pill" data-size-cm="12" aria-pressed="false">12 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</button>
+                        <button type="button" class="option-pill" data-size-cm="15" aria-pressed="false">15 {% if LANGUAGE_CODE == 'en' %}cm{% else %}см{% endif %}</button>
                     </div>
                     <input type="hidden" name="size" value="8">
                 </div>
 
                 <div class="option-group">
                     <div class="option-label-row">
-                        <span>Покрытие</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Icing{% else %}Покрытие{% endif %}</span>
                         <span class="help-mark">?</span>
                     </div>
-                    <div class="option-swatch-grid" role="group" aria-label="Выберите покрытие" data-cart-field="coating">
+                    <div class="option-swatch-grid" role="group" aria-label="{% if LANGUAGE_CODE == 'en' %}Choose icing{% else %}Выберите покрытие{% endif %}" data-cart-field="coating">
                         <button type="button" class="option-swatch is-selected" data-option-choice data-cart-value="painting" aria-pressed="true">
                             <span class="swatch-image swatch-ribbon" aria-hidden="true"></span>
-                            <span>Роспись на айсинге</span>
+                            <span>{% if LANGUAGE_CODE == 'en' %}Hand-painted icing{% else %}Роспись на айсинге{% endif %}</span>
                         </button>
                         <button type="button" class="option-swatch" data-option-choice data-cart-value="printing" aria-pressed="false">
                             <span class="swatch-image swatch-plain" aria-hidden="true"></span>
-                            <span>Печать на айсинге</span>
+                            <span>{% if LANGUAGE_CODE == 'en' %}Printed icing{% else %}Печать на айсинге{% endif %}</span>
                         </button>
                         <button type="button" class="option-swatch" data-option-choice data-cart-value="chocolate" aria-pressed="false">
                             <span class="swatch-image swatch-choco" aria-hidden="true"></span>
-                            <span>Шоколадное</span>
+                            <span>{% if LANGUAGE_CODE == 'en' %}Chocolate{% else %}Шоколадное{% endif %}</span>
                         </button>
                         <button type="button" class="option-swatch" data-option-choice data-cart-value="none" aria-pressed="false">
                             <span class="swatch-image swatch-none" aria-hidden="true"></span>
-                            <span>Без покрытия</span>
+                            <span>{% if LANGUAGE_CODE == 'en' %}No coating{% else %}Без покрытия{% endif %}</span>
                         </button>
                     </div>
                     <input type="hidden" name="coating" value="painting">
@@ -134,24 +134,24 @@
 
                 <div class="option-group">
                     <div class="option-label-row">
-                        <span>Вид теста</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Dough{% else %}Вид теста{% endif %}</span>
                     </div>
-                    <div class="option-pills" role="group" aria-label="Вид теста" data-cart-field="dough">
-                        <button type="button" class="option-pill is-selected" data-option-choice data-cart-value="classic" aria-pressed="true">Классическое</button>
-                        <button type="button" class="option-pill" data-option-choice data-cart-value="chocolate" aria-pressed="false">Шоколадное</button>
-                        <button type="button" class="option-pill" data-option-choice data-cart-value="spiced" aria-pressed="false">Пряное</button>
+                    <div class="option-pills" role="group" aria-label="{% if LANGUAGE_CODE == 'en' %}Dough type{% else %}Вид теста{% endif %}" data-cart-field="dough">
+                        <button type="button" class="option-pill is-selected" data-option-choice data-cart-value="classic" aria-pressed="true">{% if LANGUAGE_CODE == 'en' %}Classic{% else %}Классическое{% endif %}</button>
+                        <button type="button" class="option-pill" data-option-choice data-cart-value="chocolate" aria-pressed="false">{% if LANGUAGE_CODE == 'en' %}Chocolate{% else %}Шоколадное{% endif %}</button>
+                        <button type="button" class="option-pill" data-option-choice data-cart-value="spiced" aria-pressed="false">{% if LANGUAGE_CODE == 'en' %}Spiced{% else %}Пряное{% endif %}</button>
                     </div>
                     <input type="hidden" name="dough" value="classic">
                 </div>
 
                 <div class="option-group">
                     <div class="option-label-row">
-                        <span>Упаковка</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Packaging{% else %}Упаковка{% endif %}</span>
                     </div>
-                    <div class="option-swatch-grid compact" role="group" aria-label="Выберите упаковку" data-cart-field="packaging">
+                    <div class="option-swatch-grid compact" role="group" aria-label="{% if LANGUAGE_CODE == 'en' %}Choose packaging{% else %}Выберите упаковку{% endif %}" data-cart-field="packaging">
                         <button type="button" class="option-swatch is-selected" data-option-choice data-cart-value="gift_box" aria-pressed="true">
                             <span class="swatch-image swatch-box" aria-hidden="true"></span>
-                            <span>Подарочная коробка</span>
+                            <span>{% if LANGUAGE_CODE == 'en' %}Gift box{% else %}Подарочная коробка{% endif %}</span>
                         </button>
                         <button type="button" class="option-swatch" data-option-choice data-cart-value="kraft_box" aria-pressed="false">
                             <span class="swatch-image swatch-bag" aria-hidden="true"></span>
@@ -159,11 +159,11 @@
                         </button>
                         <button type="button" class="option-swatch" data-option-choice data-cart-value="individual" aria-pressed="false">
                             <span class="swatch-image swatch-individual" aria-hidden="true"></span>
-                            <span>Индивидуальная упаковка</span>
+                            <span>{% if LANGUAGE_CODE == 'en' %}Custom packaging{% else %}Индивидуальная упаковка{% endif %}</span>
                         </button>
                         <button type="button" class="option-swatch" data-option-choice data-cart-value="none" aria-pressed="false">
                             <span class="swatch-image swatch-none" aria-hidden="true"></span>
-                            <span>Без упаковки</span>
+                            <span>{% if LANGUAGE_CODE == 'en' %}No packaging{% else %}Без упаковки{% endif %}</span>
                         </button>
                     </div>
                     <input type="hidden" name="packaging" value="gift_box">
@@ -171,35 +171,37 @@
 
                     <div class="product-actions">
                         {% if user.is_authenticated %}
-                            <button class="primary-action" type="submit">В корзину</button>
+                            <button class="primary-action" type="submit">{% if LANGUAGE_CODE == 'en' %}Add to cart{% else %}В корзину{% endif %}</button>
                         {% else %}
-                            <a class="primary-action" href="{% url 'accounts:login' %}?next={{ request.get_full_path }}">Войти, чтобы добавить</a>
+                            <a class="primary-action" href="{% url 'accounts:login' %}?next={{ request.get_full_path }}">{% if LANGUAGE_CODE == 'en' %}Sign in to add{% else %}Войти, чтобы добавить{% endif %}</a>
                         {% endif %}
-                        <button class="secondary-action" type="button">Рассчитать скидку</button>
+                        <button class="secondary-action" type="button">{% if LANGUAGE_CODE == 'en' %}Calculate discount{% else %}Рассчитать скидку{% endif %}</button>
                     </div>
                 </form>
 
                 <div class="product-delivery-row">
-                    <span class="delivery-item">Срок изготовления: от 3 дней</span>
-                    <span class="delivery-item">Доставка по всей России</span>
+                    <span class="delivery-item">{% if LANGUAGE_CODE == 'en' %}Production time: from 3 days{% else %}Срок изготовления: от 3 дней{% endif %}</span>
+                    <span class="delivery-item">{% if LANGUAGE_CODE == 'en' %}Delivery across Russia{% else %}Доставка по всей России{% endif %}</span>
                 </div>
             </div>
         </div>
 
-        <div class="product-tabs" aria-label="Описание товара">
-            <div class="tab-list" role="tablist" aria-label="Информация о товаре">
-                <button class="tab-button is-active" type="button" role="tab" aria-selected="true">Описание</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false">Состав</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false">Доставка</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false">Оплата</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false">Отзывы (32)</button>
+        <div class="product-tabs" aria-label="{% if LANGUAGE_CODE == 'en' %}Product description{% else %}Описание товара{% endif %}">
+            <div class="tab-list" role="tablist" aria-label="{% if LANGUAGE_CODE == 'en' %}Product information{% else %}Информация о товаре{% endif %}">
+                <button class="tab-button is-active" type="button" role="tab" aria-selected="true">{% if LANGUAGE_CODE == 'en' %}Description{% else %}Описание{% endif %}</button>
+                <button class="tab-button" type="button" role="tab" aria-selected="false">{% if LANGUAGE_CODE == 'en' %}Ingredients{% else %}Состав{% endif %}</button>
+                <button class="tab-button" type="button" role="tab" aria-selected="false">{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</button>
+                <button class="tab-button" type="button" role="tab" aria-selected="false">{% if LANGUAGE_CODE == 'en' %}Payment{% else %}Оплата{% endif %}</button>
+                <button class="tab-button" type="button" role="tab" aria-selected="false">{% if LANGUAGE_CODE == 'en' %}Reviews (32){% else %}Отзывы (32){% endif %}</button>
             </div>
 
             <div class="tab-panel">
                 <p>
-                    Пряники ручной работы в форме сердца с нежной цветочной росписью.
+                    {% if LANGUAGE_CODE == 'en' %}Handmade heart-shaped gingerbread with delicate floral icing.
+                    Made with natural ingredients and careful attention to every detail.
+                    A lovely choice for gifts, corporate sets, and special occasions.{% else %}Пряники ручной работы в форме сердца с нежной цветочной росписью.
                     Выполнены из натуральных ингредиентов, с любовью и вниманием к деталям.
-                    Подходят для подарков, корпоративных наборов и особых событий.
+                    Подходят для подарков, корпоративных наборов и особых событий.{% endif %}
                 </p>
             </div>
         </div>
@@ -207,10 +209,10 @@
         {% if related_products %}
             <div class="related-products">
                 <div class="related-header">
-                    <h2>Похожие товары</h2>
+                    <h2>{% if LANGUAGE_CODE == 'en' %}You may also like{% else %}Похожие товары{% endif %}</h2>
                     <div class="related-nav">
-                        <button type="button" aria-label="Предыдущие товары">←</button>
-                        <button type="button" aria-label="Следующие товары">→</button>
+                        <button type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Previous products{% else %}Предыдущие товары{% endif %}">←</button>
+                        <button type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Next products{% else %}Следующие товары{% endif %}">→</button>
                     </div>
                 </div>
                 <div class="related-grid">

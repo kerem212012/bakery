@@ -1,4 +1,5 @@
 from decimal import Decimal, ROUND_HALF_UP
+from django.utils.translation import get_language
 
 
 BASE_UNIT_PRICE = Decimal("98")
@@ -101,6 +102,81 @@ CALCULATOR_OPTIONS = {
     ),
     "payments": tuple({"value": value, "label": label} for value, label in PAYMENT_CHOICES),
 }
+
+ENGLISH_CHOICES = {
+    "flavor": {
+        "classic": "Classic gingerbread",
+        "chocolate": "Chocolate",
+        "honey": "Honey",
+        "cinnamon": "Cinnamon",
+    },
+    "shape": {
+        "heart": "Heart",
+        "circle": "Circle",
+        "star": "Star",
+        "square": "Square",
+        "flower": "Flower",
+        "gingerbread": "Gingerbread person",
+    },
+    "coating": {
+        "icing": "Printed icing",
+        "painting": "Hand-painted icing",
+        "partial": "Partial coating",
+        "none": "No coating",
+    },
+    "packaging": {
+        "ribbon": "Bag with ribbon",
+        "box": "Classic box",
+        "premium": "Premium box",
+        "none": "No packaging",
+    },
+    "delivery": {
+        "moscow": "Delivery within the Moscow Ring Road",
+        "outside": "Delivery outside the Moscow Ring Road",
+        "pickup": "Pickup",
+    },
+    "payment": {
+        "organization": "Business payment, 100% prepayment",
+        "organization_half": "Business payment, 50% prepayment",
+        "card": "Card via payment link, 100% prepayment",
+        "card_half": "Card via payment link, 50% prepayment",
+        "card_delivery": "Card via payment link on delivery (orders under RUB 5,000 only)",
+        "invoice": "Invoice",
+    },
+}
+
+
+def localized_calculator_options():
+    if get_language() != "en":
+        return CALCULATOR_OPTIONS
+
+    choice_groups = {
+        "flavors": "flavor",
+        "shapes": "shape",
+        "coatings": "coating",
+        "packaging": "packaging",
+        "deliveries": "delivery",
+        "payments": "payment",
+    }
+    return {
+        group: tuple(
+            {
+                **option,
+                "label": ENGLISH_CHOICES[choice_groups[group]][option["value"]],
+            }
+            if group in choice_groups
+            else option
+            for option in options
+        )
+        for group, options in CALCULATOR_OPTIONS.items()
+    }
+
+
+def localized_choices(choices, group):
+    translations = ENGLISH_CHOICES.get(group, {})
+    if get_language() != "en":
+        return choices
+    return tuple((value, translations.get(value, label)) for value, label in choices)
 
 
 def calculate_quote(configuration):

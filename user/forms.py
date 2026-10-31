@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.utils.translation import get_language
 
 from .models import CustomerProfile
 
@@ -21,8 +22,12 @@ class LoginForm(AuthenticationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["username"].label = "Логин"
-        self.fields["password"].label = "Пароль"
+        if get_language() == "en":
+            self.fields["username"].label = "Username"
+            self.fields["password"].label = "Password"
+        else:
+            self.fields["username"].label = "Логин"
+            self.fields["password"].label = "Пароль"
 
 
 class RegistrationForm(UserCreationForm):
@@ -108,11 +113,47 @@ class RegistrationForm(UserCreationForm):
                 "phone",
             )
         )
+        if get_language() == "en":
+            labels = {
+                "customer_type": "Customer type",
+                "username": "Username",
+                "first_name": "First name",
+                "last_name": "Last name",
+                "email": "Email",
+                "password1": "Password",
+                "password2": "Confirm password",
+                "company_name": "Company name",
+                "inn": "Tax ID",
+                "kpp": "Registration code",
+                "legal_address": "Registered address",
+                "contact_name": "Contact person",
+                "phone": "Phone",
+            }
+            self.fields["customer_type"].choices = (
+                ("individual", "Individual"),
+                ("legal_entity", "Business"),
+            )
+            for field_name, label in labels.items():
+                self.fields[field_name].label = label
+            self.fields["inn"].error_messages["invalid"] = "Enter 10 or 12 digits."
+            self.fields["kpp"].error_messages["invalid"] = "Enter 9 digits."
+            self.fields["username"].help_text = (
+                "Up to 150 characters: letters, digits, and @ . + - _."
+            )
+            self.fields["password1"].help_text = (
+                "Use at least 8 characters and avoid a commonly used password."
+            )
+            self.fields["password2"].help_text = "Enter your password again to confirm."
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
         if User.objects.filter(email__iexact=email).exists():
-            raise forms.ValidationError("Аккаунт с такой почтой уже существует.")
+            message = (
+                "An account with this email already exists."
+                if get_language() == "en"
+                else "Аккаунт с такой почтой уже существует."
+            )
+            raise forms.ValidationError(message)
         return email
 
     def clean(self):
@@ -127,7 +168,12 @@ class RegistrationForm(UserCreationForm):
                 "phone",
             ):
                 if not cleaned_data.get(field_name, "").strip():
-                    self.add_error(field_name, "Обязательное поле для юридического лица.")
+                    message = (
+                        "This field is required for business accounts."
+                        if get_language() == "en"
+                        else "Обязательное поле для юридического лица."
+                    )
+                    self.add_error(field_name, message)
         return cleaned_data
 
     def save(self, commit=True):
@@ -157,6 +203,13 @@ class AccountProfileForm(forms.ModelForm):
             "last_name": "Фамилия",
             "email": "Электронная почта",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if get_language() == "en":
+            self.fields["first_name"].label = "First name"
+            self.fields["last_name"].label = "Last name"
+            self.fields["email"].label = "Email"
         widgets = {
             "first_name": forms.TextInput(attrs={"autocomplete": "given-name"}),
             "last_name": forms.TextInput(attrs={"autocomplete": "family-name"}),
@@ -166,7 +219,12 @@ class AccountProfileForm(forms.ModelForm):
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
         if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
-            raise forms.ValidationError("Аккаунт с такой почтой уже существует.")
+            message = (
+                "An account with this email already exists."
+                if get_language() == "en"
+                else "Аккаунт с такой почтой уже существует."
+            )
+            raise forms.ValidationError(message)
         return email
 
 
@@ -184,3 +242,11 @@ class DeliveryAddressForm(forms.ModelForm):
                 }
             )
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if get_language() == "en":
+            self.fields["delivery_address"].label = "Delivery address"
+            self.fields["delivery_address"].widget.attrs["placeholder"] = (
+                "City, street, building, apartment, and preferred delivery time"
+            )

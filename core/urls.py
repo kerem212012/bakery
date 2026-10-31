@@ -4,6 +4,13 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path("admin-panel/", views.admin_dashboard, name="admin_dashboard"),
+    path("manager/", views.manager_dashboard, name="manager_dashboard"),
+    path(
+        "manager/orders/<int:order_id>/status/",
+        views.manager_update_order_status,
+        name="manager_update_order_status",
+    ),
     path("about/", views.about, name="about"),
     path("corporate/", views.corporate, name="corporate"),
     path("contacts/", views.contacts, name="contacts"),
