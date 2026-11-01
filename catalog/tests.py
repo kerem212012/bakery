@@ -1,6 +1,12 @@
+from io import BytesIO
+from tempfile import TemporaryDirectory
+
 from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from PIL import Image
 
 from core.models import Preorder
 from user.models import CustomerProfile
@@ -64,6 +70,55 @@ class CatalogAdminTests(TestCase):
         self.assertEqual(product.category, self.category)
         self.assertTrue(product.is_featured)
 
+    def test_admin_can_upload_and_preview_a_product_photo(self):
+        image_buffer = BytesIO()
+        Image.new("RGB", (4, 4), color="red").save(image_buffer, format="PNG")
+        image_file = SimpleUploadedFile(
+            "gingerbread.png",
+            image_buffer.getvalue(),
+            content_type="image/png",
+        )
+
+        with TemporaryDirectory() as media_root:
+            with self.settings(MEDIA_ROOT=media_root):
+                response = self.client.post(
+                    reverse("admin:catalog_product_add"),
+                    {
+                        "name": "Пряник с фото",
+                        "name_en": "Gingerbread with photo",
+                        "slug": "",
+                        "category": str(self.category.pk),
+                        "description": "Описание товара",
+                        "description_en": "Product description",
+                        "price": "1200.00",
+                        "image": image_file,
+                        "image_url": "",
+                        "filter_options": [],
+                        "is_active": "on",
+                        "display_order": "0",
+                        "_save": "Save",
+                    },
+                )
+
+                self.assertEqual(response.status_code, 302)
+                product = Product.objects.get(name="Пряник с фото")
+                self.assertEqual(
+                    product.image.name,
+                    "catalog/products/gingerbread.png",
+                )
+                self.assertEqual(
+                    product.display_image_url,
+                    f"{settings.MEDIA_URL}{product.image.name}",
+                )
+                change_response = self.client.get(
+                    reverse("admin:catalog_product_change", args=[product.pk])
+                )
+                self.assertContains(change_response, product.display_image_url)
+                catalog_response = self.client.get(
+                    reverse("catalog:category_list")
+                )
+                self.assertContains(catalog_response, product.display_image_url)
+
     def test_admin_dashboard_links_to_catalog_and_orders(self):
         response = self.client.get(reverse("admin:index"))
 
@@ -98,6 +153,14 @@ class CatalogPageTests(TestCase):
             reverse("catalog:category_detail", args=[self.category.slug]),
         )
         self.assertContains(response, self.product.name)
+        self.assertContains(response, "Корпоративным")
+        self.assertContains(response, "Мастер-классы")
+        self.assertContains(response, "Пряники с логотипом")
+        self.assertContains(response, reverse("business_clients"))
+        self.assertContains(
+            response,
+            reverse("catalog:category_detail", args=["branded-gifts"]),
+        )
 
     def test_catalog_sidebar_shows_quick_categories_and_price_range(self):
         response = self.client.get(reverse("catalog:category_list"))

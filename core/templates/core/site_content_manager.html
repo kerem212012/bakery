@@ -1,0 +1,120 @@
+{% extends "core/base.html" %}
+
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Site content — Lukomorye{% else %}Контент сайта — Лукоморье{% endif %}{% endblock %}
+{% block shell_class %} admin-dashboard-shell{% endblock %}
+
+{% block content %}
+    <section class="site-content-manager">
+        <header class="admin-dashboard-heading">
+            <div>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Website editor{% else %}Редактор сайта{% endif %}</p>
+                <h1>{% if editing_block %}{% if LANGUAGE_CODE == 'en' %}Edit site content{% else %}Редактировать контент{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Add site content{% else %}Добавить контент на сайт{% endif %}{% endif %}</h1>
+                <p>{% if LANGUAGE_CODE == 'en' %}Add a photo, heading, and description to a public page. This is a separate website editor, not the Django admin.{% else %}Добавьте фото, заголовок и описание на нужную страницу сайта. Это отдельный редактор сайта, не Django-админка.{% endif %}</p>
+            </div>
+            <a class="admin-dashboard-site-link" href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Back to dashboard{% else %}Назад в панель{% endif %}</a>
+        </header>
+
+        {% if messages %}
+            <div class="site-content-notices">
+                {% for message in messages %}
+                    <p class="site-content-notice">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form class="site-content-editor" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="site-content-form-errors">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="site-content-form-section">
+                <h2>{% if LANGUAGE_CODE == 'en' %}Where should it appear?{% else %}Где показать блок?{% endif %}</h2>
+                <div class="site-content-form-field">
+                    <label for="{{ form.page.id_for_label }}">{{ form.page.label }}</label>
+                    {{ form.page }}
+                    {{ form.page.errors }}
+                </div>
+            </div>
+
+            <div class="site-content-form-section">
+                <h2>{% if LANGUAGE_CODE == 'en' %}Headings and descriptions{% else %}Заголовки и описания{% endif %}</h2>
+                <div class="site-content-form-grid">
+                    <div class="site-content-form-field">
+                        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+                        {{ form.title }}
+                        {{ form.title.errors }}
+                    </div>
+                    <div class="site-content-form-field">
+                        <label for="{{ form.title_en.id_for_label }}">{{ form.title_en.label }}</label>
+                        {{ form.title_en }}
+                        {{ form.title_en.errors }}
+                    </div>
+                    <div class="site-content-form-field">
+                        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {{ form.description.errors }}
+                    </div>
+                    <div class="site-content-form-field">
+                        <label for="{{ form.description_en.id_for_label }}">{{ form.description_en.label }}</label>
+                        {{ form.description_en }}
+                        {{ form.description_en.errors }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="site-content-form-section">
+                <h2>{% if LANGUAGE_CODE == 'en' %}Photo and publishing{% else %}Фото и публикация{% endif %}</h2>
+                <div class="site-content-form-field">
+                    <label for="{{ form.image.id_for_label }}">{{ form.image.label }}</label>
+                    {{ form.image }}
+                    {% if form.image.help_text %}<small>{{ form.image.help_text }}</small>{% endif %}
+                    {{ form.image.errors }}
+                    {% if editing_block.image %}
+                        <img class="site-content-editor-preview" src="{{ editing_block.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current photo{% else %}Текущее фото{% endif %}">
+                    {% endif %}
+                </div>
+                <div class="site-content-form-options">
+                    <div class="site-content-form-field">
+                        <label for="{{ form.display_order.id_for_label }}">{{ form.display_order.label }}</label>
+                        {{ form.display_order }}
+                        {{ form.display_order.errors }}
+                    </div>
+                    <label class="site-content-published">{{ form.is_active }}<span>{{ form.is_active.label }}</span></label>
+                </div>
+            </div>
+
+            <div class="site-content-form-actions">
+                <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save and publish{% else %}Сохранить{% endif %}</button>
+                {% if editing_block %}
+                    <a class="admin-dashboard-site-link" href="{% url 'site_content_manager' %}">{% if LANGUAGE_CODE == 'en' %}Cancel{% else %}Отмена{% endif %}</a>
+                {% endif %}
+            </div>
+        </form>
+
+        <section class="site-content-existing">
+            <div class="admin-dashboard-section-heading">
+                <div>
+                    <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Published blocks{% else %}Блоки сайта{% endif %}</p>
+                    <h2>{% if LANGUAGE_CODE == 'en' %}Existing content{% else %}Добавленный контент{% endif %}</h2>
+                </div>
+            </div>
+            {% if site_blocks %}
+                <div class="site-content-existing-list">
+                    {% for block in site_blocks %}
+                        <article class="site-content-existing-item">
+                            {% if block.image %}<img src="{{ block.image.url }}" alt="">{% endif %}
+                            <div>
+                                <span class="site-content-existing-page">{{ block.get_page_display }}</span>
+                                <h3>{{ block.localized_title|default:block.get_page_display }}</h3>
+                                <small>{% if block.is_active %}{% if LANGUAGE_CODE == 'en' %}Published{% else %}Опубликовано{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Hidden{% else %}Скрыто{% endif %}{% endif %}</small>
+                            </div>
+                            <a class="admin-dashboard-site-link" href="{% url 'site_content_edit' block.pk %}">{% if LANGUAGE_CODE == 'en' %}Edit{% else %}Изменить{% endif %}</a>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="site-content-empty">{% if LANGUAGE_CODE == 'en' %}No content blocks yet. Add the first one above.{% else %}Пока нет блоков контента. Добавьте первый выше.{% endif %}</p>
+            {% endif %}
+        </section>
+    </section>
+{% endblock %}

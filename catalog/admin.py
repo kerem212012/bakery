@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.html import format_html
 
 from .models import Category, Product, ProductFilterOption
 
@@ -14,6 +15,7 @@ class ProductInline(admin.TabularInline):
         "name",
         "name_en",
         "price",
+        "image",
         "is_active",
         "is_featured",
         "display_order",
@@ -44,14 +46,40 @@ def unfeature_products(modeladmin, request, queryset):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "name_en", "slug", "display_order", "is_active")
+    list_display = ("name", "name_en", "image_preview", "slug", "display_order", "is_active")
     list_editable = ("display_order", "is_active")
     list_filter = ("is_active",)
     search_fields = ("name", "name_en", "description", "description_en", "slug")
     prepopulated_fields = {"slug": ("name",)}
     inlines = (ProductInline,)
+    readonly_fields = ("image_preview",)
     ordering = ("display_order", "name")
     list_per_page = 25
+    fieldsets = (
+        (
+            "Основная информация",
+            {
+                "fields": (
+                    ("name", "name_en"),
+                    "slug",
+                    ("description", "description_en"),
+                    "image",
+                    "image_preview",
+                    "image_url",
+                )
+            },
+        ),
+        ("Публикация", {"fields": (("display_order", "is_active"),)}),
+    )
+
+    @admin.display(description="Фото")
+    def image_preview(self, obj):
+        if not obj or not obj.display_image_url:
+            return "Фото не загружено"
+        return format_html(
+            '<img src="{}" alt="" style="max-width: 120px; max-height: 90px; object-fit: cover;">',
+            obj.display_image_url,
+        )
 
 
 @admin.register(Product)
@@ -61,6 +89,7 @@ class ProductAdmin(admin.ModelAdmin):
         "name_en",
         "category",
         "price",
+        "image_preview",
         "is_featured",
         "is_active",
         "display_order",
@@ -82,6 +111,7 @@ class ProductAdmin(admin.ModelAdmin):
     filter_horizontal = ("filter_options",)
     list_per_page = 50
     save_on_top = True
+    readonly_fields = ("image_preview",)
     actions = (
         activate_products,
         deactivate_products,
@@ -99,6 +129,8 @@ class ProductAdmin(admin.ModelAdmin):
                     "description",
                     "description_en",
                     "price",
+                    "image",
+                    "image_preview",
                     "image_url",
                 )
             },
@@ -114,6 +146,15 @@ class ProductAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+    @admin.display(description="Фото")
+    def image_preview(self, obj):
+        if not obj or not obj.display_image_url:
+            return "Фото не загружено"
+        return format_html(
+            '<img src="{}" alt="" style="max-width: 160px; max-height: 120px; object-fit: cover;">',
+            obj.display_image_url,
+        )
 
 
 @admin.register(ProductFilterOption)

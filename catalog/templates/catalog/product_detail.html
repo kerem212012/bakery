@@ -18,22 +18,22 @@
             <div class="product-gallery-panel">
                 <div class="product-thumb-column" aria-label="{% if LANGUAGE_CODE == 'en' %}Product image selection{% else %}Выбор фото товара{% endif %}">
                     <button class="product-thumb is-active" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Main image{% else %}Основное фото{% endif %}">
-                        {% if product.image_url %}
-                            <img src="{{ product.image_url }}" alt="{{ product.localized_name }}">
+                        {% if product.display_image_url %}
+                            <img src="{{ product.display_image_url }}" alt="{{ product.localized_name }}">
                         {% else %}
                             <span class="thumb-placeholder" aria-hidden="true"></span>
                         {% endif %}
                     </button>
                     <button class="product-thumb" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Alternative image{% else %}Другой вариант фото{% endif %}">
-                        {% if product.image_url %}
-                            <img src="{{ product.image_url }}" alt="{{ product.localized_name }}">
+                        {% if product.display_image_url %}
+                            <img src="{{ product.display_image_url }}" alt="{{ product.localized_name }}">
                         {% else %}
                             <span class="thumb-placeholder" aria-hidden="true"></span>
                         {% endif %}
                     </button>
                     <button class="product-thumb" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Another image{% else %}Ещё вариант фото{% endif %}">
-                        {% if product.image_url %}
-                            <img src="{{ product.image_url }}" alt="{{ product.localized_name }}">
+                        {% if product.display_image_url %}
+                            <img src="{{ product.display_image_url }}" alt="{{ product.localized_name }}">
                         {% else %}
                             <span class="thumb-placeholder" aria-hidden="true"></span>
                         {% endif %}
@@ -44,8 +44,8 @@
                 </div>
 
                 <div class="product-image-stage">
-                    {% if product.image_url %}
-                        <img src="{{ product.image_url }}" alt="{{ product.localized_name }}">
+                    {% if product.display_image_url %}
+                        <img src="{{ product.display_image_url }}" alt="{{ product.localized_name }}">
                     {% else %}
                         <div class="product-image-placeholder" aria-label="{{ product.localized_name }}"></div>
                     {% endif %}
@@ -218,8 +218,8 @@
                 <div class="related-grid">
                     {% for related in related_products %}
                         <a class="related-card" href="{% url 'catalog:product_detail' category.slug related.slug %}">
-                            {% if related.image_url %}
-                                <img src="{{ related.image_url }}" alt="{{ related.name }}">
+                            {% if related.display_image_url %}
+                                <img src="{{ related.display_image_url }}" alt="{{ related.name }}">
                             {% else %}
                                 <div class="related-placeholder" aria-label="{{ related.name }}"></div>
                             {% endif %}

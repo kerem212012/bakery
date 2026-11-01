@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load l10n %}
 
 {% block title %}{% if LANGUAGE_CODE == 'en' %}Lukomorye — ideas, crafted in every detail{% else %}Лукоморье — идеи, воплощённые в деталях{% endif %}{% endblock %}
 
@@ -97,8 +98,8 @@
                 <div class="popular-grid" id="popular-track" tabindex="0" aria-label="{% if LANGUAGE_CODE == 'en' %}Popular gifts{% else %}Популярные подарки{% endif %}">
                     {% for product in popular_products %}
                         <a class="product-card" href="{% url 'catalog:category_detail' product.category.slug %}">
-                            {% if product.image_url %}
-                                <img class="product-photo" src="{{ product.image_url }}" alt="{{ product.localized_name }}" loading="lazy">
+                            {% if product.display_image_url %}
+                                <img class="product-photo" src="{{ product.display_image_url }}" alt="{{ product.localized_name }}" loading="lazy">
                             {% else %}
                                 <span class="product-photo product-photo-placeholder" role="img" aria-label="{{ product.localized_name }}"></span>
                             {% endif %}
@@ -135,13 +136,13 @@
                 <div class="catalog-grid">
                     {% for product in showcase_products %}
                         <article class="catalog-card">
-                            {% if product.image_url %}
-                                <img class="catalog-photo" src="{{ product.image_url }}" alt="{{ product.localized_name }}" loading="lazy">
+                            {% if product.display_image_url %}
+                                <img class="catalog-photo" src="{{ product.display_image_url }}" alt="{{ product.localized_name }}" loading="lazy">
                             {% else %}
                                 <span class="catalog-photo catalog-photo-placeholder" role="img" aria-label="{{ product.localized_name }}"></span>
                             {% endif %}
                             <span class="catalog-title">{{ product.localized_name }}</span>
-                            <span class="catalog-caption">{{ product.category.localized_name }}{% if product.price %} · {{ product.price }} ₽{% endif %} <span aria-hidden="true">↗</span></span>
+                            <span class="catalog-caption">{{ product.category.localized_name }}{% if product.price %}<span class="catalog-caption-price"> · {{ product.price }} ₽</span>{% endif %} <span aria-hidden="true">↗</span></span>
                         </article>
                     {% empty %}
                         <p class="catalog-empty">{% if LANGUAGE_CODE == 'en' %}Products coming soon.{% else %}Товары скоро появятся.{% endif %}</p>
@@ -175,7 +176,7 @@
                             <div class="flavor-options">
                                 {% for option in calculator_options.flavors %}
                                     <label class="flavor-option">
-                                        <input class="js-calculator-option" type="radio" name="flavor" value="{{ option.value }}" data-extra="{{ option.extra }}" {% if preorder_form.flavor.value == option.value %}checked{% endif %}>
+                                        <input class="js-calculator-option" type="radio" name="flavor" value="{{ option.value }}" data-extra="{{ option.extra|unlocalize }}" {% if preorder_form.flavor.value == option.value %}checked{% endif %}>
                                         <span class="flavor-illustration" aria-hidden="true">{% if option.value == "classic" %}♡{% elif option.value == "chocolate" %}●{% elif option.value == "honey" %}✿{% else %}✧{% endif %}</span>
                                         <span>{{ option.label }}</span>
                                     </label>
@@ -200,7 +201,7 @@
                             <div class="size-options">
                                 {% for option in calculator_options.sizes %}
                                     <label class="size-option">
-                                        <input class="js-calculator-option" type="radio" name="size" value="{{ option.value }}" data-multiplier="{{ option.multiplier }}" {% if preorder_form.size.value == option.value %}checked{% endif %}>
+                                        <input class="js-calculator-option" type="radio" name="size" value="{{ option.value }}" data-multiplier="{{ option.multiplier|unlocalize }}" {% if preorder_form.size.value == option.value %}checked{% endif %}>
                                         <span>{{ option.label }}</span>
                                     </label>
                                 {% endfor %}
@@ -227,7 +228,7 @@
                             <div class="coating-options">
                                 {% for option in calculator_options.coatings %}
                                     <label class="image-option">
-                                        <input class="js-calculator-option" type="radio" name="coating" value="{{ option.value }}" data-extra="{{ option.extra }}" {% if preorder_form.coating.value == option.value %}checked{% endif %}>
+                                        <input class="js-calculator-option" type="radio" name="coating" value="{{ option.value }}" data-extra="{{ option.extra|unlocalize }}" {% if preorder_form.coating.value == option.value %}checked{% endif %}>
                                         <span class="option-art coating-art coating-{{ option.value }}" aria-hidden="true">{% if option.value == "none" %}♥{% else %}✿{% endif %}</span>
                                         <span>{{ option.label }}</span>
                                     </label>
@@ -241,7 +242,7 @@
                             <div class="packaging-options">
                                 {% for option in calculator_options.packaging %}
                                     <label class="image-option">
-                                        <input class="js-calculator-option" type="radio" name="packaging" value="{{ option.value }}" data-extra="{{ option.extra }}" {% if preorder_form.packaging.value == option.value %}checked{% endif %}>
+                                        <input class="js-calculator-option" type="radio" name="packaging" value="{{ option.value }}" data-extra="{{ option.extra|unlocalize }}" {% if preorder_form.packaging.value == option.value %}checked{% endif %}>
                                         <span class="option-art package-art package-{{ option.value }}" aria-hidden="true">{% if option.value == "ribbon" %}♧{% elif option.value == "box" %}▱{% elif option.value == "premium" %}✿{% else %}□{% endif %}</span>
                                         <span>{{ option.label }}</span>
                                     </label>
@@ -254,7 +255,7 @@
                             <label for="id_delivery"><span class="calculator-icon" aria-hidden="true">♧</span><b>7.</b> {% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</label>
                             <select id="id_delivery" name="delivery">
                                 {% for option in calculator_options.deliveries %}
-                                    <option value="{{ option.value }}" data-cost="{{ option.cost }}" {% if preorder_form.delivery.value == option.value %}selected{% endif %}>{{ option.label }}</option>
+                                    <option value="{{ option.value }}" data-cost="{{ option.cost|unlocalize }}" {% if preorder_form.delivery.value == option.value %}selected{% endif %}>{{ option.label }}</option>
                                 {% endfor %}
                             </select>
                             {{ preorder_form.delivery.errors }}

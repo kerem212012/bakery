@@ -14,6 +14,7 @@ from .calculator import (
     SIZE_CHOICES,
     localized_choices,
 )
+from .models import FeedbackSubmission, Preorder, SiteContentBlock
 
 MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024
 MAX_ATTACHMENT_COUNT = 5
@@ -193,3 +194,116 @@ class FeedbackForm(forms.Form):
             self.fields["consent_given"].error_messages["required"] = (
                 "You must agree to the processing of your personal data."
             )
+
+
+class SiteContentBlockForm(forms.ModelForm):
+    class Meta:
+        model = SiteContentBlock
+        fields = (
+            "page",
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "image",
+            "display_order",
+            "is_active",
+        )
+        widgets = {
+            "page": forms.Select(attrs={"class": "site-content-form-control"}),
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 5}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 5}
+            ),
+            "image": forms.ClearableFileInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "display_order": forms.NumberInput(
+                attrs={"class": "site-content-form-control", "min": 0}
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if (get_language() or "").startswith("en"):
+            self.fields["page"].label = "Website page"
+            self.fields["page"].choices = [
+                (value, label)
+                for value, label in (
+                    ("all", "All pages"),
+                    ("home", "Home"),
+                    ("about", "About us"),
+                    ("business_clients", "Corporate clients"),
+                    ("corporate", "Partnership"),
+                    ("contacts", "Contacts"),
+                    ("delivery", "Delivery"),
+                    ("faq", "FAQ"),
+                    ("feedback", "Feedback"),
+                    ("packaging", "Packaging"),
+                    ("catalog", "Catalog"),
+                    ("categories", "Category overview"),
+                    ("category", "Category page"),
+                    ("product", "Product page"),
+                )
+            ]
+            labels = {
+                "title": "Heading (Russian)",
+                "title_en": "Heading (English)",
+                "description": "Description (Russian)",
+                "description_en": "Description (English)",
+                "image": "Website photo",
+                "display_order": "Display order",
+                "is_active": "Published",
+            }
+            for field_name, label in labels.items():
+                self.fields[field_name].label = label
+            self.fields["image"].help_text = (
+                "Editorial content for your website, not a product photo."
+            )
+        self.fields["image"].widget.attrs["accept"] = "image/jpeg,image/png,image/webp"
+
+
+class AdminOrderStatusForm(forms.Form):
+    status = forms.ChoiceField(choices=())
+
+    def __init__(self, *args, language_code="ru", **kwargs):
+        super().__init__(*args, **kwargs)
+        english = {
+            "new": "New",
+            "contacted": "Confirmed",
+            "production": "In production",
+            "shipping": "On the way",
+            "completed": "Delivered",
+            "cancelled": "Cancelled",
+        }
+        russian = dict(Preorder.Status.choices)
+        labels = english if language_code == "en" else russian
+        self.fields["status"].choices = tuple(
+            (value, labels[value])
+            for value, _ in Preorder.Status.choices
+        )
+        self.fields["status"].widget.attrs["class"] = "site-content-form-control"
+
+
+class AdminFeedbackStatusForm(forms.Form):
+    status = forms.ChoiceField(choices=())
+
+    def __init__(self, *args, language_code="ru", **kwargs):
+        super().__init__(*args, **kwargs)
+        english = {
+            "new": "New",
+            "in_progress": "In progress",
+            "resolved": "Resolved",
+        }
+        labels = english if language_code == "en" else dict(FeedbackSubmission.Status.choices)
+        self.fields["status"].choices = tuple(
+            (value, labels[value]) for value, _ in FeedbackSubmission.Status.choices
+        )
+        self.fields["status"].widget.attrs["class"] = "site-content-form-control"

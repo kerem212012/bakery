@@ -1,6 +1,7 @@
 from django.core.validators import FileExtensionValidator
 from django.conf import settings
 from django.db import models
+from django.utils.translation import get_language
 
 
 def preorder_attachment_path(instance, filename):
@@ -101,3 +102,62 @@ class FeedbackSubmission(models.Model):
 
     def __str__(self):
         return f"Обращение #{self.pk} — {self.subject}"
+
+
+class SiteContentBlock(models.Model):
+    class Page(models.TextChoices):
+        ALL = "all", "Все страницы"
+        HOME = "home", "Главная"
+        ABOUT = "about", "О нас"
+        BUSINESS_CLIENTS = "business_clients", "Корпоративным клиентам"
+        PARTNERSHIP = "corporate", "Сотрудничество"
+        CONTACTS = "contacts", "Контакты"
+        DELIVERY = "delivery", "Доставка"
+        FAQ = "faq", "Вопросы и ответы"
+        FEEDBACK = "feedback", "Обратная связь"
+        PACKAGING = "packaging", "Упаковка"
+        CATALOG = "catalog", "Каталог"
+        CATEGORIES = "categories", "Категории"
+        CATEGORY = "category", "Страница категории"
+        PRODUCT = "product", "Страница товара"
+
+    page = models.CharField(
+        "Страница сайта",
+        max_length=24,
+        choices=Page.choices,
+        default=Page.HOME,
+    )
+    title = models.CharField("Заголовок", max_length=180, blank=True)
+    title_en = models.CharField("Заголовок на английском", max_length=180, blank=True)
+    description = models.TextField("Описание", blank=True)
+    description_en = models.TextField("Описание на английском", blank=True)
+    image = models.ImageField(
+        "Фото сайта",
+        upload_to="site-content/",
+        blank=True,
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
+        help_text="Это редакционный контент страницы сайта, не фотография товара.",
+    )
+    display_order = models.PositiveIntegerField("Порядок отображения", default=0)
+    is_active = models.BooleanField("Опубликовано", default=True)
+    created_at = models.DateTimeField("Создано", auto_now_add=True)
+
+    class Meta:
+        ordering = ("display_order", "pk")
+        verbose_name = "блок контента сайта"
+        verbose_name_plural = "контент сайта"
+
+    def __str__(self):
+        return self.title or self.get_page_display()
+
+    @property
+    def localized_title(self):
+        if (get_language() or "").startswith("en") and self.title_en:
+            return self.title_en
+        return self.title
+
+    @property
+    def localized_description(self):
+        if (get_language() or "").startswith("en") and self.description_en:
+            return self.description_en
+        return self.description

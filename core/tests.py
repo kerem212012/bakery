@@ -1,15 +1,18 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from io import BytesIO
+from tempfile import TemporaryDirectory
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth.models import Permission
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from PIL import Image
 
 from catalog.models import Category, Product
 from .calculator import calculate_quote
-from .models import FeedbackSubmission, Preorder
+from .models import FeedbackSubmission, Preorder, SiteContentBlock
 
 
 class AdminDashboardTests(TestCase):
@@ -49,9 +52,17 @@ class AdminDashboardTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Панель управления")
-        self.assertContains(response, reverse("admin:catalog_product_add"))
-        self.assertContains(response, reverse("admin:catalog_category_changelist"))
-        self.assertContains(response, reverse("admin:core_preorder_changelist"))
+        self.assertContains(response, reverse("admin_section_new", args=("products",)))
+        self.assertContains(response, reverse("site_content_manager"))
+        self.assertContains(response, "Фото и описания сайта")
+        self.assertContains(response, reverse("admin_section", args=("categories",)))
+        self.assertContains(response, reverse("admin_section", args=("orders",)))
+        self.assertContains(response, reverse("admin_section", args=("filters",)))
+        self.assertContains(response, reverse("admin_section", args=("customers",)))
+        self.assertContains(response, reverse("admin_section", args=("messages",)))
+        self.assertNotContains(response, "/admin/catalog/")
+        self.assertNotContains(response, "/admin/core/")
+        self.assertNotContains(response, "/admin/user/")
         self.assertEqual(
             response.context["product_count"],
             existing_product_count + 2,
@@ -60,6 +71,262 @@ class AdminDashboardTests(TestCase):
             response.context["active_product_count"],
             existing_active_product_count + 1,
         )
+
+    def test_site_content_editor_is_superuser_only(self):
+        manager = get_user_model().objects.create_user(
+            username="content_manager",
+            password="test-password",
+            is_staff=True,
+        )
+        self.client.force_login(manager)
+
+        response = self.client.get(reverse("site_content_manager"))
+        self.assertEqual(response.status_code, 403)
+
+        admin_user = get_user_model().objects.create_superuser(
+            username="content_admin",
+            email="content-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        response = self.client.get(reverse("site_content_manager"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Добавить контент на сайт")
+        self.assertContains(response, "не Django-админка")
+
+    def test_site_content_manager_saves_new_page_block(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="content_creator",
+            email="content-creator@example.com",
+            password="content-password",
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.post(
+            reverse("site_content_manager"),
+            {
+                "page": SiteContentBlock.Page.ABOUT,
+                "title": "Custom page heading",
+                "title_en": "Custom page heading in English",
+                "description": "Custom page description",
+                "description_en": "Custom page description in English",
+                "display_order": "2",
+                "is_active": "on",
+            },
+        )
+
+        self.assertRedirects(response, reverse("site_content_manager"))
+        block = SiteContentBlock.objects.get()
+        self.assertEqual(block.page, SiteContentBlock.Page.ABOUT)
+        self.assertEqual(block.title, "Custom page heading")
+        self.assertEqual(block.display_order, 2)
+
+    def test_custom_admin_section_requires_view_permission(self):
+        manager = get_user_model().objects.create_user(
+            username="section_manager",
+            is_staff=True,
+        )
+        self.client.force_login(manager)
+
+        response = self.client.get(reverse("admin_section", args=("products",)))
+
+        self.assertEqual(response.status_code, 403)
+
+        manager.user_permissions.add(
+            Permission.objects.get(
+                content_type__app_label="catalog",
+                codename="view_product",
+            )
+        )
+        response = self.client.get(reverse("admin_section", args=("products",)))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Товары")
+
+    def test_all_admin_section_pages_render_for_superuser(self):
+        admin_user = get_user_model().objects.create_user(
+            username="all_sections_admin",
+            email="all-sections@example.com",
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.client.force_login(admin_user)
+
+        for section in (
+            "products",
+            "categories",
+            "filters",
+            "orders",
+            "customers",
+            "messages",
+        ):
+            with self.subTest(section=section):
+                response = self.client.get(reverse("admin_section", args=(section,)))
+                self.assertEqual(response.status_code, 200)
+
+        for section in ("categories", "filters"):
+            with self.subTest(new_section=section):
+                response = self.client.get(
+                    reverse("admin_section_new", args=(section,))
+                )
+                self.assertEqual(response.status_code, 200)
+
+    def test_custom_product_page_creates_product(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="section_product_admin",
+            email="section-product-admin@example.com",
+            password="section-password",
+        )
+        category = Category.objects.create(name="Custom section category")
+        self.client.force_login(admin_user)
+
+        response = self.client.post(
+            reverse("admin_section_new", args=("products",)),
+            {
+                "name": "Custom section product",
+                "name_en": "Custom section product EN",
+                "category": category.pk,
+                "description": "Description",
+                "description_en": "English description",
+                "price": "120.00",
+                "image_url": "",
+                "display_order": "0",
+                "is_active": "on",
+                "is_featured": "on",
+            },
+        )
+
+        product = Product.objects.get(name="Custom section product")
+        self.assertRedirects(
+            response,
+            reverse("admin_section_edit", args=("products", product.pk)),
+        )
+        self.assertEqual(product.price, Decimal("120.00"))
+
+    def test_custom_order_and_message_pages_update_statuses(self):
+        admin_user = get_user_model().objects.create_user(
+            username="section_status_admin",
+            email="section-status-admin@example.com",
+            is_staff=True,
+            is_superuser=True,
+        )
+        order = Preorder.objects.create(
+            name="Section order customer",
+            email="section-order@example.com",
+            phone="+7 900 000-00-00",
+            configuration={"quantity": 3},
+            unit_price="100.00",
+            discount_percent=0,
+            delivery_cost="0.00",
+            total_price="300.00",
+            consent_given=True,
+        )
+        feedback = FeedbackSubmission.objects.create(
+            name="Section feedback customer",
+            email="section-feedback@example.com",
+            subject="Section feedback subject",
+            message="A message for the custom admin page.",
+            consent_given=True,
+        )
+        self.client.force_login(admin_user)
+
+        order_url = reverse("admin_section_edit", args=("orders", order.pk))
+        order_response = self.client.get(order_url)
+        self.assertEqual(order_response.status_code, 200)
+        self.assertContains(order_response, "Section order customer")
+        self.assertRedirects(
+            self.client.post(order_url, {"status": Preorder.Status.PRODUCTION}),
+            order_url,
+        )
+        order.refresh_from_db()
+        self.assertEqual(order.status, Preorder.Status.PRODUCTION)
+
+        feedback_url = reverse("admin_section_edit", args=("messages", feedback.pk))
+        feedback_response = self.client.get(feedback_url)
+        self.assertEqual(feedback_response.status_code, 200)
+        self.assertContains(feedback_response, "A message for the custom admin page.")
+        self.assertRedirects(
+            self.client.post(
+                feedback_url,
+                {"status": FeedbackSubmission.Status.RESOLVED},
+            ),
+            feedback_url,
+        )
+        feedback.refresh_from_db()
+        self.assertEqual(feedback.status, FeedbackSubmission.Status.RESOLVED)
+
+    def test_active_site_content_only_appears_on_its_selected_page(self):
+        SiteContentBlock.objects.create(
+            page=SiteContentBlock.Page.HOME,
+            title="Homepage editorial heading",
+            description="Homepage editorial description",
+        )
+        SiteContentBlock.objects.create(
+            page=SiteContentBlock.Page.ABOUT,
+            title="About editorial heading",
+        )
+        SiteContentBlock.objects.create(
+            page=SiteContentBlock.Page.HOME,
+            title="Hidden editorial heading",
+            is_active=False,
+        )
+
+        home_response = self.client.get(reverse("home"))
+        about_response = self.client.get(reverse("about"))
+
+        self.assertContains(home_response, "Homepage editorial heading")
+        self.assertNotContains(home_response, "About editorial heading")
+        self.assertNotContains(home_response, "Hidden editorial heading")
+        self.assertContains(about_response, "About editorial heading")
+        self.assertNotContains(about_response, "Homepage editorial heading")
+
+    def test_all_pages_content_appears_on_public_routes_but_not_editor_pages(self):
+        SiteContentBlock.objects.create(
+            page=SiteContentBlock.Page.ALL,
+            title="Every public page heading",
+        )
+        SiteContentBlock.objects.create(
+            page=SiteContentBlock.Page.HOME,
+            title="Homepage only heading",
+        )
+        admin_user = get_user_model().objects.create_superuser(
+            username="all_pages_content_admin",
+            email="all-pages-content-admin@example.com",
+            password="content-password",
+        )
+        self.client.force_login(admin_user)
+
+        home_response = self.client.get(reverse("home"))
+        cart_response = self.client.get(reverse("catalog:cart"))
+        about_response = self.client.get(reverse("about"))
+        editor_response = self.client.get(reverse("site_content_manager"))
+        dashboard_response = self.client.get(reverse("admin_dashboard"))
+
+        self.assertContains(home_response, "Every public page heading")
+        self.assertContains(cart_response, "Every public page heading")
+        self.assertContains(about_response, "Every public page heading")
+        self.assertNotContains(cart_response, "Homepage only heading")
+        self.assertEqual(editor_response.context["site_content_blocks"], ())
+        self.assertEqual(dashboard_response.context["site_content_blocks"], ())
+
+    def test_site_content_image_upload_is_rendered(self):
+        image_buffer = BytesIO()
+        Image.new("RGB", (1, 1), color="white").save(image_buffer, format="PNG")
+
+        with TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                block = SiteContentBlock.objects.create(
+                    page=SiteContentBlock.Page.HOME,
+                    title="Photo editorial heading",
+                    image=SimpleUploadedFile(
+                        "editorial.png",
+                        image_buffer.getvalue(),
+                        content_type="image/png",
+                    ),
+                )
+
+                response = self.client.get(reverse("home"))
+
+                self.assertContains(response, f'src="{block.image.url}"')
 
     def test_staff_header_links_to_admin_and_permitted_manager_pages(self):
         manager = get_user_model().objects.create_user(
@@ -256,6 +523,12 @@ class CalculatorTests(TestCase):
         self.assertContains(response, 'name="quantity"')
         self.assertContains(response, 'name="attachments"')
         self.assertContains(response, "Отправить предзаказ")
+
+    def test_calculator_numeric_data_attributes_are_not_localized(self):
+        response = self.client.get("/")
+
+        self.assertContains(response, 'data-multiplier="0.55"')
+        self.assertContains(response, 'data-multiplier="1.4"')
 
     def test_language_switch_keeps_the_current_page_and_renders_english(self):
         response = self.client.post(
@@ -494,7 +767,16 @@ class HomePageCatalogTests(TestCase):
         self.assertContains(response, "Франшиза")
         self.assertContains(response, "Производителям и поставщикам")
         self.assertContains(response, "Наши успехи — ваши возможности")
-        self.assertContains(response, f'href="{reverse("corporate")}">Корпоративным клиентам</a>')
+        self.assertContains(response, f'href="{reverse("business_clients")}">Корпоративным клиентам</a>')
+
+    def test_business_clients_page_renders_its_own_content(self):
+        response = self.client.get(reverse("business_clients"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<title>Корпоративным клиентам — Лукоморье</title>")
+        self.assertContains(response, "Индивидуальные решения")
+        self.assertContains(response, "Взаимодействие")
+        self.assertContains(response, "Калькулятор заказа")
 
     def test_delivery_page_renders_methods_pickup_and_useful_information(self):
         response = self.client.get(reverse("delivery"))

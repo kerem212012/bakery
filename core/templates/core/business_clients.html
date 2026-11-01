@@ -1,0 +1,155 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Business clients — Lukomorye{% else %}Корпоративным клиентам — Лукоморье{% endif %}{% endblock %}
+
+{% block content %}
+    <div class="business-clients-page">
+        <nav class="about-breadcrumbs" aria-label="{% if LANGUAGE_CODE == 'en' %}Breadcrumbs{% else %}Хлебные крошки{% endif %}">
+            <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">{% if LANGUAGE_CODE == 'en' %}Business clients{% else %}Корпоративным клиентам{% endif %}</span>
+        </nav>
+
+        <section class="business-clients-hero" aria-labelledby="business-clients-heading">
+            <div class="business-clients-hero-copy">
+                <p class="business-clients-kicker">{% if LANGUAGE_CODE == 'en' %}Home / Business clients{% else %}Главная / Корпоративным клиентам{% endif %}</p>
+                <h1 id="business-clients-heading">{% if LANGUAGE_CODE == 'en' %}Corporate clients{% else %}Корпоративным<br>клиентам{% endif %}</h1>
+                <p class="business-clients-subtitle">{% if LANGUAGE_CODE == 'en' %}Individual solutions for your business{% else %}Индивидуальные решения<br>для вашего бизнеса{% endif %}</p>
+                <p class="business-clients-description">{% if LANGUAGE_CODE == 'en' %}We create confectionery items that highlight the value of your company and leave pleasant impressions on your colleagues, partners, and clients.{% else %}Создаём кондитерские изделия, которые подчёркивают ценность вашей компании и оставляют приятные впечатления у сотрудников, партнёров и клиентов.{% endif %}</p>
+                <a class="button button-dark" href="mailto:hello@lukomorye.example?subject=Корпоративный%20заказ">
+                    {% if LANGUAGE_CODE == 'en' %}Discuss the order{% else %}Обсудить заказ{% endif %} <span aria-hidden="true">→</span>
+                </a>
+            </div>
+            <div class="business-clients-hero-media" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift box with decorated gingerbread cookies{% else %}Подарочная коробка с фигурными пряниками{% endif %}"></div>
+        </section>
+
+        <section class="business-clients-section" aria-labelledby="business-client-process-heading">
+            <h2 class="business-clients-section-heading" id="business-client-process-heading">1. {% if LANGUAGE_CODE == 'en' %}Interaction{% else %}Взаимодействие{% endif %}</h2>
+            <p class="business-clients-section-copy">{% if LANGUAGE_CODE == 'en' %}A simple and convenient work process — from idea to ready-made order.{% else %}Простой и удобный процесс работы — от идеи до готового заказа.{% endif %}</p>
+
+            <div class="business-clients-step-list">
+                <div class="business-clients-step-item">
+                    <span class="business-clients-step-icon" aria-hidden="true">↺</span>
+                    <h3>{% if LANGUAGE_CODE == 'en' %}Request{% else %}Заявка{% endif %}</h3>
+                    <p>{% if LANGUAGE_CODE == 'en' %}Send a request by phone, email, or through the website.{% else %}Оставьте запрос на сайте, по телефону или по электронной почте.{% endif %}</p>
+                </div>
+                <span class="business-clients-step-arrow" aria-hidden="true">→</span>
+
+                <div class="business-clients-step-item">
+                    <span class="business-clients-step-icon" aria-hidden="true">▣</span>
+                    <h3>{% if LANGUAGE_CODE == 'en' %}Discussion{% else %}Обсуждение{% endif %}</h3>
+                    <p>{% if LANGUAGE_CODE == 'en' %}We clarify details and decide on a concept together.{% else %}Уточняем детали, предлагаем решения и согласовываем формат заказа.{% endif %}</p>
+                </div>
+                <span class="business-clients-step-arrow" aria-hidden="true">→</span>
+
+                <div class="business-clients-step-item">
+                    <span class="business-clients-step-icon" aria-hidden="true">✓</span>
+                    <h3>{% if LANGUAGE_CODE == 'en' %}Approval{% else %}Согласование{% endif %}</h3>
+                    <p>{% if LANGUAGE_CODE == 'en' %}We present the design and confirm the final details before production.{% else %}Готовим визуализацию и фиксируем финальные детали для запуска в работу.{% endif %}</p>
+                </div>
+                <span class="business-clients-step-arrow" aria-hidden="true">→</span>
+
+                <div class="business-clients-step-item">
+                    <span class="business-clients-step-icon" aria-hidden="true">⚙</span>
+                    <h3>{% if LANGUAGE_CODE == 'en' %}Production{% else %}Производство{% endif %}</h3>
+                    <p>{% if LANGUAGE_CODE == 'en' %}We prepare the order in line with your brand and timelines.{% else %}Изготавливаем заказ в сроки и в соответствии с вашими требованиями.{% endif %}</p>
+                </div>
+                <span class="business-clients-step-arrow" aria-hidden="true">→</span>
+
+                <div class="business-clients-step-item">
+                    <span class="business-clients-step-icon" aria-hidden="true">▤</span>
+                    <h3>{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</h3>
+                    <p>{% if LANGUAGE_CODE == 'en' %}Your order is delivered in a convenient way and ready to impress.{% else %}Доставляем готовый заказ удобным способом и в нужные сроки.{% endif %}</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="business-clients-section business-clients-pricing-section">
+            <div class="business-clients-inline-heading">
+                <h2 class="business-clients-section-heading">2. {% if LANGUAGE_CODE == 'en' %}Payment{% else %}Оплата{% endif %}</h2>
+                <h2 class="business-clients-section-heading">3. {% if LANGUAGE_CODE == 'en' %}Delivery / Pickup{% else %}Доставка / Самовывоз{% endif %}</h2>
+            </div>
+
+            <div class="business-clients-payment-row">
+                <div class="business-clients-payment-area">
+                    <div class="business-clients-option-card">
+                        <span class="business-clients-option-icon" aria-hidden="true">◫</span>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Cashless{% else %}Безналичный расчёт{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}Payment by bank transfer or online.{% else %}Оплата по безналичному расчёту.{% endif %}</p>
+                    </div>
+                    <div class="business-clients-option-card">
+                        <span class="business-clients-option-icon" aria-hidden="true">✎</span>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Invoice{% else %}Счёт{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}We provide documentation for corporate orders.{% else %}Счёт и документы для юридических клиентов.{% endif %}</p>
+                    </div>
+                    <div class="business-clients-option-card">
+                        <span class="business-clients-option-icon" aria-hidden="true">%</span>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Individual terms{% else %}Индивидуальные условия{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}We offer flexible payment options for large orders.{% else %}Гибкие условия оплаты для больших объёмов.{% endif %}</p>
+                    </div>
+                    <a class="button button-dark business-clients-payment-button" href="mailto:hello@lukomorye.example?subject=Оплата%20заказа">
+                        {% if LANGUAGE_CODE == 'en' %}Check payment terms{% else %}Посмотреть реквизиты{% endif %} <span aria-hidden="true">→</span>
+                    </a>
+                </div>
+
+                <div class="business-clients-delivery-area">
+                    <div class="business-clients-delivery-card">
+                        <span class="business-clients-option-icon" aria-hidden="true">✦</span>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Delivery in Moscow{% else %}Доставка по Москве{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}Fast and reliable delivery across Moscow.{% else %}Доставка по Москве в удобное для вас время.{% endif %}</p>
+                    </div>
+                    <div class="business-clients-delivery-card">
+                        <span class="business-clients-option-icon" aria-hidden="true">◎</span>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Delivery in Russia{% else %}Доставка по России{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}We send orders across the country by trusted partners.{% else %}Отправка по России через надёжные курьерские службы.{% endif %}</p>
+                    </div>
+                    <div class="business-clients-delivery-card">
+                        <span class="business-clients-option-icon" aria-hidden="true">▣</span>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Pickup{% else %}Самовывоз{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}Pick up your order from our studio in Moscow.{% else %}Самовывоз из студии в Москве по адресу: ул. Приморская, 10.{% endif %}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="business-clients-section business-clients-calculator-section" aria-labelledby="business-clients-calculator-heading">
+            <div class="business-clients-calculator-copy">
+                <h2 class="business-clients-section-heading" id="business-clients-calculator-heading">4. {% if LANGUAGE_CODE == 'en' %}Order calculator{% else %}Калькулятор заказа{% endif %}</h2>
+                <p>{% if LANGUAGE_CODE == 'en' %}Calculate the approximate cost of your custom order and send the request for a quote.{% else %}Рассчитайте ориентировочную стоимость вашего заказа и отправьте заявку на расчёт.{% endif %}</p>
+                <a class="button button-dark" href="{% url 'home' %}#calculator">
+                    {% if LANGUAGE_CODE == 'en' %}Go to the calculator{% else %}Перейти к калькулятору{% endif %} <span aria-hidden="true">→</span>
+                </a>
+            </div>
+            <div class="business-clients-calculator-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Decorated gingerbread cookies in a gift box{% else %}Украшенные пряники в подарочной коробке{% endif %}"></div>
+        </section>
+
+        <section class="business-clients-section business-clients-contacts-section" aria-labelledby="business-clients-contacts-heading">
+            <h2 class="business-clients-section-heading" id="business-clients-contacts-heading">5. {% if LANGUAGE_CODE == 'en' %}Contacts{% else %}Контакты{% endif %}</h2>
+            <p class="business-clients-section-copy">{% if LANGUAGE_CODE == 'en' %}We are always happy to discuss your project and offer the best solution.{% else %}Мы всегда готовы обсудить ваш проект и подобрать оптимальное решение.{% endif %}</p>
+
+            <div class="business-clients-contacts-grid">
+                <div class="business-clients-contact-item">
+                    <span class="business-clients-contact-icon" aria-hidden="true">☎</span>
+                    <div>
+                        <a href="tel:+70000000000">+7 (000) 000-00-00</a>
+                        <small>{% if LANGUAGE_CODE == 'en' %}We're available 9:00 to 21:00{% else %}Ежедневно с 9:00 до 21:00{% endif %}</small>
+                    </div>
+                </div>
+                <div class="business-clients-contact-item">
+                    <span class="business-clients-contact-icon" aria-hidden="true">✉</span>
+                    <div>
+                        <a href="mailto:info@lukomorye.ru">info@lukomorye.ru</a>
+                        <small>{% if LANGUAGE_CODE == 'en' %}Response within one business day{% else %}Ответ в течение рабочего дня{% endif %}</small>
+                    </div>
+                </div>
+                <div class="business-clients-contact-item">
+                    <span class="business-clients-contact-icon" aria-hidden="true">◍</span>
+                    <div>
+                        <p>{% if LANGUAGE_CODE == 'en' %}Moscow, ul. Primorskaya, 10, bldg. 1{% else %}г. Москва, ул. Приморская, д. 10, стр. 1{% endif %}</p>
+                        <small>{% if LANGUAGE_CODE == 'en' %}Business center «Primere»{% else %}Бизнес-центр «Примор»{% endif %}</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}

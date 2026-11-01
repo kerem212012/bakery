@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Prata&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=75">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=87">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -61,6 +61,21 @@
 
         <main class="{% block main_class %}{% endblock %}">
             {% block content %}{% endblock %}
+            {% if site_content_blocks %}
+                <section class="site-content-blocks" aria-label="{% if LANGUAGE_CODE == 'en' %}Additional information{% else %}Дополнительная информация{% endif %}">
+                    {% for block in site_content_blocks %}
+                        <article class="site-content-block">
+                            {% if block.image %}
+                                <img src="{{ block.image.url }}" alt="{{ block.localized_title|default:'' }}">
+                            {% endif %}
+                            <div class="site-content-block-copy">
+                                {% if block.localized_title %}<h2>{{ block.localized_title }}</h2>{% endif %}
+                                {% if block.localized_description %}<p>{{ block.localized_description|linebreaksbr }}</p>{% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </section>
+            {% endif %}
         </main>
 
         <footer class="site-footer">
@@ -81,7 +96,7 @@
                 </nav>
                 <nav class="footer-column" aria-label="{% if LANGUAGE_CODE == 'en' %}For business{% else %}Корпоративным клиентам{% endif %}">
                     <h2>{% if LANGUAGE_CODE == 'en' %}For business{% else %}Корпоративным клиентам{% endif %}</h2>
-                    <a href="{% url 'corporate' %}">{% if LANGUAGE_CODE == 'en' %}Business gifts{% else %}Подарки для бизнеса{% endif %}</a>
+                    <a href="{% url 'business_clients' %}">{% if LANGUAGE_CODE == 'en' %}Business gifts{% else %}Подарки для бизнеса{% endif %}</a>
                     <a href="mailto:hello@lukomorye.example">{% if LANGUAGE_CODE == 'en' %}Custom orders{% else %}Индивидуальные заказы{% endif %}</a>
                     <a href="mailto:hello@lukomorye.example">{% if LANGUAGE_CODE == 'en' %}Branding{% else %}Брендирование{% endif %}</a>
                     <a href="{% url 'corporate' %}">{% if LANGUAGE_CODE == 'en' %}Partnership{% else %}Партнёрство{% endif %}</a>
@@ -139,7 +154,7 @@
                 <a href="{% url 'accounts:register' %}">{% if LANGUAGE_CODE == 'en' %}Create account{% else %}Регистрация{% endif %}</a>
             {% endif %}
             <a href="{% url 'packaging' %}">{% if LANGUAGE_CODE == 'en' %}Packaging{% else %}Варианты упаковки{% endif %}</a>
-            <a href="{% url 'corporate' %}">{% if LANGUAGE_CODE == 'en' %}Business clients{% else %}Корпоративным клиентам{% endif %}</a>
+            <a href="{% url 'business_clients' %}">{% if LANGUAGE_CODE == 'en' %}Business clients{% else %}Корпоративным клиентам{% endif %}</a>
             <a href="{% url 'faq' %}">FAQ</a>
             <a href="{% url 'about' %}">{% if LANGUAGE_CODE == 'en' %}About{% else %}О нас{% endif %}</a>
             <a href="{% url 'contacts' %}">{% if LANGUAGE_CODE == 'en' %}Contact{% else %}Контакты{% endif %}</a>
@@ -171,7 +186,7 @@
         <div class="mobile-menu-links">
             <a href="{% url 'home' %}"><span class="mobile-menu-number">01</span><span>{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="{% url 'catalog:category_list' %}"><span class="mobile-menu-number">02</span><span>{% if LANGUAGE_CODE == 'en' %}Catalog{% else %}Каталог{% endif %}</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
-            <a href="{% url 'corporate' %}"><span class="mobile-menu-number">03</span><span>{% if LANGUAGE_CODE == 'en' %}Business clients{% else %}Корпоративным клиентам{% endif %}</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+            <a href="{% url 'business_clients' %}"><span class="mobile-menu-number">03</span><span>{% if LANGUAGE_CODE == 'en' %}Business clients{% else %}Корпоративным клиентам{% endif %}</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="{% url 'packaging' %}"><span class="mobile-menu-number">04</span><span>{% if LANGUAGE_CODE == 'en' %}Packaging options{% else %}Варианты упаковки{% endif %}</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="{% url 'delivery' %}"><span class="mobile-menu-number">05</span><span>{% if LANGUAGE_CODE == 'en' %}Delivery & pickup{% else %}Доставка и самовывоз{% endif %}</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
             <a href="{% url 'about' %}"><span class="mobile-menu-number">06</span><span>{% if LANGUAGE_CODE == 'en' %}About us{% else %}О компании{% endif %}</span><svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>

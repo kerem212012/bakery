@@ -1,6 +1,10 @@
 from django.contrib import admin
 
-from .models import FeedbackSubmission, Preorder, PreorderAttachment
+from .models import (
+    FeedbackSubmission,
+    Preorder,
+    PreorderAttachment,
+)
 
 
 class PreorderAttachmentInline(admin.TabularInline):

@@ -1,0 +1,190 @@
+{% extends "core/base.html" %}
+
+{% block title %}{{ page_title }} — Lukomorye{% endblock %}
+{% block shell_class %} admin-dashboard-shell{% endblock %}
+
+{% block content %}
+    <section class="site-content-manager">
+        <header class="admin-dashboard-heading">
+            <div>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Lukomorye management{% else %}Управление Лукоморьем{% endif %}</p>
+                <h1>{{ page_title }}</h1>
+                {% if is_new or form %}
+                    <p>{% if LANGUAGE_CODE == 'en' %}Manage this section using the website dashboard.{% else %}Управляйте этим разделом через панель сайта.{% endif %}</p>
+                {% endif %}
+            </div>
+            <div class="admin-dashboard-heading-actions">
+                {% if can_add and form and not is_new %}
+                    <a class="admin-dashboard-site-link admin-dashboard-primary-link" href="{% url 'admin_section_new' section %}">{% if LANGUAGE_CODE == 'en' %}Add{% else %}Добавить{% endif %}</a>
+                {% endif %}
+                {% if object or is_new %}
+                    <a class="admin-dashboard-site-link" href="{% url 'admin_section' section %}">{% if LANGUAGE_CODE == 'en' %}Back to list{% else %}К списку{% endif %}</a>
+                {% endif %}
+                <a class="admin-dashboard-site-link" href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Dashboard{% else %}Панель управления{% endif %}</a>
+            </div>
+        </header>
+
+        {% if messages %}
+            <div class="site-content-notices">
+                {% for message in messages %}<p class="site-content-notice">{{ message }}</p>{% endfor %}
+            </div>
+        {% endif %}
+
+        {% if form %}
+            <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% if form.non_field_errors %}<div class="site-content-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+                <div class="site-content-form-section">
+                    <div class="site-content-form-grid">
+                        {% for field in form %}
+                            {% if field.field.widget.input_type != "checkbox" %}
+                                <div class="site-content-form-field{% if field.field.widget.input_type == 'file' %} site-content-form-field-wide{% endif %}">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                    {{ field.errors }}
+                                    {% if field.name == "image" and object.image %}
+                                        <img class="site-content-editor-preview" src="{{ object.display_image_url|default:object.image.url }}" alt="">
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="site-content-form-options">
+                        {% for field in form %}
+                            {% if field.field.widget.input_type == "checkbox" %}
+                                <label class="site-content-published">{{ field }}<span>{{ field.label }}</span></label>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save{% else %}Сохранить{% endif %}</button>
+                    </div>
+                </div>
+            </form>
+        {% elif object %}
+            {% if section_kind == "order" %}
+                <section class="site-content-form-section admin-record-details">
+                    <div class="site-content-record-grid">
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Customer{% else %}Клиент{% endif %}</strong>{{ object.name }}</p>
+                        <p><strong>Email</strong><a href="mailto:{{ object.email }}">{{ object.email }}</a></p>
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Phone{% else %}Телефон{% endif %}</strong><a href="tel:{{ object.phone }}">{{ object.phone }}</a></p>
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Total{% else %}Итого{% endif %}</strong>{{ object.total_price }} ₽</p>
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Delivery date{% else %}Дата доставки{% endif %}</strong>{{ object.delivery_date|default:"—" }}</p>
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Address{% else %}Адрес{% endif %}</strong>{{ object.address|default:"—" }}</p>
+                        <p class="site-content-record-wide"><strong>{% if LANGUAGE_CODE == 'en' %}Configuration{% else %}Параметры заказа{% endif %}</strong><code>{{ object.configuration }}</code></p>
+                        {% if object.comment %}<p class="site-content-record-wide"><strong>{% if LANGUAGE_CODE == 'en' %}Comment{% else %}Комментарий{% endif %}</strong>{{ object.comment }}</p>{% endif %}
+                    </div>
+                    {% if object.attachments.all %}
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Attachments{% else %}Вложения{% endif %}</h2>
+                        <ul>{% for attachment in object.attachments.all %}<li><a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a></li>{% endfor %}</ul>
+                    {% endif %}
+                    {% if can_change and status_form %}
+                        <form class="site-content-form-options" method="post">
+                            {% csrf_token %}
+                            <div class="site-content-form-field">
+                                <label for="{{ status_form.status.id_for_label }}">{% if LANGUAGE_CODE == 'en' %}Order status{% else %}Статус заказа{% endif %}</label>
+                                {{ status_form.status }}
+                                {{ status_form.status.errors }}
+                            </div>
+                            <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save status{% else %}Сохранить статус{% endif %}</button>
+                        </form>
+                    {% endif %}
+                </section>
+            {% elif section_kind == "message" %}
+                <section class="site-content-form-section admin-record-details">
+                    <div class="site-content-record-grid">
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}From{% else %}От кого{% endif %}</strong>{{ object.name }}</p>
+                        <p><strong>Email</strong><a href="mailto:{{ object.email }}">{{ object.email }}</a></p>
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Received{% else %}Получено{% endif %}</strong>{{ object.created_at|date:"d.m.Y H:i" }}</p>
+                        <p class="site-content-record-wide"><strong>{% if LANGUAGE_CODE == 'en' %}Message{% else %}Сообщение{% endif %}</strong>{{ object.message|linebreaksbr }}</p>
+                    </div>
+                    {% if can_change and status_form %}
+                        <form class="site-content-form-options" method="post">
+                            {% csrf_token %}
+                            <div class="site-content-form-field">
+                                <label for="{{ status_form.status.id_for_label }}">{% if LANGUAGE_CODE == 'en' %}Message status{% else %}Статус обращения{% endif %}</label>
+                                {{ status_form.status }}
+                                {{ status_form.status.errors }}
+                            </div>
+                            <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save status{% else %}Сохранить статус{% endif %}</button>
+                        </form>
+                    {% endif %}
+                </section>
+            {% elif section_kind == "customer" %}
+                <section class="site-content-form-section admin-record-details">
+                    <div class="site-content-record-grid">
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Account{% else %}Аккаунт{% endif %}</strong>{{ object.user.get_username }}</p>
+                        <p><strong>Email</strong><a href="mailto:{{ object.user.email }}">{{ object.user.email }}</a></p>
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Customer type{% else %}Тип клиента{% endif %}</strong>{{ object.get_customer_type_display }}</p>
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Company{% else %}Организация{% endif %}</strong>{{ object.company_name|default:"—" }}</p>
+                        <p><strong>ИНН</strong>{{ object.inn|default:"—" }}</p>
+                        <p><strong>КПП</strong>{{ object.kpp|default:"—" }}</p>
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Contact{% else %}Контактное лицо{% endif %}</strong>{{ object.contact_name|default:"—" }}</p>
+                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Phone{% else %}Телефон{% endif %}</strong>{{ object.phone|default:"—" }}</p>
+                        <p class="site-content-record-wide"><strong>{% if LANGUAGE_CODE == 'en' %}Legal address{% else %}Юридический адрес{% endif %}</strong>{{ object.legal_address|default:"—" }}</p>
+                        <p class="site-content-record-wide"><strong>{% if LANGUAGE_CODE == 'en' %}Delivery address{% else %}Адрес доставки{% endif %}</strong>{{ object.delivery_address|default:"—" }}</p>
+                    </div>
+                </section>
+            {% endif %}
+        {% else %}
+            <form class="site-content-search" method="get">
+                <label for="admin-section-search">{% if LANGUAGE_CODE == 'en' %}Search{% else %}Поиск{% endif %}</label>
+                <input id="admin-section-search" class="site-content-form-control" type="search" name="q" value="{{ search_query }}" placeholder="{% if LANGUAGE_CODE == 'en' %}Search this section{% else %}Поиск в разделе{% endif %}">
+                <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Find{% else %}Найти{% endif %}</button>
+            </form>
+
+            {% if can_add and section_kind != "order" and section_kind != "message" and section_kind != "customer" %}
+                <div class="site-content-section-add">
+                    <a class="admin-dashboard-site-link admin-dashboard-primary-link" href="{% url 'admin_section_new' section %}">{% if LANGUAGE_CODE == 'en' %}Add{% else %}Добавить{% endif %}</a>
+                </div>
+            {% endif %}
+
+            {% if items %}
+                <div class="site-content-existing-list">
+                    {% for item in items %}
+                        <article class="site-content-existing-item admin-record-row admin-record-row-{{ section_kind }}">
+                            {% if section_kind == "product" or section_kind == "category" %}
+                                {% if item.display_image_url %}<img src="{{ item.display_image_url }}" alt="">{% endif %}
+                            {% endif %}
+                            <div>
+                                {% if section_kind == "product" %}
+                                    <span class="site-content-existing-page">{{ item.category.localized_name }}</span>
+                                    <h3>{{ item.localized_name }}</h3>
+                                    <small>{{ item.price|default:"—" }} ₽ · {% if item.is_active %}{% if LANGUAGE_CODE == 'en' %}Published{% else %}Опубликован{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Hidden{% else %}Скрыт{% endif %}{% endif %}</small>
+                                {% elif section_kind == "category" %}
+                                    <span class="site-content-existing-page">{{ item.slug }}</span>
+                                    <h3>{{ item.localized_name }}</h3>
+                                    <small>{{ item.products.count }} {% if LANGUAGE_CODE == 'en' %}products{% else %}товаров{% endif %}</small>
+                                {% elif section_kind == "filter" %}
+                                    <span class="site-content-existing-page">{{ item.get_filter_type_display }}</span>
+                                    <h3>{{ item.localized_label }}</h3>
+                                    <small>{{ item.value }}</small>
+                                {% elif section_kind == "order" %}
+                                    <span class="site-content-existing-page">#{{ item.pk }} · {{ item.created_at|date:"d.m.Y H:i" }}</span>
+                                    <h3>{{ item.name }}</h3>
+                                    <small>{{ item.email }} · {{ item.total_price }} ₽ · {{ item.get_status_display }}</small>
+                                {% elif section_kind == "customer" %}
+                                    <span class="site-content-existing-page">{{ item.get_customer_type_display }}</span>
+                                    <h3>{{ item }}</h3>
+                                    <small>{{ item.user.email }}{% if item.phone %} · {{ item.phone }}{% endif %}</small>
+                                {% elif section_kind == "message" %}
+                                    <span class="site-content-existing-page">{{ item.name }} · {{ item.created_at|date:"d.m.Y H:i" }}</span>
+                                    <h3>{{ item.subject }}</h3>
+                                    <small>{{ item.email }} · {{ item.get_status_display }}</small>
+                                {% endif %}
+                            </div>
+                            {% if section_kind == "customer" %}
+                                <a class="admin-dashboard-site-link" href="{% url 'admin_section_edit' section item.pk %}">{% if LANGUAGE_CODE == 'en' %}View{% else %}Просмотр{% endif %}</a>
+                            {% elif can_change %}
+                                <a class="admin-dashboard-site-link" href="{% url 'admin_section_edit' section item.pk %}">{% if LANGUAGE_CODE == 'en' %}Open{% else %}Открыть{% endif %}</a>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="site-content-empty">{% if LANGUAGE_CODE == 'en' %}Nothing found in this section.{% else %}В этом разделе пока ничего нет.{% endif %}</p>
+            {% endif %}
+        {% endif %}
+    </section>
+{% endblock %}

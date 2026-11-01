@@ -163,13 +163,37 @@
                 </div>
             </div>
 
+            <section class="catalog-promo-grid" aria-label="{% if LANGUAGE_CODE == 'en' %}Featured services{% else %}Популярные предложения{% endif %}">
+                <a class="catalog-promo-card catalog-promo-corporate" href="{% url 'business_clients' %}">
+                    <span class="catalog-promo-copy">
+                        <strong>{% if LANGUAGE_CODE == 'en' %}Corporate clients{% else %}Корпоративным<br>клиентам{% endif %}</strong>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Custom solutions for your business{% else %}Индивидуальные решения<br>для вашего бизнеса{% endif %}</span>
+                        <span class="catalog-promo-arrow" aria-hidden="true">→</span>
+                    </span>
+                </a>
+                <a class="catalog-promo-card catalog-promo-workshops" href="mailto:info@lukomorye.ru?subject={% if LANGUAGE_CODE == 'en' %}Masterclass%20inquiry{% else %}Мастер-класс{% endif %}">
+                    <span class="catalog-promo-copy">
+                        <strong>{% if LANGUAGE_CODE == 'en' %}Masterclasses{% else %}Мастер-классы{% endif %}</strong>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Creative sessions for children and adults{% else %}Творческие занятия<br>для детей и взрослых{% endif %}</span>
+                        <span class="catalog-promo-arrow" aria-hidden="true">→</span>
+                    </span>
+                </a>
+                <a class="catalog-promo-card catalog-promo-branded" href="{% url 'catalog:category_detail' 'branded-gifts' %}">
+                    <span class="catalog-promo-copy">
+                        <strong>{% if LANGUAGE_CODE == 'en' %}Logo gingerbread{% else %}Пряники с логотипом{% endif %}</strong>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Branded gingerbread with your design{% else %}Брендированные пряники<br>с вашим дизайном{% endif %}</span>
+                        <span class="catalog-promo-arrow" aria-hidden="true">→</span>
+                    </span>
+                </a>
+            </section>
+
             <div class="catalog-grid">
                 {% for product in products %}
                     <article class="catalog-product-card">
                         <div class="catalog-product-image-wrap">
                             <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}" class="catalog-product-link-wrapper">
-                                {% if product.image_url %}
-                                    <img src="{{ product.image_url }}" alt="{{ product.localized_name }}" loading="lazy">
+                                {% if product.display_image_url %}
+                                    <img src="{{ product.display_image_url }}" alt="{{ product.localized_name }}" loading="lazy">
                                 {% else %}
                                     <div class="catalog-product-placeholder" aria-label="{{ product.localized_name }}"></div>
                                 {% endif %}

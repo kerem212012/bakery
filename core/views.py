@@ -5,12 +5,28 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from catalog.models import Category, Product
+from catalog.forms import (
+    CategoryEditorForm,
+    ProductEditorForm,
+    ProductFilterOptionEditorForm,
+)
+from catalog.models import Category, Product, ProductFilterOption
 from user.models import CustomerProfile
 
 from .calculator import calculate_quote, localized_calculator_options
-from .forms import FeedbackForm, PreorderForm
-from .models import FeedbackSubmission, Preorder, PreorderAttachment
+from .forms import (
+    AdminFeedbackStatusForm,
+    AdminOrderStatusForm,
+    FeedbackForm,
+    PreorderForm,
+    SiteContentBlockForm,
+)
+from .models import (
+    FeedbackSubmission,
+    Preorder,
+    PreorderAttachment,
+    SiteContentBlock,
+)
 
 
 @staff_member_required(login_url="admin:login")
@@ -29,6 +45,7 @@ def admin_dashboard(request):
         {
             "can_view_products": can_view_products,
             "can_add_products": user.has_perm("catalog.add_product"),
+            "is_superuser": user.is_superuser,
             "can_view_categories": can_view_categories,
             "can_add_categories": user.has_perm("catalog.add_category"),
             "can_view_filter_options": can_view_filter_options,
@@ -62,6 +79,229 @@ def admin_dashboard(request):
                 if can_view_orders
                 else ()
             ),
+        },
+    )
+
+
+@staff_member_required(login_url="admin:login")
+def site_content_manager(request, block_id=None):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    block = (
+        get_object_or_404(SiteContentBlock, pk=block_id)
+        if block_id is not None
+        else None
+    )
+    if request.method == "POST":
+        form = SiteContentBlockForm(
+            request.POST,
+            request.FILES,
+            instance=block,
+        )
+        if form.is_valid():
+            form.save()
+            message = (
+                "Site content saved."
+                if request.LANGUAGE_CODE == "en"
+                else "Контент сайта сохранён."
+            )
+            messages.success(request, message)
+            return redirect("site_content_manager")
+    else:
+        form = SiteContentBlockForm(instance=block)
+
+    return render(
+        request,
+        "core/site_content_manager.html",
+        {
+            "form": form,
+            "editing_block": block,
+            "site_blocks": SiteContentBlock.objects.all(),
+        },
+    )
+
+
+ADMIN_SECTION_CONFIG = {
+    "products": {
+        "model": Product,
+        "form": ProductEditorForm,
+        "view_perm": "catalog.view_product",
+        "add_perm": "catalog.add_product",
+        "change_perm": "catalog.change_product",
+        "search_fields": ("name", "name_en", "category__name"),
+        "title": ("Products", "Товары"),
+        "add_title": ("Add a product", "Добавить товар"),
+        "kind": "product",
+    },
+    "categories": {
+        "model": Category,
+        "form": CategoryEditorForm,
+        "view_perm": "catalog.view_category",
+        "add_perm": "catalog.add_category",
+        "change_perm": "catalog.change_category",
+        "search_fields": ("name", "name_en", "slug"),
+        "title": ("Categories", "Категории"),
+        "add_title": ("Add a category", "Добавить категорию"),
+        "kind": "category",
+    },
+    "filters": {
+        "model": ProductFilterOption,
+        "form": ProductFilterOptionEditorForm,
+        "view_perm": "catalog.view_productfilteroption",
+        "add_perm": "catalog.add_productfilteroption",
+        "change_perm": "catalog.change_productfilteroption",
+        "search_fields": ("label", "label_en", "value"),
+        "title": ("Product filters", "Фильтры товаров"),
+        "add_title": ("Add a filter option", "Добавить фильтр"),
+        "kind": "filter",
+    },
+    "orders": {
+        "model": Preorder,
+        "view_perm": "core.view_preorder",
+        "change_perm": "core.change_preorder",
+        "search_fields": ("name", "email", "phone"),
+        "title": ("Orders", "Заказы"),
+        "kind": "order",
+    },
+    "customers": {
+        "model": CustomerProfile,
+        "view_perm": "user.view_customerprofile",
+        "search_fields": (
+            "user__username",
+            "user__email",
+            "company_name",
+            "inn",
+            "contact_name",
+        ),
+        "title": ("Customers", "Клиенты"),
+        "kind": "customer",
+    },
+    "messages": {
+        "model": FeedbackSubmission,
+        "view_perm": "core.view_feedbacksubmission",
+        "change_perm": "core.change_feedbacksubmission",
+        "search_fields": ("name", "email", "subject", "message"),
+        "title": ("Customer messages", "Обращения клиентов"),
+        "kind": "message",
+    },
+}
+
+
+@staff_member_required(login_url="admin:login")
+def admin_section(request, section, object_id=None, new=False):
+    config = ADMIN_SECTION_CONFIG.get(section)
+    if config is None:
+        raise PermissionDenied
+
+    user = request.user
+    can_view = user.has_perm(config["view_perm"])
+    can_add = bool(config.get("add_perm") and user.has_perm(config["add_perm"]))
+    can_change = bool(
+        config.get("change_perm") and user.has_perm(config["change_perm"])
+    )
+    if new and not can_add:
+        raise PermissionDenied
+    if not new and not can_view:
+        raise PermissionDenied
+    if object_id is not None and not can_change and section != "customers":
+        raise PermissionDenied
+
+    model = config["model"]
+    instance = (
+        get_object_or_404(model, pk=object_id)
+        if object_id is not None
+        else None
+    )
+    status_form = None
+    if section in ("orders", "messages") and instance is not None:
+        form_class = (
+            AdminOrderStatusForm if section == "orders" else AdminFeedbackStatusForm
+        )
+        if request.method == "POST":
+            if not can_change:
+                raise PermissionDenied
+            status_form = form_class(
+                request.POST,
+                language_code=request.LANGUAGE_CODE,
+                initial={"status": instance.status},
+            )
+            if status_form.is_valid():
+                instance.status = status_form.cleaned_data["status"]
+                instance.save(update_fields=("status",))
+                messages.success(
+                    request,
+                    "Status saved." if request.LANGUAGE_CODE == "en" else "Статус сохранён.",
+                )
+                return redirect("admin_section_edit", section=section, object_id=instance.pk)
+        else:
+            status_form = form_class(
+                language_code=request.LANGUAGE_CODE,
+                initial={"status": instance.status},
+            )
+
+    form_class = config.get("form")
+    form = None
+    if form_class and (new or instance is not None):
+        if request.method == "POST":
+            if not (can_add if new else can_change):
+                raise PermissionDenied
+            form = form_class(request.POST, request.FILES, instance=instance)
+            if form.is_valid():
+                saved = form.save()
+                messages.success(
+                    request,
+                    "Changes saved." if request.LANGUAGE_CODE == "en" else "Изменения сохранены.",
+                )
+                if can_change:
+                    return redirect(
+                        "admin_section_edit",
+                        section=section,
+                        object_id=saved.pk,
+                    )
+                if can_view:
+                    return redirect("admin_section", section=section)
+                return redirect("admin_dashboard")
+        else:
+            form = form_class(instance=instance)
+
+    items = model.objects.all()
+    if section == "products":
+        items = items.select_related("category")
+    elif section == "customers":
+        items = items.select_related("user")
+    search_query = request.GET.get("q", "").strip()
+    if search_query:
+        from django.db.models import Q
+
+        search = Q()
+        for field in config["search_fields"]:
+            search |= Q(**{f"{field}__icontains": search_query})
+        items = items.filter(search)
+
+    title_index = 0 if request.LANGUAGE_CODE == "en" else 1
+    return render(
+        request,
+        "core/admin_section.html",
+        {
+            "section": section,
+            "section_kind": config["kind"],
+            "section_title": config["title"][title_index],
+            "page_title": (
+                config["add_title"][title_index]
+                if new
+                else str(instance) if instance is not None and form is not None
+                else config["title"][title_index]
+            ),
+            "items": items,
+            "search_query": search_query,
+            "form": form,
+            "status_form": status_form,
+            "object": instance,
+            "is_new": new,
+            "can_add": can_add,
+            "can_change": can_change,
+            "messages": messages.get_messages(request),
         },
     )
 
@@ -230,6 +470,10 @@ def about(request):
 
 def corporate(request):
     return render(request, "core/corporate.html")
+
+
+def business_clients(request):
+    return render(request, "core/business_clients.html")
 
 
 def contacts(request):

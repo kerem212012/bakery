@@ -29,8 +29,8 @@
                 <article class="favorite-card" data-favorite-card>
                     <div class="favorite-image-wrap">
                         <a href="{% url 'catalog:product_detail' product.category.slug product.slug %}">
-                            {% if product.image_url %}
-                                <img src="{{ product.image_url }}" alt="{{ product.localized_name }}" loading="lazy">
+                            {% if product.display_image_url %}
+                                <img src="{{ product.display_image_url }}" alt="{{ product.localized_name }}" loading="lazy">
                             {% else %}
                                 <span class="catalog-product-placeholder" aria-hidden="true"></span>
                             {% endif %}

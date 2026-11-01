@@ -21,8 +21,8 @@
                 {% for item in items %}
                     <article class="cart-item">
                         <a class="cart-item-image" href="{% url 'catalog:product_detail' item.product.category.slug item.product.slug %}">
-                            {% if item.product.image_url %}
-                                <img src="{{ item.product.image_url }}" alt="{{ item.product.localized_name }}">
+                            {% if item.product.display_image_url %}
+                                <img src="{{ item.product.display_image_url }}" alt="{{ item.product.localized_name }}">
                             {% else %}
                                 <span aria-hidden="true"></span>
                             {% endif %}

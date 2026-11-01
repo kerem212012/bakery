@@ -31,6 +31,12 @@ class SluggedModel(models.Model):
 class Category(SluggedModel):
     description = models.TextField(blank=True)
     description_en = models.TextField(blank=True)
+    image = models.ImageField(
+        "Фото категории",
+        upload_to="catalog/categories/",
+        blank=True,
+        help_text="Загрузите изображение категории или укажите ссылку в поле ниже.",
+    )
     image_url = models.URLField(max_length=500, blank=True)
     display_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -48,6 +54,10 @@ class Category(SluggedModel):
             return self.description_en
         return self.description
 
+    @property
+    def display_image_url(self):
+        return self.image.url if self.image else self.image_url
+
 
 class Product(SluggedModel):
     category = models.ForeignKey(
@@ -58,6 +68,12 @@ class Product(SluggedModel):
     description = models.TextField(blank=True)
     description_en = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    image = models.ImageField(
+        "Фото товара",
+        upload_to="catalog/products/",
+        blank=True,
+        help_text="Загрузите фотографию товара. Она будет показана в каталоге и на главной.",
+    )
     image_url = models.URLField(max_length=500, blank=True)
     display_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -79,6 +95,10 @@ class Product(SluggedModel):
         if get_language() == "en" and self.description_en:
             return self.description_en
         return self.description
+
+    @property
+    def display_image_url(self):
+        return self.image.url if self.image else self.image_url
 
 
 class ProductFilterOption(models.Model):

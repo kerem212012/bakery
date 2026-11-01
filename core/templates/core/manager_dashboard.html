@@ -50,7 +50,7 @@
                         <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Customer orders{% else %}Заказы клиентов{% endif %}</p>
                         <h2>{% if LANGUAGE_CODE == 'en' %}Order queue{% else %}Очередь заказов{% endif %}</h2>
                     </div>
-                    <a href="{% url 'admin:core_preorder_changelist' %}">{% if LANGUAGE_CODE == 'en' %}Full order list{% else %}Все заказы{% endif %} →</a>
+                    <a href="{% url 'admin_section' 'orders' %}">{% if LANGUAGE_CODE == 'en' %}Full order list{% else %}Все заказы{% endif %} →</a>
                 </div>
 
                 {% if orders %}
@@ -91,7 +91,7 @@
                                         </form>
                                     {% endif %}
                                     {% if can_change_orders %}
-                                        <a class="manager-order-details" href="{% url 'admin:core_preorder_change' order.pk %}">{% if LANGUAGE_CODE == 'en' %}Order details{% else %}Подробности заказа{% endif %} →</a>
+                                        <a class="manager-order-details" href="{% url 'admin_section_edit' 'orders' order.pk %}">{% if LANGUAGE_CODE == 'en' %}Order details{% else %}Подробности заказа{% endif %} →</a>
                                     {% endif %}
                                 </div>
                             </article>
@@ -110,7 +110,7 @@
                         <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Contact requests{% else %}Сообщения клиентов{% endif %}</p>
                         <h2>{% if LANGUAGE_CODE == 'en' %}Recent messages{% else %}Последние обращения{% endif %}</h2>
                     </div>
-                    <a href="{% url 'admin:core_feedbacksubmission_changelist' %}">{% if LANGUAGE_CODE == 'en' %}All messages{% else %}Все обращения{% endif %} →</a>
+                    <a href="{% url 'admin_section' 'messages' %}">{% if LANGUAGE_CODE == 'en' %}All messages{% else %}Все обращения{% endif %} →</a>
                 </div>
                 {% if feedback_items %}
                     <div class="manager-message-list">

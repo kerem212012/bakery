@@ -17,8 +17,8 @@
             <article class="catalog-product-card catalog-product-link">
                 <div class="catalog-product-image-wrap">
                     <a href="{% url 'catalog:product_detail' category.slug product.slug %}">
-                        {% if product.image_url %}
-                            <img class="catalog-product-image" src="{{ product.image_url }}" alt="{{ product.localized_name }}" loading="lazy">
+                        {% if product.display_image_url %}
+                            <img class="catalog-product-image" src="{{ product.display_image_url }}" alt="{{ product.localized_name }}" loading="lazy">
                         {% else %}
                             <div class="catalog-product-image catalog-product-placeholder" role="img" aria-label="{{ product.localized_name }}"></div>
                         {% endif %}
