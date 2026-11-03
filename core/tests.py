@@ -288,13 +288,11 @@ class AdminDashboardTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["form"].instance.pk, None)
-        self.assertEqual(
-            list(response.context["site_blocks"].values_list("title", flat=True)),
-            ["First about block", "Second about block"],
-        )
+        self.assertIsNone(response.context["form"])
+        self.assertNotIn("site_blocks", response.context)
+        self.assertNotContains(response, "Additional page content")
+        self.assertNotContains(response, "Дополнительный контент страницы")
         self.assertContains(response, 'option value="about" selected')
-        self.assertNotContains(response, "Catalog block")
 
     def test_page_picker_switches_from_editing_one_page_to_another(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -391,39 +389,6 @@ class AdminDashboardTests(TestCase):
                     & set(response.context["page_form"].fields)
                 )
 
-    def test_section_editor_hides_button_fields_but_keeps_nonbutton_values(self):
-        admin_user = get_user_model().objects.create_superuser(
-            username="section_field_visibility_admin",
-            email="section-field-visibility@example.com",
-            password="test-password",
-        )
-        self.client.force_login(admin_user)
-
-        home_response = self.client.get(
-            reverse("site_content_manager"),
-            {"page": SitePageSection.Page.HOME},
-        )
-        about_response = self.client.get(
-            reverse("site_content_manager"),
-            {"page": SitePageSection.Page.ABOUT},
-        )
-        home_forms = {
-            form.instance.group: form
-            for form in home_response.context["section_formset"].forms
-            if form.instance.pk
-        }
-        about_forms = {
-            form.instance.group: form
-            for form in about_response.context["section_formset"].forms
-            if form.instance.pk
-        }
-
-        self.assertFalse(home_forms["home_about"].show_value_fields)
-        self.assertFalse(home_forms["home_about"].show_url_field)
-        self.assertIn("value", about_forms["stats"].fields)
-        self.assertIn("value_en", about_forms["stats"].fields)
-        self.assertFalse(about_forms["stats"].show_url_field)
-
     def test_page_content_button_edits_are_rendered_on_every_static_page(self):
         pages = (
             (SitePageContent.Page.ABOUT, "about"),
@@ -453,26 +418,14 @@ class AdminDashboardTests(TestCase):
                 self.assertContains(response, 'href="/custom-action/"')
                 self.assertContains(response, "Связаться")
 
-    def test_page_picker_exposes_structured_content_for_every_static_page(self):
+    def test_page_picker_does_not_render_section_editor(self):
         admin_user = get_user_model().objects.create_superuser(
             username="all_page_sections_admin",
             email="all-page-sections-admin@example.com",
             password="test-pass-123",
         )
         self.client.force_login(admin_user)
-        pages = (
-            SitePageSection.Page.HOME,
-            SitePageSection.Page.ABOUT,
-            SitePageSection.Page.BUSINESS_CLIENTS,
-            SitePageSection.Page.PARTNERSHIP,
-            SitePageSection.Page.CONTACTS,
-            SitePageSection.Page.DELIVERY,
-            SitePageSection.Page.FAQ,
-            SitePageSection.Page.FEEDBACK,
-            SitePageSection.Page.PACKAGING,
-            SitePageSection.Page.CATALOG,
-            SitePageSection.Page.CATEGORIES,
-        )
+        pages = SiteContentBlock.Page.values
 
         for page in pages:
             with self.subTest(page=page):
@@ -481,8 +434,1170 @@ class AdminDashboardTests(TestCase):
                     {"page": page},
                 )
                 self.assertEqual(response.status_code, 200)
-                self.assertIsNotNone(response.context["section_formset"])
-                self.assertContains(response, "Разделы и карточки страницы")
+                self.assertNotIn("section_formset", response.context)
+                self.assertNotContains(response, 'name="action" value="save_page_sections"')
+
+    def test_home_about_form_is_only_available_for_home_page(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="home_about_form_admin",
+            email="home-about-form-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        home_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.HOME},
+        )
+        about_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.ABOUT},
+        )
+
+        self.assertIsNotNone(home_response.context["home_about_form"])
+        self.assertFalse(
+            {"value", "value_en", "url"}
+            & set(home_response.context["home_about_form"].fields)
+        )
+        self.assertContains(home_response, "Главная страница — раздел")
+        self.assertIsNone(about_response.context["home_about_form"])
+        self.assertNotContains(about_response, "Главная страница — раздел")
+
+    def test_about_story_form_is_only_available_for_about_page(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="about_story_form_admin",
+            email="about-story-form-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        about_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.ABOUT},
+        )
+        home_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.HOME},
+        )
+
+        self.assertIsNotNone(about_response.context["about_story_form"])
+        self.assertContains(about_response, "Страница «О нас» — «Наша история»")
+        self.assertIsNone(home_response.context["about_story_form"])
+        self.assertNotContains(home_response, "Страница «О нас» — «Наша история»")
+
+    def test_about_story_form_saves_and_updates_public_page(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="about_story_saver",
+            email="about-story-saver@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.post(
+            reverse("site_content_manager"),
+            {
+                "action": "save_about_story",
+                "page": SitePageSection.Page.ABOUT,
+                "section_eyebrow": "Семейная история",
+                "section_eyebrow_en": "A family story",
+                "section_title": "Новая история",
+                "section_title_en": "A new story",
+                "description": "Обновлённый рассказ о компании.",
+                "description_en": "An updated story about the company.",
+                "image_alt": "Мастерская",
+                "image_alt_en": "Workshop",
+                "is_active": "on",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=about",
+        )
+        story = SitePageSection.objects.get(
+            page=SitePageSection.Page.ABOUT,
+            group="story",
+        )
+        self.assertEqual(story.section_title, "Новая история")
+        self.assertEqual(story.description_en, "An updated story about the company.")
+
+        about_response = self.client.get(reverse("about"))
+        self.assertContains(about_response, "Новая история")
+        self.assertContains(about_response, "Обновлённый рассказ о компании.")
+
+    def test_about_promises_form_updates_principle_cards(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="about_promises_saver",
+            email="about-promises-saver@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        editor_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageSection.Page.ABOUT},
+        )
+        formset = editor_response.context["about_promises_formset"]
+        self.assertEqual(
+            len(formset.forms),
+            SitePageSection.objects.filter(
+                page=SitePageSection.Page.ABOUT,
+                group="promises",
+            ).count(),
+        )
+        self.assertEqual(
+            [form.initial["display_order"] for form in formset.forms],
+            list(range(1, len(formset.forms) + 1)),
+        )
+        post_data = {
+            "page": SitePageSection.Page.ABOUT,
+            "action": "save_about_promises",
+            "promises-TOTAL_FORMS": str(len(formset.forms)),
+            "promises-INITIAL_FORMS": str(formset.initial_form_count()),
+            "promises-MIN_NUM_FORMS": "0",
+            "promises-MAX_NUM_FORMS": "1000",
+        }
+        for index, form in enumerate(formset.forms):
+            if form.instance.pk:
+                post_data[f"promises-{index}-id"] = str(form.instance.pk)
+                post_data[f"promises-{index}-title"] = form.instance.title
+                post_data[f"promises-{index}-title_en"] = form.instance.title_en
+                post_data[f"promises-{index}-description"] = form.instance.description
+                post_data[f"promises-{index}-description_en"] = form.instance.description_en
+                post_data[f"promises-{index}-display_order"] = str(
+                    form.instance.display_order + 1
+                )
+                if form.instance.is_active:
+                    post_data[f"promises-{index}-is_active"] = "on"
+        post_data["promises-0-title"] = "Новый принцип"
+
+        response = self.client.post(reverse("site_content_manager"), post_data)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=about",
+        )
+        promise = SitePageSection.objects.get(
+            page=SitePageSection.Page.ABOUT,
+            group="promises",
+            display_order=0,
+        )
+        self.assertEqual(promise.title, "Новый принцип")
+        about_response = self.client.get(reverse("about"))
+        self.assertContains(about_response, "Новый принцип")
+
+    def test_about_values_form_updates_section_heading_and_value_cards(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="about_values_saver",
+            email="about-values-saver@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        editor_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageSection.Page.ABOUT},
+        )
+        formset = editor_response.context["about_values_formset"]
+        self.assertEqual(
+            len(formset.forms),
+            SitePageSection.objects.filter(
+                page=SitePageSection.Page.ABOUT,
+                group="values",
+            ).count(),
+        )
+        self.assertEqual(
+            [form.initial["display_order"] for form in formset.forms],
+            list(range(1, len(formset.forms) + 1)),
+        )
+        post_data = {
+            "page": SitePageSection.Page.ABOUT,
+            "action": "save_about_values",
+            "values-TOTAL_FORMS": str(len(formset.forms)),
+            "values-INITIAL_FORMS": str(formset.initial_form_count()),
+            "values-MIN_NUM_FORMS": "0",
+            "values-MAX_NUM_FORMS": "1000",
+        }
+        heading_form = editor_response.context["about_values_heading_form"]
+        for field_name in heading_form.fields:
+            post_data[f"values-heading-{field_name}"] = heading_form.initial.get(
+                field_name, ""
+            )
+        for index, form in enumerate(formset.forms):
+            if form.instance.pk:
+                post_data[f"values-{index}-id"] = str(form.instance.pk)
+                for field_name in (
+                    "title",
+                    "title_en",
+                    "description",
+                    "description_en",
+                    "image_alt",
+                    "image_alt_en",
+                    "display_order",
+                ):
+                    post_data[f"values-{index}-{field_name}"] = str(
+                        (
+                            form.instance.display_order + 1
+                            if field_name == "display_order"
+                            else getattr(form.instance, field_name)
+                        )
+                    )
+                if form.instance.is_active:
+                    post_data[f"values-{index}-is_active"] = "on"
+        post_data["values-heading-section_title"] = "Новая заголовочная часть"
+        post_data["values-heading-section_title_en"] = "New values heading"
+        post_data["values-0-title"] = "Новая ценность"
+
+        response = self.client.post(reverse("site_content_manager"), post_data)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=about",
+        )
+        value_card = SitePageSection.objects.get(
+            page=SitePageSection.Page.ABOUT,
+            group="values",
+            display_order=0,
+        )
+        self.assertEqual(value_card.section_title, "Новая заголовочная часть")
+        self.assertEqual(value_card.section_title_en, "New values heading")
+        self.assertEqual(value_card.title, "Новая ценность")
+        about_response = self.client.get(reverse("about"))
+        self.assertContains(about_response, "Новая заголовочная часть")
+        self.assertContains(about_response, "Новая ценность")
+
+    def test_contact_details_form_is_only_available_under_all_pages(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="contact_details_form_admin",
+            email="contact-details-form-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        contacts_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.CONTACTS},
+        )
+        all_pages_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.ALL},
+        )
+
+        self.assertIsNone(contacts_response.context["contact_details_form"])
+        self.assertIsNotNone(contacts_response.context["contact_requisites_form"])
+        self.assertContains(contacts_response, "Контакты — реквизиты")
+        self.assertIsNotNone(all_pages_response.context["contact_details_form"])
+        self.assertIsNone(all_pages_response.context["contact_requisites_form"])
+        self.assertContains(all_pages_response, "Все страницы — контактные данные")
+        self.assertEqual(
+            len(all_pages_response.context["contact_details_form"].fields),
+            15,
+        )
+        self.assertIsNotNone(
+            all_pages_response.context["business_clients_contact_form"]
+        )
+        self.assertEqual(
+            len(all_pages_response.context["business_clients_contact_form"].fields),
+            15,
+        )
+        self.assertContains(
+            all_pages_response,
+            'name="action" value="save_contact_details"',
+            count=1,
+        )
+        self.assertContains(
+            all_pages_response,
+            'name="action" value="save_business_clients_contacts"',
+            count=1,
+        )
+
+    def test_contact_details_form_updates_public_phone_email_and_address(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="contact_details_saver",
+            email="contact-details-saver@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        editor_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.ALL},
+        )
+        form = editor_response.context["contact_details_form"]
+        post_data = {
+            "page": SiteContentBlock.Page.ALL,
+            "action": "save_contact_details",
+        }
+        post_data.update(
+            {
+                field_name: form.initial[field_name]
+                for field_name in form.fields
+            }
+        )
+        post_data["phone_value"] = "+7 999 111-22-33"
+        post_data["phone_url"] = "tel:+79991112233"
+        post_data["email_value"] = "new@example.com"
+        post_data["email_url"] = "mailto:new@example.com"
+        post_data["address_value"] = "New office address"
+
+        response = self.client.post(reverse("site_content_manager"), post_data)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=all",
+        )
+        contacts = list(
+            SitePageSection.objects.filter(
+                page=SitePageSection.Page.CONTACTS,
+                group="details",
+            ).order_by("display_order", "pk")
+        )
+        self.assertEqual(contacts[0].value, "+7 999 111-22-33")
+        self.assertEqual(contacts[0].url, "tel:+79991112233")
+        self.assertEqual(contacts[1].value, "new@example.com")
+        self.assertEqual(contacts[1].url, "mailto:new@example.com")
+        self.assertEqual(contacts[2].value, "New office address")
+
+        public_response = self.client.get(reverse("contacts"))
+        self.assertContains(public_response, "+7 999 111-22-33")
+        self.assertContains(public_response, 'href="mailto:new@example.com"')
+        self.assertContains(public_response, "New office address")
+
+    def test_contact_requisites_form_updates_contacts_page(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="contact_requisites_saver",
+            email="contact-requisites-saver@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        editor_url = reverse("site_content_manager")
+        editor_response = self.client.get(
+            editor_url,
+            {"page": SitePageSection.Page.CONTACTS},
+        )
+        form = editor_response.context["contact_requisites_form"]
+        post_data = {
+            "page": SitePageSection.Page.CONTACTS,
+            "action": "save_contact_requisites",
+            **{
+                f"{form.prefix}-{field_name}": form[field_name].value() or ""
+                for field_name in form.fields
+            },
+        }
+        post_data.update(
+            {
+                f"{form.prefix}-title": "Новые реквизиты",
+                f"{form.prefix}-title_en": "New company details",
+                f"{form.prefix}-description": "Обновлённое описание реквизитов.",
+                f"{form.prefix}-description_en": "Updated company details.",
+                f"{form.prefix}-value": "Запросить новые реквизиты",
+                f"{form.prefix}-value_en": "Request new company details",
+                f"{form.prefix}-url": "mailto:accounts@example.com",
+                f"{form.prefix}-is_active": "on",
+            }
+        )
+
+        response = self.client.post(editor_url, post_data)
+
+        self.assertRedirects(
+            response,
+            f"{editor_url}?page={SitePageSection.Page.CONTACTS}",
+        )
+        requisites = SitePageSection.objects.get(
+            page=SitePageSection.Page.CONTACTS,
+            group="requisites",
+            display_order=0,
+        )
+        self.assertEqual(requisites.title, "Новые реквизиты")
+        self.assertEqual(requisites.description, "Обновлённое описание реквизитов.")
+        self.assertEqual(requisites.value, "Запросить новые реквизиты")
+        self.assertEqual(requisites.url, "mailto:accounts@example.com")
+
+        public_response = self.client.get(reverse("contacts"))
+        self.assertContains(public_response, "Новые реквизиты")
+        self.assertContains(public_response, "Обновлённое описание реквизитов.")
+        self.assertContains(public_response, "Запросить новые реквизиты")
+        self.assertContains(public_response, 'href="mailto:accounts@example.com"')
+
+    def test_delivery_sections_are_editable_and_rendered(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="delivery_sections_admin",
+            email="delivery-sections-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        editor_url = reverse("site_content_manager")
+        page = SitePageSection.Page.DELIVERY
+        editor_response = self.client.get(editor_url, {"page": page})
+        self.assertEqual(editor_response.status_code, 200)
+
+        methods_heading_form = editor_response.context[
+            "delivery_methods_heading_form"
+        ]
+        methods_formset = editor_response.context["delivery_methods_formset"]
+        pickup_heading_form = editor_response.context[
+            "delivery_pickup_heading_form"
+        ]
+        pickup_formset = editor_response.context["delivery_pickup_formset"]
+        help_heading_form = editor_response.context["delivery_help_heading_form"]
+        help_formset = editor_response.context["delivery_help_formset"]
+        self.assertIsNotNone(methods_formset)
+        self.assertIsNotNone(pickup_formset)
+        self.assertIsNotNone(help_formset)
+        self.assertContains(editor_response, "Доставка — способы доставки")
+        self.assertContains(editor_response, "Доставка — самовывоз")
+        self.assertContains(editor_response, "Доставка — полезная информация")
+
+        def formset_data(formset):
+            data = {
+                f"{formset.prefix}-TOTAL_FORMS": str(len(formset.forms)),
+                f"{formset.prefix}-INITIAL_FORMS": str(formset.initial_form_count()),
+                f"{formset.prefix}-MIN_NUM_FORMS": "0",
+                f"{formset.prefix}-MAX_NUM_FORMS": "1000",
+            }
+            for form in formset.forms:
+                for field_name in form.fields:
+                    if field_name == "image":
+                        continue
+                    name = f"{form.prefix}-{field_name}"
+                    if field_name == "id":
+                        data[name] = str(form.instance.pk)
+                    else:
+                        data[name] = form[field_name].value() or ""
+            return data
+
+        def form_data(form):
+            return {
+                f"{form.prefix}-{field_name}": form[field_name].value() or ""
+                for field_name in form.fields
+            }
+
+        methods_data = {
+            "page": page,
+            "action": "save_delivery_methods",
+            **formset_data(methods_formset),
+            **form_data(methods_heading_form),
+            "delivery-methods-0-title": "Новая доставка",
+            "delivery-methods-0-title_en": "New delivery",
+            "delivery-methods-0-description": "Описание новой доставки.",
+            "delivery-methods-0-description_en": "Description of new delivery.",
+            "delivery-methods-0-value": "Новый срок доставки",
+            "delivery-methods-0-value_en": "New delivery timeframe",
+            "delivery-methods-heading-section_title": "Новые способы доставки",
+            "delivery-methods-heading-section_title_en": "New delivery methods",
+            "delivery-methods-heading-section_description": "Обновлённое описание доставки.",
+            "delivery-methods-heading-section_description_en": "Updated delivery introduction.",
+        }
+        response = self.client.post(editor_url, methods_data)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+
+        pickup_data = {
+            "page": page,
+            "action": "save_delivery_pickup",
+            **formset_data(pickup_formset),
+            **form_data(pickup_heading_form),
+            "delivery-pickup-0-title": "Новый адрес",
+            "delivery-pickup-0-title_en": "New address",
+            "delivery-pickup-0-description": "Новый адрес студии.",
+            "delivery-pickup-0-description_en": "New studio address.",
+            "delivery-pickup-heading-section_title": "Новый самовывоз",
+            "delivery-pickup-heading-section_title_en": "New pickup",
+            "delivery-pickup-heading-section_description": "Обновлённые условия самовывоза.",
+            "delivery-pickup-heading-section_description_en": "Updated pickup details.",
+            "delivery-pickup-heading-value": "Открыть новый маршрут",
+            "delivery-pickup-heading-value_en": "Open new route",
+            "delivery-pickup-heading-url": "https://maps.example/pickup",
+        }
+        response = self.client.post(editor_url, pickup_data)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+
+        help_data = {
+            "page": page,
+            "action": "save_delivery_help",
+            **formset_data(help_formset),
+            **form_data(help_heading_form),
+            "delivery-help-0-title": "Новая стоимость доставки",
+            "delivery-help-0-title_en": "New delivery cost",
+            "delivery-help-0-description": "Описание новой стоимости доставки.",
+            "delivery-help-0-description_en": "Description of new delivery cost.",
+            "delivery-help-heading-section_title": "Новая полезная информация",
+            "delivery-help-heading-section_title_en": "New useful information",
+        }
+        response = self.client.post(editor_url, help_data)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+
+        methods = SitePageSection.objects.get(
+            page=page,
+            group="methods",
+            display_order=0,
+        )
+        pickup_heading = SitePageSection.objects.get(
+            page=page,
+            group="pickup",
+            display_order=0,
+        )
+        pickup_address = SitePageSection.objects.get(
+            page=page,
+            group="pickup",
+            display_order=1,
+        )
+        delivery_cost = SitePageSection.objects.get(
+            page=page,
+            group="notes",
+            display_order=0,
+        )
+        self.assertEqual(methods.title, "Новая доставка")
+        self.assertEqual(methods.section_title, "Новые способы доставки")
+        self.assertEqual(pickup_heading.section_title, "Новый самовывоз")
+        self.assertEqual(pickup_heading.url, "https://maps.example/pickup")
+        self.assertEqual(pickup_address.description, "Новый адрес студии.")
+        self.assertEqual(delivery_cost.title, "Новая стоимость доставки")
+        self.assertEqual(delivery_cost.section_title, "Новая полезная информация")
+
+        public_response = self.client.get(reverse("delivery"))
+        for rendered_text in (
+            "Новые способы доставки",
+            "Обновлённое описание доставки.",
+            "Новая доставка",
+            "Новый срок доставки",
+            "Новый самовывоз",
+            "Обновлённые условия самовывоза.",
+            "Новый адрес",
+            "Новый адрес студии.",
+            "Новая полезная информация",
+            "Новая стоимость доставки",
+            "Описание новой стоимости доставки.",
+        ):
+            with self.subTest(text=rendered_text):
+                self.assertContains(public_response, rendered_text)
+        self.assertContains(public_response, 'href="https://maps.example/pickup"')
+
+    def test_faq_questions_can_be_added_edited_ordered_and_deleted(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="faq_questions_admin",
+            email="faq-questions-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        editor_url = reverse("site_content_manager")
+        page = SitePageSection.Page.FAQ
+        editor_response = self.client.get(editor_url, {"page": page})
+        formset = editor_response.context["faq_questions_formset"]
+        self.assertIsNotNone(formset)
+        self.assertEqual(formset.extra_forms[0]["display_order"].value(), formset.initial_form_count() + 1)
+        self.assertContains(editor_response, "Частые вопросы — вопросы и ответы")
+        self.assertContains(editor_response, "Добавить вопрос")
+
+        post_data = {
+            "page": page,
+            "action": "save_faq_questions",
+            f"{formset.prefix}-TOTAL_FORMS": str(formset.total_form_count()),
+            f"{formset.prefix}-INITIAL_FORMS": str(formset.initial_form_count()),
+            f"{formset.prefix}-MIN_NUM_FORMS": "0",
+            f"{formset.prefix}-MAX_NUM_FORMS": "1000",
+        }
+        for index, question_form in enumerate(formset.forms):
+            for field_name in question_form.fields:
+                field_key = f"{question_form.prefix}-{field_name}"
+                if field_name == "id":
+                    post_data[field_key] = str(question_form.instance.pk or "")
+                elif field_name == "DELETE":
+                    if index == 1:
+                        post_data[field_key] = "on"
+                elif field_name == "is_active":
+                    if question_form[field_name].value():
+                        post_data[field_key] = "on"
+                else:
+                    post_data[field_key] = question_form[field_name].value() or ""
+
+        post_data.update(
+            {
+                f"{formset.prefix}-0-title": "Обновлённый вопрос",
+                f"{formset.prefix}-0-title_en": "Updated question",
+                f"{formset.prefix}-0-description": "Обновлённый ответ.",
+                f"{formset.prefix}-0-description_en": "Updated answer.",
+                f"{formset.prefix}-0-display_order": "8",
+                f"{formset.prefix}-{formset.initial_form_count()}-title": "Новый вопрос",
+                f"{formset.prefix}-{formset.initial_form_count()}-title_en": "New question",
+                f"{formset.prefix}-{formset.initial_form_count()}-description": "Новый ответ.",
+                f"{formset.prefix}-{formset.initial_form_count()}-description_en": "New answer.",
+                f"{formset.prefix}-{formset.initial_form_count()}-display_order": "9",
+                f"{formset.prefix}-{formset.initial_form_count()}-is_active": "on",
+            }
+        )
+
+        response = self.client.post(editor_url, post_data)
+
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+        questions = SitePageSection.objects.filter(
+            page=page,
+            group="questions",
+        )
+        self.assertEqual(
+            questions.filter(title="Обновлённый вопрос").get().display_order,
+            7,
+        )
+        self.assertTrue(questions.filter(title="Новый вопрос").exists())
+        self.assertFalse(questions.filter(title="Можно ли нанести логотип или индивидуальный дизайн?").exists())
+
+        public_response = self.client.get(reverse("faq"))
+        self.assertContains(public_response, "Обновлённый вопрос")
+        self.assertContains(public_response, "Обновлённый ответ.")
+        self.assertContains(public_response, "Новый вопрос")
+        self.assertContains(public_response, "Новый ответ.")
+        self.assertNotContains(
+            public_response,
+            "Можно ли нанести логотип или индивидуальный дизайн?",
+        )
+
+    def test_packaging_sections_can_be_edited_from_site_content_manager(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="packaging_sections_admin",
+            email="packaging-sections-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        editor_url = reverse("site_content_manager")
+        page = SitePageSection.Page.PACKAGING
+        editor_response = self.client.get(editor_url, {"page": page})
+        options_formset = editor_response.context["packaging_options_formset"]
+        options_heading_form = editor_response.context[
+            "packaging_options_heading_form"
+        ]
+        extras_formset = editor_response.context["packaging_extras_formset"]
+        extras_heading_form = editor_response.context[
+            "packaging_extras_heading_form"
+        ]
+        self.assertIsNotNone(options_formset)
+        self.assertIsNotNone(extras_formset)
+        self.assertContains(editor_response, "Упаковка — основные варианты")
+        self.assertContains(editor_response, "Упаковка — дополнительные варианты")
+
+        def formset_data(formset):
+            data = {
+                f"{formset.prefix}-TOTAL_FORMS": str(len(formset.forms)),
+                f"{formset.prefix}-INITIAL_FORMS": str(formset.initial_form_count()),
+                f"{formset.prefix}-MIN_NUM_FORMS": "0",
+                f"{formset.prefix}-MAX_NUM_FORMS": "1000",
+            }
+            for form in formset.forms:
+                for field_name in form.fields:
+                    if field_name == "image":
+                        continue
+                    name = f"{form.prefix}-{field_name}"
+                    if field_name == "id":
+                        data[name] = str(form.instance.pk)
+                    elif field_name == "is_active":
+                        if form[field_name].value():
+                            data[name] = "on"
+                    else:
+                        data[name] = form[field_name].value() or ""
+            return data
+
+        def heading_form_data(form):
+            return {
+                f"{form.prefix}-{field_name}": form[field_name].value() or ""
+                for field_name in form.fields
+            }
+
+        options_post = {
+            "page": page,
+            "action": "save_packaging_options",
+            **formset_data(options_formset),
+            **heading_form_data(options_heading_form),
+            f"{options_formset.prefix}-0-title": "Обновлённая коробка",
+            f"{options_formset.prefix}-0-title_en": "Updated box",
+            f"{options_formset.prefix}-0-description": "Описание упаковки.",
+            f"{options_formset.prefix}-0-description_en": "Packaging description.",
+            f"{options_heading_form.prefix}-section_title": "Новая упаковка",
+            f"{options_heading_form.prefix}-section_title_en": "New packaging",
+        }
+        response = self.client.post(editor_url, options_post)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+
+        extras_post = {
+            "page": page,
+            "action": "save_packaging_extras",
+            **formset_data(extras_formset),
+            **heading_form_data(extras_heading_form),
+            f"{extras_formset.prefix}-0-title": "Новая брендированная коробка",
+            f"{extras_formset.prefix}-0-title_en": "New branded box",
+            f"{extras_formset.prefix}-0-description": "Описание брендирования.",
+            f"{extras_formset.prefix}-0-description_en": "Branding description.",
+            f"{extras_heading_form.prefix}-section_title": "Новые дополнения",
+            f"{extras_heading_form.prefix}-section_title_en": "New extras",
+        }
+        response = self.client.post(editor_url, extras_post)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+
+        options_card = SitePageSection.objects.get(
+            page=page,
+            group="options",
+            display_order=0,
+        )
+        extras_card = SitePageSection.objects.get(
+            page=page,
+            group="extras",
+            display_order=0,
+        )
+        self.assertEqual(options_card.title, "Обновлённая коробка")
+        self.assertEqual(options_card.section_title, "Новая упаковка")
+        self.assertEqual(extras_card.title, "Новая брендированная коробка")
+        self.assertEqual(extras_card.section_title, "Новые дополнения")
+
+        public_response = self.client.get(reverse("packaging"))
+        for rendered_text in (
+            "Новая упаковка",
+            "Обновлённая коробка",
+            "Описание упаковки.",
+            "Новые дополнения",
+            "Новая брендированная коробка",
+            "Описание брендирования.",
+        ):
+            with self.subTest(text=rendered_text):
+                self.assertContains(public_response, rendered_text)
+
+    def test_business_client_contacts_can_be_edited_from_all_pages(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="corporate_contacts_saver",
+            email="corporate-contacts-saver@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        editor_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.ALL},
+        )
+        form = editor_response.context["business_clients_contact_form"]
+        post_data = {
+            "page": SiteContentBlock.Page.ALL,
+            "action": "save_business_clients_contacts",
+            **{
+                field_name: form.initial[field_name]
+                for field_name in form.fields
+            },
+        }
+        post_data.update(
+            {
+                "phone_value": "+7 999 111-22-33",
+                "phone_url": "tel:+79991112233",
+                "email_value": "corporate@example.com",
+                "email_url": "mailto:corporate@example.com",
+                "address_value": "New corporate office",
+                "address_description": "Business center New",
+            }
+        )
+
+        response = self.client.post(reverse("site_content_manager"), post_data)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=all",
+        )
+        corporate_contacts = list(
+            SitePageSection.objects.filter(
+                page=SitePageSection.Page.BUSINESS_CLIENTS,
+                group="contacts",
+            ).order_by("display_order", "pk")
+        )
+        self.assertEqual(corporate_contacts[0].value, "+7 999 111-22-33")
+        self.assertEqual(corporate_contacts[1].value, "corporate@example.com")
+        self.assertEqual(corporate_contacts[2].value, "New corporate office")
+        self.assertEqual(corporate_contacts[2].description, "Business center New")
+
+        public_response = self.client.get(reverse("business_clients"))
+        self.assertContains(public_response, "+7 999 111-22-33")
+        self.assertContains(public_response, "corporate@example.com")
+        self.assertContains(public_response, "New corporate office")
+        self.assertContains(public_response, "Business center New")
+
+    def test_business_client_sections_are_editable_and_rendered(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="business_client_sections_admin",
+            email="business-client-sections-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        editor_url = reverse("site_content_manager")
+        page = SitePageSection.Page.BUSINESS_CLIENTS
+
+        editor_response = self.client.get(editor_url, {"page": page})
+        self.assertEqual(editor_response.status_code, 200)
+        for form_name in (
+            "business_clients_steps_heading_form",
+            "business_clients_steps_formset",
+            "business_clients_payment_heading_form",
+            "business_clients_payment_formset",
+            "business_clients_delivery_heading_form",
+            "business_clients_delivery_formset",
+            "business_clients_calculator_form",
+        ):
+            self.assertIsNotNone(editor_response.context[form_name])
+        payment_heading_form = editor_response.context[
+            "business_clients_payment_heading_form"
+        ]
+        calculator_form = editor_response.context[
+            "business_clients_calculator_form"
+        ]
+        for field_name in ("value", "value_en", "url"):
+            self.assertNotIn(field_name, payment_heading_form.fields)
+            self.assertNotIn(field_name, calculator_form.fields)
+        self.assertContains(editor_response, "Корпоративным клиентам — порядок работы")
+        self.assertContains(editor_response, "Корпоративным клиентам — оплата и доставка")
+        self.assertContains(editor_response, "Корпоративным клиентам — калькулятор заказа")
+        self.assertNotContains(editor_response, "Button text")
+        self.assertNotContains(editor_response, "Button link")
+
+        def formset_data(formset):
+            data = {
+                f"{formset.prefix}-TOTAL_FORMS": str(len(formset.forms)),
+                f"{formset.prefix}-INITIAL_FORMS": str(formset.initial_form_count()),
+                f"{formset.prefix}-MIN_NUM_FORMS": "0",
+                f"{formset.prefix}-MAX_NUM_FORMS": "1000",
+            }
+            for form in formset.forms:
+                for field_name in form.fields:
+                    name = f"{form.prefix}-{field_name}"
+                    if field_name == "id":
+                        data[name] = str(form.instance.pk)
+                    else:
+                        value = form[field_name].value()
+                        data[name] = (
+                            "on" if field_name == "is_active" and value else value or ""
+                        )
+            return data
+
+        def form_data(form):
+            return {
+                f"{form.prefix}-{field_name}": form[field_name].value() or ""
+                for field_name in form.fields
+            }
+
+        steps = editor_response.context["business_clients_steps_formset"]
+        steps_data = {
+            "page": page,
+            "action": "save_business_clients_steps",
+            **formset_data(steps),
+            **form_data(editor_response.context["business_clients_steps_heading_form"]),
+            f"{steps.prefix}-0-title": "Новая заявка",
+            f"{steps.prefix}-0-title_en": "New request",
+            "steps-heading-section_title": "Новый процесс работы",
+            "steps-heading-section_title_en": "New work process",
+            "steps-heading-section_description": "Обновлённое описание процесса.",
+            "steps-heading-section_description_en": "Updated process introduction.",
+        }
+        response = self.client.post(editor_url, steps_data)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+        self.assertEqual(
+            SitePageSection.objects.get(
+                page=page,
+                group="steps",
+                display_order=0,
+            ).title,
+            "Новая заявка",
+        )
+
+        payment_formset = editor_response.context["business_clients_payment_formset"]
+        delivery_formset = editor_response.context["business_clients_delivery_formset"]
+        payment_button_before = (
+            payment_heading_form.instance.value,
+            payment_heading_form.instance.value_en,
+            payment_heading_form.instance.url,
+        )
+        pricing_data = {
+            "page": page,
+            "action": "save_business_clients_pricing",
+            **formset_data(payment_formset),
+            **formset_data(delivery_formset),
+            **form_data(editor_response.context["business_clients_payment_heading_form"]),
+            **form_data(editor_response.context["business_clients_delivery_heading_form"]),
+            f"{payment_formset.prefix}-0-title": "Новый способ оплаты",
+            f"{payment_formset.prefix}-0-title_en": "New payment option",
+            "payment-heading-section_title": "Новая оплата",
+            "payment-heading-section_title_en": "New payment",
+            f"{delivery_formset.prefix}-0-title": "Новая доставка",
+            f"{delivery_formset.prefix}-0-title_en": "New delivery",
+            "delivery-heading-section_title": "Новая доставка и самовывоз",
+            "delivery-heading-section_title_en": "New delivery and pickup",
+        }
+        response = self.client.post(editor_url, pricing_data)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+        self.assertEqual(
+            SitePageSection.objects.get(
+                page=page,
+                group="payment",
+                display_order=0,
+            ).title,
+            "Новый способ оплаты",
+        )
+        self.assertEqual(
+            (
+                SitePageSection.objects.get(
+                    page=page,
+                    group="payment",
+                    display_order=0,
+                ).value,
+                SitePageSection.objects.get(
+                    page=page,
+                    group="payment",
+                    display_order=0,
+                ).value_en,
+                SitePageSection.objects.get(
+                    page=page,
+                    group="payment",
+                    display_order=0,
+                ).url,
+            ),
+            payment_button_before,
+        )
+
+        calculator_button_before = (
+            calculator_form.instance.value,
+            calculator_form.instance.value_en,
+            calculator_form.instance.url,
+        )
+        calculator_data = {
+            "page": page,
+            "action": "save_business_clients_calculator",
+            **form_data(calculator_form),
+            "calculator-title": "Новый калькулятор заказа",
+            "calculator-title_en": "New order calculator",
+            "calculator-description": "Описание нового калькулятора.",
+            "calculator-description_en": "Description of the new calculator.",
+            "calculator-image_alt": "Новое изображение",
+            "calculator-image_alt_en": "New image",
+        }
+        response = self.client.post(editor_url, calculator_data)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+        calculator = SitePageSection.objects.get(
+            page=page,
+            group="calculator",
+            display_order=0,
+        )
+        self.assertEqual(
+            (calculator.value, calculator.value_en, calculator.url),
+            calculator_button_before,
+        )
+
+        business_clients_response = self.client.get(reverse("business_clients"))
+        for rendered_text in (
+            "Новая заявка",
+            "Новый процесс работы",
+            "Обновлённое описание процесса.",
+            "Новая оплата",
+            "Новый способ оплаты",
+            "Новая доставка и самовывоз",
+            "Новая доставка",
+            "Новый калькулятор заказа",
+            "Описание нового калькулятора.",
+        ):
+            with self.subTest(text=rendered_text):
+                self.assertContains(business_clients_response, rendered_text)
+        if payment_button_before[0]:
+            self.assertContains(business_clients_response, payment_button_before[0])
+        if payment_button_before[2]:
+            self.assertContains(
+                business_clients_response,
+                f'href="{payment_button_before[2]}"',
+            )
+        if calculator_button_before[0]:
+            self.assertContains(business_clients_response, calculator_button_before[0])
+        if calculator_button_before[2]:
+            self.assertContains(
+                business_clients_response,
+                f'href="{calculator_button_before[2]}"',
+            )
+
+    def test_partnership_directions_and_success_are_editable(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="partnership_sections_admin",
+            email="partnership-sections-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        editor_url = reverse("site_content_manager")
+        page = SitePageSection.Page.PARTNERSHIP
+        editor_response = self.client.get(editor_url, {"page": page})
+
+        directions_formset = editor_response.context[
+            "partnership_directions_formset"
+        ]
+        success_formset = editor_response.context[
+            "partnership_success_formset"
+        ]
+        directions_heading_form = editor_response.context[
+            "partnership_directions_heading_form"
+        ]
+        success_heading_form = editor_response.context[
+            "partnership_success_heading_form"
+        ]
+        self.assertIsNotNone(directions_formset)
+        self.assertIsNotNone(success_formset)
+        self.assertContains(editor_response, "Партнёрство — направления сотрудничества")
+        self.assertContains(editor_response, "Партнёрство — наши успехи")
+
+        def formset_data(formset):
+            data = {
+                f"{formset.prefix}-TOTAL_FORMS": str(len(formset.forms)),
+                f"{formset.prefix}-INITIAL_FORMS": str(formset.initial_form_count()),
+                f"{formset.prefix}-MIN_NUM_FORMS": "0",
+                f"{formset.prefix}-MAX_NUM_FORMS": "1000",
+            }
+            for form in formset.forms:
+                for field_name in form.fields:
+                    name = f"{form.prefix}-{field_name}"
+                    if field_name == "id":
+                        data[name] = str(form.instance.pk)
+                    else:
+                        data[name] = form[field_name].value() or ""
+            return data
+
+        def heading_data(form):
+            return {
+                f"{form.prefix}-{field_name}": form[field_name].value() or ""
+                for field_name in form.fields
+            }
+
+        directions_data = {
+            "page": page,
+            "action": "save_partnership_directions",
+            **formset_data(directions_formset),
+            **heading_data(directions_heading_form),
+            "partnership-directions-0-title": "Новое направление",
+            "partnership-directions-0-title_en": "New direction",
+            "partnership-directions-heading-section_title": "Новые направления",
+            "partnership-directions-heading-section_title_en": "New directions",
+            "partnership-directions-heading-section_description": "Новые условия сотрудничества.",
+            "partnership-directions-heading-section_description_en": "New partnership options.",
+        }
+        response = self.client.post(editor_url, directions_data)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+
+        success_data = {
+            "page": page,
+            "action": "save_partnership_success",
+            **formset_data(success_formset),
+            **heading_data(success_heading_form),
+            "partnership-success-0-title": "Новый показатель",
+            "partnership-success-0-title_en": "New metric",
+            "partnership-success-0-description": "Описание нового показателя.",
+            "partnership-success-0-description_en": "Description of the new metric.",
+            "partnership-success-heading-section_title": "Новые успехи",
+            "partnership-success-heading-section_title_en": "New success",
+            "partnership-success-heading-section_description": "Обновлённое описание успехов.",
+            "partnership-success-heading-section_description_en": "Updated success introduction.",
+        }
+        response = self.client.post(editor_url, success_data)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+
+        directions = SitePageSection.objects.get(
+            page=page,
+            group="directions",
+            display_order=0,
+        )
+        success = SitePageSection.objects.get(
+            page=page,
+            group="stats",
+            display_order=0,
+        )
+        self.assertEqual(directions.title, "Новое направление")
+        self.assertEqual(directions.section_title, "Новые направления")
+        self.assertEqual(success.title, "Новый показатель")
+        self.assertEqual(success.section_title, "Новые успехи")
+
+        public_response = self.client.get(reverse("corporate"))
+        for rendered_text in (
+            "Новое направление",
+            "Новые направления",
+            "Новые условия сотрудничества.",
+            "Новый показатель",
+            "Новые успехи",
+            "Описание нового показателя.",
+        ):
+            with self.subTest(text=rendered_text):
+                self.assertContains(public_response, rendered_text)
+
+    def test_home_about_form_updates_the_section_and_both_paragraphs(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="home_about_saver",
+            email="home-about-saver@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        response = self.client.post(
+            reverse("site_content_manager"),
+            {
+                "action": "save_home_about",
+                "page": SitePageSection.Page.HOME,
+                "section_eyebrow": "О бренде",
+                "section_eyebrow_en": "About the brand",
+                "section_title": "Новый заголовок о компании",
+                "section_title_en": "A new company heading",
+                "description": "Первый обновлённый абзац.",
+                "description_en": "The updated first paragraph.",
+                "description_2": "Второй обновлённый абзац.",
+                "description_2_en": "The updated second paragraph.",
+                "image_alt": "Фото о компании",
+                "image_alt_en": "About section image",
+                "is_active": "on",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=home",
+        )
+        sections = list(
+            SitePageSection.objects.filter(
+                page=SitePageSection.Page.HOME,
+                group="home_about",
+            ).order_by("display_order", "pk")
+        )
+        self.assertEqual(sections[0].section_title, "Новый заголовок о компании")
+        self.assertEqual(sections[0].value_en, "More about us")
+        self.assertEqual(sections[0].url, "/about/")
+        self.assertEqual(sections[1].description, "Второй обновлённый абзац.")
+        self.assertEqual(sections[1].description_en, "The updated second paragraph.")
+
+        home_response = self.client.get(reverse("home"))
+        self.assertContains(home_response, "Новый заголовок о компании")
+        self.assertContains(home_response, "Первый обновлённый абзац.")
+        self.assertContains(home_response, "Второй обновлённый абзац.")
+
+    def test_home_about_form_creates_section_when_it_does_not_exist(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="home_about_creator",
+            email="home-about-creator@example.com",
+            password="test-password",
+        )
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.HOME,
+            group="home_about",
+        ).delete()
+        self.client.force_login(admin_user)
+
+        response = self.client.post(
+            reverse("site_content_manager"),
+            {
+                "action": "save_home_about",
+                "page": SitePageSection.Page.HOME,
+                "section_title": "Created About section",
+                "description": "Created first paragraph",
+                "description_2": "Created second paragraph",
+                "is_active": "on",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=home",
+        )
+        self.assertEqual(
+            SitePageSection.objects.filter(
+                page=SitePageSection.Page.HOME,
+                group="home_about",
+            ).count(),
+            2,
+        )
 
     def test_page_content_save_updates_public_page_intro(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -519,71 +1634,6 @@ class AdminDashboardTests(TestCase):
         self.assertContains(about_response, "Новый заголовок о нас")
         self.assertContains(about_response, "Новое описание страницы")
         self.assertContains(about_response, 'href="/contacts/"')
-
-    def test_page_sections_save_and_render_structured_about_content(self):
-        admin_user = get_user_model().objects.create_superuser(
-            username="page_section_saver",
-            email="page-section-saver@example.com",
-            password="test-pass-123",
-        )
-        SitePageSection.objects.filter(page=SitePageSection.Page.ABOUT).delete()
-        self.client.force_login(admin_user)
-
-        response = self.client.post(
-            reverse("site_content_manager"),
-            {
-                "action": "save_page_sections",
-                "page": SitePageSection.Page.ABOUT,
-                "sections-TOTAL_FORMS": "1",
-                "sections-INITIAL_FORMS": "0",
-                "sections-MIN_NUM_FORMS": "0",
-                "sections-MAX_NUM_FORMS": "1000",
-                "sections-0-group": "promises",
-                "sections-0-title": "Carefully selected ingredients",
-                "sections-0-title_en": "Carefully selected ingredients",
-                "sections-0-description": "Edited promise text",
-                "sections-0-description_en": "Edited promise text",
-                "sections-0-display_order": "0",
-                "sections-0-is_active": "on",
-            },
-        )
-
-        self.assertRedirects(
-            response,
-            f"{reverse('site_content_manager')}?page=about",
-        )
-        section = SitePageSection.objects.get(page=SitePageSection.Page.ABOUT)
-        self.assertEqual(section.group, "promises")
-        about_response = self.client.get(reverse("about"))
-        self.assertContains(about_response, "Carefully selected ingredients")
-        self.assertContains(about_response, "Edited promise text")
-
-    def test_page_section_editor_hides_button_text_and_url(self):
-        admin_user = get_user_model().objects.create_superuser(
-            username="page_section_button_editor",
-            email="page-section-button-editor@example.com",
-            password="test-password",
-        )
-        SitePageSection.objects.filter(page=SitePageSection.Page.HOME).delete()
-        SitePageSection.objects.create(
-            page=SitePageSection.Page.HOME,
-            group="home_about",
-            title="About our bakery",
-        )
-        self.client.force_login(admin_user)
-
-        editor_response = self.client.get(
-            reverse("site_content_manager"),
-            {"page": SitePageSection.Page.HOME},
-        )
-
-        about_form = next(
-            form
-            for form in editor_response.context["section_formset"].forms
-            if form.instance.group == "home_about"
-        )
-        self.assertFalse(about_form.show_value_fields)
-        self.assertFalse(about_form.show_url_field)
 
     def test_selected_page_content_renders_on_each_static_page(self):
         pages = (
@@ -698,7 +1748,7 @@ class AdminDashboardTests(TestCase):
         self.assertContains(home_response, "Описание второго баннера")
         self.assertContains(home_response, 'href="/catalog/"')
 
-    def test_site_content_manager_saves_new_page_block(self):
+    def test_site_content_manager_does_not_create_new_page_blocks(self):
         admin_user = get_user_model().objects.create_superuser(
             username="content_creator",
             email="content-creator@example.com",
@@ -719,19 +1769,8 @@ class AdminDashboardTests(TestCase):
             },
         )
 
-        block = SiteContentBlock.objects.get()
-        edit_url = reverse("site_content_edit", args=(block.pk,))
-        self.assertRedirects(response, edit_url)
-        self.assertEqual(block.page, SiteContentBlock.Page.ABOUT)
-        self.assertEqual(block.title, "Custom page heading")
-        self.assertEqual(block.display_order, 2)
-        edit_response = self.client.get(edit_url)
-        self.assertEqual(edit_response.status_code, 200)
-        self.assertContains(edit_response, 'option value="about" selected')
-        about_response = self.client.get(reverse("about"))
-        home_response = self.client.get(reverse("home"))
-        self.assertContains(about_response, "Custom page heading")
-        self.assertNotContains(home_response, "Custom page heading")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(SiteContentBlock.objects.exists())
 
     def test_editing_site_content_page_updates_and_stays_on_the_block(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -1429,6 +2468,94 @@ class HomePageCatalogTests(TestCase):
         self.assertContains(response, "Индивидуальные решения")
         self.assertContains(response, "Взаимодействие")
         self.assertContains(response, "Калькулятор заказа")
+
+    def test_business_clients_page_does_not_repeat_configured_address(self):
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="contacts",
+        ).delete()
+        SitePageSection.objects.create(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="contacts",
+            title="Телефон",
+            title_en="Phone",
+            value="+7 000 000-00-00",
+            value_en="+7 000 000-00-00",
+            url="tel:+70000000000",
+            display_order=0,
+        )
+        SitePageSection.objects.create(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="contacts",
+            title="E-mail",
+            title_en="E-mail",
+            value="info@example.com",
+            value_en="info@example.com",
+            url="mailto:info@example.com",
+            display_order=1,
+        )
+        SitePageSection.objects.create(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="contacts",
+            title="Адрес",
+            title_en="Address",
+            value="г. Москва, ул. Приморская, д. 10, стр. 1",
+            value_en="Moscow, ul. Primorskaya, 10, bldg. 1",
+            description="Бизнес-центр «Примор»",
+            description_en="Business center «Primere»",
+            display_order=2,
+        )
+
+        response = self.client.get(reverse("business_clients"))
+
+        self.assertEqual(
+            response.content.count(
+                "г. Москва, ул. Приморская, д. 10, стр. 1".encode()
+            ),
+            1,
+        )
+
+    def test_footer_contact_information_uses_contact_page_details(self):
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.CONTACTS,
+            group="details",
+        ).delete()
+        SitePageSection.objects.create(
+            page=SitePageSection.Page.CONTACTS,
+            group="details",
+            title="Телефон",
+            title_en="Phone",
+            value="+7 999 111-22-33",
+            value_en="+7 999 111-22-33",
+            url="tel:+79991112233",
+            display_order=0,
+        )
+        SitePageSection.objects.create(
+            page=SitePageSection.Page.CONTACTS,
+            group="details",
+            title="E-mail",
+            title_en="E-mail",
+            value="footer@example.com",
+            value_en="footer@example.com",
+            url="mailto:footer@example.com",
+            display_order=1,
+        )
+        SitePageSection.objects.create(
+            page=SitePageSection.Page.CONTACTS,
+            group="details",
+            title="Адрес",
+            title_en="Address",
+            value="Новый адрес офиса",
+            value_en="New office address",
+            display_order=2,
+        )
+
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, "+7 999 111-22-33")
+        self.assertContains(response, 'href="mailto:footer@example.com"')
+        self.assertContains(response, "Новый адрес офиса")
+        self.assertNotContains(response, "+7 800 123-45-67")
 
     def test_delivery_page_renders_methods_pickup_and_useful_information(self):
         response = self.client.get(reverse("delivery"))

@@ -9,7 +9,7 @@
             <div>
                 <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Website editor{% else %}Редактор сайта{% endif %}</p>
                 <h1>{% if editing_block %}{% if LANGUAGE_CODE == 'en' %}Edit extra content{% else %}Редактировать дополнительный блок{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Edit page content{% else %}Редактировать страницы сайта{% endif %}{% endif %}</h1>
-                <p>{% if LANGUAGE_CODE == 'en' %}Choose a page to edit its introduction, structured content sections, cards, and images. Home includes its banner slides.{% else %}Выберите страницу, чтобы изменить вступление, разделы, карточки и изображения. Для главной страницы доступны слайды баннера.{% endif %}</p>
+                <p>{% if LANGUAGE_CODE == 'en' %}Choose a page to edit its introduction. Home includes its banner slides.{% else %}Выберите страницу, чтобы изменить вступление. Для главной страницы доступны слайды баннера.{% endif %}</p>
             </div>
             <a class="admin-dashboard-site-link" href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Back to dashboard{% else %}Назад в панель{% endif %}</a>
         </header>
@@ -125,24 +125,32 @@
                 </section>
             {% endif %}
 
-            {% if section_formset %}
+            {% if packaging_options_heading_form %}
                 <form class="site-content-editor" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <input type="hidden" name="page" value="{{ selected_page }}">
-                    <input type="hidden" name="action" value="save_page_sections">
-                    {{ section_formset.management_form }}
-                    {% if section_formset.non_form_errors %}<div class="site-content-form-errors">{{ section_formset.non_form_errors }}</div>{% endif %}
+                    <input type="hidden" name="action" value="save_packaging_options">
+                    {{ packaging_options_formset.management_form }}
+                    {% if packaging_options_formset.non_form_errors %}<div class="site-content-form-errors">{{ packaging_options_formset.non_form_errors }}</div>{% endif %}
                     <section class="site-content-form-section">
-                        <h2>{% if LANGUAGE_CODE == 'en' %}Page sections and cards{% else %}Разделы и карточки страницы{% endif %}</h2>
-                        <p>{% if LANGUAGE_CODE == 'en' %}Edit the structured text and images used in this page's content. For buttons and links, edit the button/link text and URL fields. Choose the matching content group to keep each item in its existing layout. Delete an item to hide it.{% else %}Изменяйте тексты и изображения страницы. Чтобы изменить кнопку или ссылку, отредактируйте поля текста кнопки/ссылки и URL. Выберите подходящую группу, чтобы сохранить расположение элементов. Чтобы скрыть элемент, отметьте его удаление.{% endif %}</p>
-                        {% for section_form in section_formset %}
-                            <article class="site-content-form-section site-content-slide-editor" data-value-groups="{{ section_form.value_groups|join:',' }}" data-url-groups="{{ section_form.url_groups|join:',' }}">
-                                {% for hidden in section_form.hidden_fields %}{{ hidden }}{% endfor %}
-                                <h3>{% if LANGUAGE_CODE == 'en' %}Content item {{ forloop.counter }}{% else %}Элемент {{ forloop.counter }}{% endif %}</h3>
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Packaging — main options{% else %}Упаковка — основные варианты{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in packaging_options_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for card_form in packaging_options_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in card_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Packaging option {{ forloop.counter }}{% else %}Вариант упаковки {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
-                                    {% for field in section_form.visible_fields %}
-                                        <div class="site-content-form-field{% if field.name == 'is_active' or field.name == 'DELETE' %} site-content-published{% endif %}"{% if field.name == 'value' or field.name == 'value_en' %} data-section-value-field{% if not section_form.show_value_fields %} hidden{% endif %}{% elif field.name == 'url' %} data-section-url-field{% if not section_form.show_url_field %} hidden{% endif %}{% endif %}>
-                                            {% if field.name == 'is_active' or field.name == 'DELETE' %}
+                                    {% for field in card_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                            {% if field.name == 'is_active' %}
                                                 <label>{{ field }}<span>{{ field.label }}</span></label>
                                             {% else %}
                                                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -153,77 +161,687 @@
                                         </div>
                                     {% endfor %}
                                 </div>
-                                {% if section_form.instance.image %}
-                                    <img class="site-content-editor-preview" src="{{ section_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current section image{% else %}Текущее изображение блока{% endif %}">
+                                {% if card_form.instance.image %}
+                                    <img class="site-content-editor-preview" src="{{ card_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current packaging image{% else %}Текущее изображение упаковки{% endif %}">
                                 {% endif %}
                             </article>
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
-                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save page sections{% else %}Сохранить разделы страницы{% endif %}</button>
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save packaging options{% else %}Сохранить варианты упаковки{% endif %}</button>
                     </div>
                 </form>
             {% endif %}
 
-            <section class="site-content-existing">
-                <div class="admin-dashboard-section-heading">
-                    <div>
-                        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Extra content blocks{% else %}Дополнительные блоки{% endif %}</p>
-                        <h2>{% if LANGUAGE_CODE == 'en' %}Additional page content{% else %}Дополнительный контент страницы{% endif %}</h2>
-                    </div>
-                </div>
+            {% if packaging_extras_heading_form %}
                 <form class="site-content-editor" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <input type="hidden" name="page" value="{{ selected_page }}">
-                    <input type="hidden" name="action" value="save_extra_block">
-                    <div class="site-content-form-grid">
-                        {% for field in form %}
-                            <div class="site-content-form-field">
-                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                {{ field }}
-                                {{ field.errors }}
-                                {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-                            </div>
-                        {% endfor %}
-                    </div>
-                    <button class="admin-dashboard-site-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Add extra content{% else %}Добавить дополнительный блок{% endif %}</button>
-                </form>
-                {% if site_blocks %}
-                    <div class="site-content-existing-list">
-                        {% for block in site_blocks %}
-                            <article class="site-content-existing-item">
-                                {% if block.image %}<img src="{{ block.image.url }}" alt="">{% endif %}
-                                <div>
-                                    <span class="site-content-existing-page">{{ block.get_page_display }}</span>
-                                    <h3>{{ block.localized_title|default:block.get_page_display }}</h3>
-                                    <small>{% if block.is_active %}{% if LANGUAGE_CODE == 'en' %}Published{% else %}Опубликовано{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Hidden{% else %}Скрыто{% endif %}{% endif %}</small>
+                    <input type="hidden" name="action" value="save_packaging_extras">
+                    {{ packaging_extras_formset.management_form }}
+                    {% if packaging_extras_formset.non_form_errors %}<div class="site-content-form-errors">{{ packaging_extras_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Packaging — additional options{% else %}Упаковка — дополнительные варианты{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in packaging_extras_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
                                 </div>
-                                <a class="admin-dashboard-site-link" href="{% url 'site_content_edit' block.pk %}">{% if LANGUAGE_CODE == 'en' %}Edit{% else %}Изменить{% endif %}</a>
+                            {% endfor %}
+                        </div>
+                        {% for card_form in packaging_extras_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in card_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Additional option {{ forloop.counter }}{% else %}Дополнительный вариант {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in card_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                            {% if field.name == 'is_active' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if card_form.instance.image %}
+                                    <img class="site-content-editor-preview" src="{{ card_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current packaging image{% else %}Текущее изображение упаковки{% endif %}">
+                                {% endif %}
                             </article>
                         {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save additional options{% else %}Сохранить дополнительные варианты{% endif %}</button>
                     </div>
-                {% endif %}
-            </section>
+                </form>
+            {% endif %}
+
+            {% if faq_questions_formset %}
+                <form class="site-content-editor" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_faq_questions">
+                    {{ faq_questions_formset.management_form }}
+                    {% if faq_questions_formset.non_form_errors %}<div class="site-content-form-errors">{{ faq_questions_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}FAQ — questions and answers{% else %}Частые вопросы — вопросы и ответы{% endif %}</h2>
+                        <p>{% if LANGUAGE_CODE == 'en' %}Edit, reorder, publish, or remove questions. The last blank form adds one new question.{% else %}Редактируйте, сортируйте, публикуйте или удаляйте вопросы. Последняя пустая форма добавляет новый вопрос.{% endif %}</p>
+                        {% for question_form in faq_questions_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in question_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if forloop.last and not question_form.instance.pk %}{% if LANGUAGE_CODE == 'en' %}Add question{% else %}Добавить вопрос{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Question {{ forloop.counter }}{% else %}Вопрос {{ forloop.counter }}{% endif %}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in question_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' or field.name == 'DELETE' %} site-content-published{% endif %}">
+                                            {% if field.name == 'is_active' or field.name == 'DELETE' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save FAQ{% else %}Сохранить вопросы и ответы{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if delivery_methods_heading_form %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_delivery_methods">
+                    {{ delivery_methods_formset.management_form }}
+                    {% if delivery_methods_formset.non_form_errors %}<div class="site-content-form-errors">{{ delivery_methods_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Delivery — delivery methods{% else %}Доставка — способы доставки{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in delivery_methods_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for method_form in delivery_methods_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in method_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Delivery method {{ forloop.counter }}{% else %}Способ доставки {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in method_form.visible_fields %}
+                                        <div class="site-content-form-field">
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                            {{ field.errors }}
+                                            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if method_form.instance.image %}
+                                    <img class="site-content-editor-preview" src="{{ method_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current delivery method image{% else %}Текущее изображение способа доставки{% endif %}">
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save delivery methods{% else %}Сохранить способы доставки{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if delivery_pickup_heading_form %}
+                <form class="site-content-editor" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_delivery_pickup">
+                    {{ delivery_pickup_formset.management_form }}
+                    {% if delivery_pickup_formset.non_form_errors %}<div class="site-content-form-errors">{{ delivery_pickup_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Delivery — pickup{% else %}Доставка — самовывоз{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in delivery_pickup_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for pickup_form in delivery_pickup_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in pickup_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Pickup detail {{ forloop.counter }}{% else %}Информация о самовывозе {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in pickup_form.visible_fields %}
+                                        <div class="site-content-form-field">
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save pickup information{% else %}Сохранить информацию о самовывозе{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if delivery_help_heading_form %}
+                <form class="site-content-editor" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_delivery_help">
+                    {{ delivery_help_formset.management_form }}
+                    {% if delivery_help_formset.non_form_errors %}<div class="site-content-form-errors">{{ delivery_help_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Delivery — useful information{% else %}Доставка — полезная информация{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in delivery_help_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for help_form in delivery_help_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in help_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Information {{ forloop.counter }}{% else %}Информация {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in help_form.visible_fields %}
+                                        <div class="site-content-form-field">
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save delivery information{% else %}Сохранить информацию о доставке{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if contact_requisites_form %}
+                <form class="site-content-editor" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_contact_requisites">
+                    {% if contact_requisites_form.non_field_errors %}<div class="site-content-form-errors">{{ contact_requisites_form.non_field_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Contacts — company details{% else %}Контакты — реквизиты{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in contact_requisites_form %}
+                                <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                    {% if field.name == 'is_active' %}
+                                        <label>{{ field }}<span>{{ field.label }}</span></label>
+                                    {% else %}
+                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                        {{ field }}
+                                    {% endif %}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save company details{% else %}Сохранить реквизиты{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if partnership_directions_heading_form %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_partnership_directions">
+                    {{ partnership_directions_formset.management_form }}
+                    {% if partnership_directions_formset.non_form_errors %}<div class="site-content-form-errors">{{ partnership_directions_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Partnership — directions{% else %}Партнёрство — направления сотрудничества{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in partnership_directions_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for direction_form in partnership_directions_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in direction_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Direction {{ forloop.counter }}{% else %}Направление {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in direction_form.visible_fields %}
+                                        <div class="site-content-form-field">
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                            {{ field.errors }}
+                                            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if direction_form.instance.image %}
+                                    <img class="site-content-editor-preview" src="{{ direction_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current partnership direction image{% else %}Текущее изображение направления сотрудничества{% endif %}">
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save partnership directions{% else %}Сохранить направления сотрудничества{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if partnership_success_heading_form %}
+                <form class="site-content-editor" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_partnership_success">
+                    {{ partnership_success_formset.management_form }}
+                    {% if partnership_success_formset.non_form_errors %}<div class="site-content-form-errors">{{ partnership_success_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Partnership — our success{% else %}Партнёрство — наши успехи{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in partnership_success_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for success_form in partnership_success_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in success_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Success metric {{ forloop.counter }}{% else %}Показатель успеха {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in success_form.visible_fields %}
+                                        <div class="site-content-form-field">
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save partnership success{% else %}Сохранить успехи сотрудничества{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if business_clients_steps_heading_form %}
+                <form class="site-content-editor" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_business_clients_steps">
+                    {{ business_clients_steps_formset.management_form }}
+                    {% if business_clients_steps_formset.non_form_errors %}<div class="site-content-form-errors">{{ business_clients_steps_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Business clients — interaction{% else %}Корпоративным клиентам — порядок работы{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in business_clients_steps_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for step_form in business_clients_steps_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in step_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Step {{ forloop.counter }}{% else %}Этап {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in step_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                            {% if field.name == 'is_active' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save interaction section{% else %}Сохранить раздел о порядке работы{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if business_clients_payment_heading_form %}
+                <form class="site-content-editor" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_business_clients_pricing">
+                    {{ business_clients_payment_formset.management_form }}
+                    {{ business_clients_delivery_formset.management_form }}
+                    {% if business_clients_payment_formset.non_form_errors %}<div class="site-content-form-errors">{{ business_clients_payment_formset.non_form_errors }}</div>{% endif %}
+                    {% if business_clients_delivery_formset.non_form_errors %}<div class="site-content-form-errors">{{ business_clients_delivery_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Business clients — payment and delivery{% else %}Корпоративным клиентам — оплата и доставка{% endif %}</h2>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Payment{% else %}Оплата{% endif %}</h3>
+                        <div class="site-content-form-grid">
+                            {% for field in business_clients_payment_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for payment_form in business_clients_payment_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in payment_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Payment option {{ forloop.counter }}{% else %}Вариант оплаты {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in payment_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                            {% if field.name == 'is_active' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Delivery / pickup{% else %}Доставка / самовывоз{% endif %}</h3>
+                        <div class="site-content-form-grid">
+                            {% for field in business_clients_delivery_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for delivery_form in business_clients_delivery_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in delivery_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Delivery option {{ forloop.counter }}{% else %}Вариант доставки {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in delivery_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                            {% if field.name == 'is_active' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save payment and delivery sections{% else %}Сохранить разделы оплаты и доставки{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if business_clients_calculator_form %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_business_clients_calculator">
+                    {% if business_clients_calculator_form.non_field_errors %}<div class="site-content-form-errors">{{ business_clients_calculator_form.non_field_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Business clients — order calculator{% else %}Корпоративным клиентам — калькулятор заказа{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in business_clients_calculator_form %}
+                                <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                    {% if field.name == 'is_active' %}
+                                        <label>{{ field }}<span>{{ field.label }}</span></label>
+                                    {% else %}
+                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                        {{ field }}
+                                    {% endif %}
+                                    {{ field.errors }}
+                                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if business_clients_calculator_form.instance.image %}
+                            <img class="site-content-editor-preview" src="{{ business_clients_calculator_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current calculator section image{% else %}Текущее изображение раздела калькулятора{% endif %}">
+                        {% endif %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save calculator section{% else %}Сохранить раздел калькулятора{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if home_about_form %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_home_about">
+                    {% if home_about_form.non_field_errors %}<div class="site-content-form-errors">{{ home_about_form.non_field_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Home page — About us section{% else %}Главная страница — раздел «О компании»{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in home_about_form %}
+                                <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                    {% if field.name == 'is_active' %}
+                                        <label>{{ field }}<span>{{ field.label }}</span></label>
+                                    {% else %}
+                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                        {{ field }}
+                                    {% endif %}
+                                    {{ field.errors }}
+                                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if home_about_form.instance.image %}
+                            <img class="site-content-editor-preview" src="{{ home_about_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current About section image{% else %}Текущее изображение раздела «О компании»{% endif %}">
+                        {% endif %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save About section{% else %}Сохранить раздел «О компании»{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if about_story_form %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_about_story">
+                    {% if about_story_form.non_field_errors %}<div class="site-content-form-errors">{{ about_story_form.non_field_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}About us page — Our story{% else %}Страница «О нас» — «Наша история»{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in about_story_form %}
+                                <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                    {% if field.name == 'is_active' %}
+                                        <label>{{ field }}<span>{{ field.label }}</span></label>
+                                    {% else %}
+                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                        {{ field }}
+                                    {% endif %}
+                                    {{ field.errors }}
+                                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if about_story_form.instance.image %}
+                            <img class="site-content-editor-preview" src="{{ about_story_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current story image{% else %}Текущее изображение раздела «Наша история»{% endif %}">
+                        {% endif %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save story{% else %}Сохранить историю{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if about_promises_formset %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_about_promises">
+                    {{ about_promises_formset.management_form }}
+                    {% if about_promises_formset.non_form_errors %}<div class="site-content-form-errors">{{ about_promises_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}About us page — Our principles{% else %}Страница «О нас» — «Наши принципы»{% endif %}</h2>
+                        {% for promise_form in about_promises_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in promise_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Principle {{ forloop.counter }}{% else %}Принцип {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in promise_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                            {% if field.name == 'is_active' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save principles{% else %}Сохранить принципы{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if about_values_formset %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_about_values">
+                    {{ about_values_formset.management_form }}
+                    {% if about_values_formset.non_form_errors %}<div class="site-content-form-errors">{{ about_values_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}About us page — Our values{% else %}Страница «О нас» — «Наши ценности»{% endif %}</h2>
+                        {% if about_values_heading_form.non_field_errors %}<div class="site-content-form-errors">{{ about_values_heading_form.non_field_errors }}</div>{% endif %}
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Section heading{% else %}Заголовок раздела{% endif %}</h3>
+                        <div class="site-content-form-grid">
+                            {% for field in about_values_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for value_form in about_values_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in value_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Value {{ forloop.counter }}{% else %}Ценность {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in value_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                            {% if field.name == 'is_active' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if value_form.instance.image %}
+                                    <img class="site-content-editor-preview" src="{{ value_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current value image{% else %}Текущее изображение ценности{% endif %}">
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save values{% else %}Сохранить ценности{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if contact_details_form %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_contact_details">
+                    {% if contact_details_form.non_field_errors %}<div class="site-content-form-errors">{{ contact_details_form.non_field_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}All pages — contact details{% else %}Все страницы — контактные данные{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in contact_details_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save contact details{% else %}Сохранить контактные данные{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if business_clients_contact_form %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_business_clients_contacts">
+                    {% if business_clients_contact_form.non_field_errors %}<div class="site-content-form-errors">{{ business_clients_contact_form.non_field_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}All pages — corporate client contact details{% else %}Все страницы — контакты для корпоративных клиентов{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in business_clients_contact_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save corporate client contacts{% else %}Сохранить контакты для корпоративных клиентов{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
         {% endif %}
     </section>
-    {% if section_formset %}
-        <script>
-            document.querySelectorAll("[data-value-groups]").forEach((item) => {
-                const group = item.querySelector('select[name$="-group"]');
-                if (!group) return;
-                const valueGroups = item.dataset.valueGroups.split(",").filter(Boolean);
-                const urlGroups = item.dataset.urlGroups.split(",").filter(Boolean);
-                const updateFields = () => {
-                    item.querySelectorAll("[data-section-value-field]").forEach((field) => {
-                        field.hidden = !valueGroups.includes(group.value);
-                    });
-                    item.querySelectorAll("[data-section-url-field]").forEach((field) => {
-                        field.hidden = !urlGroups.includes(group.value);
-                    });
-                };
-                group.addEventListener("change", updateFields);
-                updateFields();
-            });
-        </script>
-    {% endif %}
 {% endblock %}

@@ -41,6 +41,7 @@ def site_content_blocks(request):
             "site_home_hero_slides": (),
             "site_home_hero_configured": False,
             "site_page_sections": {},
+            "site_footer_contacts": (),
         }
 
     page = PAGE_BY_VIEW_NAME.get(match.view_name)
@@ -77,4 +78,9 @@ def site_content_blocks(request):
             else False
         ),
         "site_page_sections": page_sections,
+        "site_footer_contacts": SitePageSection.objects.filter(
+            page=SitePageSection.Page.CONTACTS,
+            group="details",
+            is_active=True,
+        ).order_by("display_order", "pk"),
     }

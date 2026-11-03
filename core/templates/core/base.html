@@ -103,6 +103,14 @@
                 </nav>
                 <div class="footer-column footer-contact">
                     <h2>{% if LANGUAGE_CODE == 'en' %}Contact{% else %}Контакты{% endif %}</h2>
+                    {% if site_footer_contacts %}
+                        {% for item in site_footer_contacts %}
+                            {% if item.url %}<a class="footer-contact-item" href="{{ item.url }}">{% else %}<div class="footer-contact-item">{% endif %}
+                                <span class="footer-contact-icon" aria-hidden="true">{% cycle "☎" "✉" "⌖" %}</span>
+                                <span>{{ item.localized_value|linebreaksbr }}</span>
+                            {% if item.url %}</a>{% else %}</div>{% endif %}
+                        {% endfor %}
+                    {% else %}
                     <a class="footer-contact-item" href="tel:+74951234567">
                         <span class="footer-contact-icon" aria-hidden="true">☎</span>
                         <span>+7 495 123-45-67<br>+7 800 123-45-67</span>
@@ -115,6 +123,7 @@
                         <span class="footer-contact-icon" aria-hidden="true">⌖</span>
                         <span>{% if LANGUAGE_CODE == 'en' %}Moscow,<br>12 Pryanichnaya St.{% else %}г. Москва,<br>ул. Пряничная, д. 12{% endif %}</span>
                     </div>
+                    {% endif %}
                 </div>
                 <a class="footer-map" href="{% url 'contacts' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact and address in Moscow{% else %}Контакты и адрес в Москве{% endif %}">
                     <span class="footer-map-pin" aria-hidden="true">●</span>

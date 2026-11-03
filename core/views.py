@@ -19,14 +19,34 @@ from .calculator import calculate_quote, localized_calculator_options
 from .forms import (
     AdminFeedbackStatusForm,
     AdminOrderStatusForm,
+    AboutPromiseForm,
+    AboutStorySectionForm,
+    AboutValueCardForm,
+    AboutValuesHeadingForm,
+    BusinessClientsCalculatorForm,
+    BusinessClientsCardForm,
+    BusinessClientsPaymentHeadingForm,
+    BusinessClientsSectionHeadingForm,
+    BusinessClientsSectionTitleForm,
+    ContactRequisitesForm,
+    ContactDetailsForm,
+    DeliveryHelpCardForm,
+    DeliveryMethodsCardForm,
+    DeliveryPickupDetailForm,
+    DeliveryPickupHeadingForm,
+    DeliverySectionHeadingForm,
+    FAQQuestionForm,
     FeedbackForm,
+    HomeAboutSectionForm,
     HomeHeroSlideBaseFormSet,
     HOME_HERO_SLIDE_DEFAULTS,
     HomeHeroSlideForm,
+    PackagingCardForm,
+    PartnershipDirectionForm,
+    PartnershipSuccessForm,
     PreorderForm,
     SiteContentBlockForm,
     SitePageContentForm,
-    SitePageSectionForm,
 )
 from .models import (
     FeedbackSubmission,
@@ -123,11 +143,309 @@ def site_content_manager(request, block_id=None):
     if selected_page not in page_choices:
         raise Http404("Unknown site content page.")
 
-    page_blocks = SiteContentBlock.objects.filter(page=selected_page)
     page_content = SitePageContent.objects.filter(page=selected_page).first()
+    form = None
     content_form = None
     slide_formset = None
-    section_formset = None
+    home_about_form = None
+    about_story_form = None
+    about_promises_formset = None
+    about_values_formset = None
+    about_values_heading_form = None
+    contact_details_form = None
+    contact_requisites_form = None
+    business_clients_contact_form = None
+    business_clients_steps_heading_form = None
+    business_clients_steps_formset = None
+    business_clients_payment_heading_form = None
+    business_clients_payment_formset = None
+    business_clients_delivery_heading_form = None
+    business_clients_delivery_formset = None
+    business_clients_calculator_form = None
+    partnership_directions_heading_form = None
+    partnership_directions_formset = None
+    partnership_success_heading_form = None
+    partnership_success_formset = None
+    delivery_methods_heading_form = None
+    delivery_methods_formset = None
+    delivery_pickup_heading_form = None
+    delivery_pickup_formset = None
+    delivery_help_heading_form = None
+    delivery_help_formset = None
+    faq_questions_formset = None
+    packaging_options_heading_form = None
+    packaging_options_formset = None
+    packaging_extras_heading_form = None
+    packaging_extras_formset = None
+    home_about_sections = (
+        list(
+            SitePageSection.objects.filter(
+                page=SitePageSection.Page.HOME,
+                group="home_about",
+            ).order_by("display_order", "pk")
+        )
+        if selected_page == SitePageSection.Page.HOME
+        else []
+    )
+    home_about_instance = home_about_sections[0] if home_about_sections else None
+    home_about_secondary = (
+        home_about_sections[1] if len(home_about_sections) > 1 else None
+    )
+    about_story_instance = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.ABOUT,
+            group="story",
+        )
+        .order_by("display_order", "pk")
+        .first()
+        if selected_page == SitePageSection.Page.ABOUT
+        else None
+    )
+    about_promises_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.ABOUT,
+            group="promises",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.ABOUT
+        else SitePageSection.objects.none()
+    )
+    about_values_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.ABOUT,
+            group="values",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.ABOUT
+        else SitePageSection.objects.none()
+    )
+    about_values_heading_instance = about_values_queryset.first()
+    contact_details_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.CONTACTS,
+            group="details",
+        ).order_by("display_order", "pk")
+        if selected_page == SiteContentBlock.Page.ALL
+        else SitePageSection.objects.none()
+    )
+    contact_requisites_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.CONTACTS,
+            group="requisites",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.CONTACTS
+        else SitePageSection.objects.none()
+    )
+    contact_requisites_instance = (
+        contact_requisites_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.CONTACTS,
+            group="requisites",
+            display_order=0,
+        )
+    )
+    business_clients_contacts_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="contacts",
+        ).order_by("display_order", "pk")
+        if selected_page == SiteContentBlock.Page.ALL
+        else SitePageSection.objects.none()
+    )
+    business_clients_steps_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="steps",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.BUSINESS_CLIENTS
+        else SitePageSection.objects.none()
+    )
+    business_clients_payment_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="payment",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.BUSINESS_CLIENTS
+        else SitePageSection.objects.none()
+    )
+    business_clients_delivery_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="delivery",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.BUSINESS_CLIENTS
+        else SitePageSection.objects.none()
+    )
+    business_clients_calculator_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="calculator",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.BUSINESS_CLIENTS
+        else SitePageSection.objects.none()
+    )
+    business_clients_steps_heading_instance = (
+        business_clients_steps_queryset.filter(is_active=True).first()
+        or business_clients_steps_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="steps",
+            display_order=0,
+        )
+    )
+    business_clients_payment_heading_instance = (
+        business_clients_payment_queryset.filter(is_active=True).first()
+        or business_clients_payment_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="payment",
+            display_order=0,
+        )
+    )
+    business_clients_delivery_heading_instance = (
+        business_clients_delivery_queryset.filter(is_active=True).first()
+        or business_clients_delivery_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="delivery",
+            display_order=0,
+        )
+    )
+    business_clients_calculator_instance = (
+        business_clients_calculator_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="calculator",
+            display_order=0,
+        )
+    )
+    partnership_directions_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.PARTNERSHIP,
+            group="directions",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.PARTNERSHIP
+        else SitePageSection.objects.none()
+    )
+    partnership_success_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.PARTNERSHIP,
+            group="stats",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.PARTNERSHIP
+        else SitePageSection.objects.none()
+    )
+    partnership_directions_heading_instance = (
+        partnership_directions_queryset.filter(is_active=True).first()
+        or partnership_directions_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.PARTNERSHIP,
+            group="directions",
+            display_order=0,
+        )
+    )
+    partnership_success_heading_instance = (
+        partnership_success_queryset.filter(is_active=True).first()
+        or partnership_success_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.PARTNERSHIP,
+            group="stats",
+            display_order=0,
+        )
+    )
+    delivery_methods_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.DELIVERY,
+            group="methods",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.DELIVERY
+        else SitePageSection.objects.none()
+    )
+    delivery_pickup_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.DELIVERY,
+            group="pickup",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.DELIVERY
+        else SitePageSection.objects.none()
+    )
+    delivery_help_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.DELIVERY,
+            group="notes",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.DELIVERY
+        else SitePageSection.objects.none()
+    )
+    delivery_methods_heading_instance = (
+        delivery_methods_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.DELIVERY,
+            group="methods",
+            display_order=0,
+        )
+    )
+    delivery_pickup_heading_instance = (
+        delivery_pickup_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.DELIVERY,
+            group="pickup",
+            display_order=0,
+        )
+    )
+    delivery_pickup_items_queryset = (
+        delivery_pickup_queryset.exclude(
+            pk=delivery_pickup_heading_instance.pk
+        )
+        if delivery_pickup_heading_instance.pk
+        else delivery_pickup_queryset
+    )
+    delivery_help_heading_instance = (
+        delivery_help_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.DELIVERY,
+            group="notes",
+            display_order=0,
+        )
+    )
+    faq_questions_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.FAQ,
+            group="questions",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.FAQ
+        else SitePageSection.objects.none()
+    )
+    packaging_options_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.PACKAGING,
+            group="options",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.PACKAGING
+        else SitePageSection.objects.none()
+    )
+    packaging_extras_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.PACKAGING,
+            group="extras",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.PACKAGING
+        else SitePageSection.objects.none()
+    )
+    packaging_options_heading_instance = (
+        packaging_options_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.PACKAGING,
+            group="options",
+            display_order=0,
+        )
+    )
+    packaging_extras_heading_instance = (
+        packaging_extras_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.PACKAGING,
+            group="extras",
+            display_order=0,
+        )
+    )
 
     if block:
         if request.method == "POST":
@@ -148,7 +466,6 @@ def site_content_manager(request, block_id=None):
         else:
             form = SiteContentBlockForm(instance=block)
     else:
-        form = SiteContentBlockForm(initial={"page": selected_page})
         if request.method == "POST" and request.POST.get("action") == "save_home_slides":
             slide_queryset = HomeHeroSlide.objects.all()
             slide_initial = HOME_HERO_SLIDE_DEFAULTS[slide_queryset.count() :]
@@ -188,56 +505,751 @@ def site_content_manager(request, block_id=None):
                     "Page content saved." if request.LANGUAGE_CODE == "en" else "Контент страницы сохранён.",
                 )
                 return redirect(f"{request.path}?page={selected_page}")
-        elif request.method == "POST" and request.POST.get("action") == "save_page_sections":
-            SectionFormSet = modelformset_factory(
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_contact_requisites"
+            and selected_page == SitePageSection.Page.CONTACTS
+        ):
+            contact_requisites_form = ContactRequisitesForm(
+                request.POST,
+                instance=contact_requisites_instance,
+                prefix="contact-requisites",
+            )
+            if contact_requisites_form.is_valid():
+                requisites = contact_requisites_form.save(commit=False)
+                requisites.page = SitePageSection.Page.CONTACTS
+                requisites.group = "requisites"
+                requisites.display_order = 0
+                requisites.save()
+                messages.success(
+                    request,
+                    "Contact requisites saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Реквизиты сохранены.",
+                )
+                return redirect(
+                    f"{request.path}?page={SitePageSection.Page.CONTACTS}"
+                )
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_home_about"
+            and selected_page == SitePageSection.Page.HOME
+        ):
+            home_about_form = HomeAboutSectionForm(
+                request.POST,
+                request.FILES,
+                instance=home_about_instance,
+                secondary_instance=home_about_secondary,
+            )
+            if home_about_form.is_valid():
+                with transaction.atomic():
+                    home_about_form.save()
+                messages.success(
+                    request,
+                    "Home about section saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Раздел «О компании» на главной странице сохранён.",
+                )
+                return redirect(f"{request.path}?page={SitePageSection.Page.HOME}")
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_about_story"
+            and selected_page == SitePageSection.Page.ABOUT
+        ):
+            about_story_form = AboutStorySectionForm(
+                request.POST,
+                request.FILES,
+                instance=about_story_instance,
+            )
+            if about_story_form.is_valid():
+                about_story_form.save()
+                messages.success(
+                    request,
+                    "About story saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "История страницы «О нас» сохранена.",
+                )
+                return redirect(f"{request.path}?page={SitePageSection.Page.ABOUT}")
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_about_promises"
+            and selected_page == SitePageSection.Page.ABOUT
+        ):
+            AboutPromisesFormSet = modelformset_factory(
                 SitePageSection,
-                form=SitePageSectionForm,
+                form=AboutPromiseForm,
+                extra=0,
+            )
+            about_promises_formset = AboutPromisesFormSet(
+                request.POST,
+                request.FILES,
+                queryset=about_promises_queryset,
+                prefix="promises",
+            )
+            if about_promises_formset.is_valid():
+                with transaction.atomic():
+                    for promise in about_promises_formset.save(commit=False):
+                        promise.page = SitePageSection.Page.ABOUT
+                        promise.group = "promises"
+                        promise.save()
+                messages.success(
+                    request,
+                    "About principles saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Принципы страницы «О нас» сохранены.",
+                )
+                return redirect(f"{request.path}?page={SitePageSection.Page.ABOUT}")
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_about_values"
+            and selected_page == SitePageSection.Page.ABOUT
+        ):
+            AboutValuesFormSet = modelformset_factory(
+                SitePageSection,
+                form=AboutValueCardForm,
+                extra=0,
+            )
+            about_values_formset = AboutValuesFormSet(
+                request.POST,
+                request.FILES,
+                queryset=about_values_queryset,
+                prefix="values",
+            )
+            about_values_heading_form = AboutValuesHeadingForm(
+                request.POST,
+                prefix="values-heading",
+                instance=about_values_heading_instance,
+            )
+            if (
+                about_values_formset.is_valid()
+                and about_values_heading_form.is_valid()
+            ):
+                with transaction.atomic():
+                    for value_card in about_values_formset.save(commit=False):
+                        value_card.page = SitePageSection.Page.ABOUT
+                        value_card.group = "values"
+                        value_card.save()
+                    heading_instance = (
+                        SitePageSection.objects.filter(
+                            page=SitePageSection.Page.ABOUT,
+                            group="values",
+                        )
+                        .order_by("display_order", "pk")
+                        .first()
+                    )
+                    if heading_instance is None:
+                        heading_instance = SitePageSection(
+                            page=SitePageSection.Page.ABOUT,
+                            group="values",
+                        )
+                    for field_name, value in about_values_heading_form.cleaned_data.items():
+                        setattr(heading_instance, field_name, value)
+                    heading_instance.save()
+                messages.success(
+                    request,
+                    "About values saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Ценности страницы «О нас» сохранены.",
+                )
+                return redirect(f"{request.path}?page={SitePageSection.Page.ABOUT}")
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_faq_questions"
+            and selected_page == SitePageSection.Page.FAQ
+        ):
+            FAQQuestionsFormSet = modelformset_factory(
+                SitePageSection,
+                form=FAQQuestionForm,
                 extra=1,
                 can_delete=True,
             )
-            section_formset = SectionFormSet(
+            faq_questions_formset = FAQQuestionsFormSet(
                 request.POST,
-                request.FILES,
-                queryset=SitePageSection.objects.filter(page=selected_page),
-                form_kwargs={"page": selected_page},
-                prefix="sections",
+                queryset=faq_questions_queryset,
+                prefix="faq-questions",
             )
-            if section_formset.is_valid():
+            if faq_questions_formset.is_valid():
                 with transaction.atomic():
-                    for section in section_formset.save(commit=False):
-                        section.page = selected_page
-                        section.save()
-                    for section in section_formset.deleted_objects:
-                        section.delete()
+                    questions = faq_questions_formset.save(commit=False)
+                    for deleted_question in faq_questions_formset.deleted_objects:
+                        deleted_question.delete()
+                    for question in questions:
+                        question.page = SitePageSection.Page.FAQ
+                        question.group = "questions"
+                        question.save()
                 messages.success(
                     request,
-                    "Page sections saved."
+                    "FAQ questions saved."
                     if request.LANGUAGE_CODE == "en"
-                    else "Блоки страницы сохранены.",
+                    else "Вопросы и ответы сохранены.",
                 )
-                return redirect(f"{request.path}?page={selected_page}")
-        elif request.method == "POST" and (
-            request.POST.get("action") == "save_extra_block"
-            or (
-                not request.POST.get("action")
-                and "title" in request.POST
-            )
+                return redirect(f"{request.path}?page={SitePageSection.Page.FAQ}")
+        elif (
+            request.method == "POST"
+            and request.POST.get("action")
+            in {"save_packaging_options", "save_packaging_extras"}
+            and selected_page == SitePageSection.Page.PACKAGING
         ):
-            form = SiteContentBlockForm(
+            is_options = request.POST.get("action") == "save_packaging_options"
+            group = "options" if is_options else "extras"
+            queryset = (
+                packaging_options_queryset if is_options else packaging_extras_queryset
+            )
+            heading_instance = (
+                packaging_options_heading_instance
+                if is_options
+                else packaging_extras_heading_instance
+            )
+            PackagingFormSet = modelformset_factory(
+                SitePageSection,
+                form=PackagingCardForm,
+                extra=0,
+            )
+            packaging_heading_form = BusinessClientsSectionTitleForm(
+                request.POST,
+                instance=heading_instance,
+                prefix=f"packaging-{group}-heading",
+            )
+            packaging_formset = PackagingFormSet(
                 request.POST,
                 request.FILES,
+                queryset=queryset,
+                prefix=f"packaging-{group}",
             )
-            if form.is_valid():
-                saved_block = form.save()
+            if is_options:
+                packaging_options_heading_form = packaging_heading_form
+                packaging_options_formset = packaging_formset
+            else:
+                packaging_extras_heading_form = packaging_heading_form
+                packaging_extras_formset = packaging_formset
+            if packaging_heading_form.is_valid() and packaging_formset.is_valid():
+                with transaction.atomic():
+                    for card in packaging_formset.save(commit=False):
+                        card.page = SitePageSection.Page.PACKAGING
+                        card.group = group
+                        card.save()
+                    heading = packaging_heading_form.save(commit=False)
+                    heading.page = SitePageSection.Page.PACKAGING
+                    heading.group = group
+                    if heading.pk:
+                        heading.save(
+                            update_fields=(
+                                "page",
+                                "group",
+                                "section_title",
+                                "section_title_en",
+                            )
+                        )
+                    else:
+                        heading.save()
                 messages.success(
                     request,
-                    "Additional content saved."
+                    (
+                        "Packaging options saved."
+                        if is_options
+                        else "Additional packaging options saved."
+                    )
                     if request.LANGUAGE_CODE == "en"
-                    else "Дополнительный блок сохранён.",
+                    else (
+                        "Варианты упаковки сохранены."
+                        if is_options
+                        else "Дополнительные варианты упаковки сохранены."
+                    ),
                 )
-                if request.POST.get("action") == "save_extra_block":
-                    return redirect(f"{request.path}?page={selected_page}")
-                return redirect("site_content_edit", block_id=saved_block.pk)
+                return redirect(f"{request.path}?page={SitePageSection.Page.PACKAGING}")
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_delivery_methods"
+            and selected_page == SitePageSection.Page.DELIVERY
+        ):
+            DeliveryMethodsFormSet = modelformset_factory(
+                SitePageSection,
+                form=DeliveryMethodsCardForm,
+                extra=0,
+            )
+            delivery_methods_heading_form = DeliverySectionHeadingForm(
+                request.POST,
+                instance=delivery_methods_heading_instance,
+                prefix="delivery-methods-heading",
+            )
+            delivery_methods_formset = DeliveryMethodsFormSet(
+                request.POST,
+                request.FILES,
+                queryset=delivery_methods_queryset,
+                prefix="delivery-methods",
+            )
+            if (
+                delivery_methods_heading_form.is_valid()
+                and delivery_methods_formset.is_valid()
+            ):
+                with transaction.atomic():
+                    for method in delivery_methods_formset.save(commit=False):
+                        method.page = SitePageSection.Page.DELIVERY
+                        method.group = "methods"
+                        method.save()
+                    heading = delivery_methods_heading_form.save(commit=False)
+                    heading.page = SitePageSection.Page.DELIVERY
+                    heading.group = "methods"
+                    if heading.pk:
+                        heading.save(
+                            update_fields=(
+                                "page",
+                                "group",
+                                "section_title",
+                                "section_title_en",
+                                "section_description",
+                                "section_description_en",
+                            )
+                        )
+                    else:
+                        heading.save()
+                messages.success(
+                    request,
+                    "Delivery methods saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Способы доставки сохранены.",
+                )
+                return redirect(f"{request.path}?page={SitePageSection.Page.DELIVERY}")
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_delivery_pickup"
+            and selected_page == SitePageSection.Page.DELIVERY
+        ):
+            DeliveryPickupFormSet = modelformset_factory(
+                SitePageSection,
+                form=DeliveryPickupDetailForm,
+                extra=0,
+            )
+            delivery_pickup_heading_form = DeliveryPickupHeadingForm(
+                request.POST,
+                instance=delivery_pickup_heading_instance,
+                prefix="delivery-pickup-heading",
+            )
+            delivery_pickup_formset = DeliveryPickupFormSet(
+                request.POST,
+                queryset=delivery_pickup_items_queryset,
+                prefix="delivery-pickup",
+            )
+            if (
+                delivery_pickup_heading_form.is_valid()
+                and delivery_pickup_formset.is_valid()
+            ):
+                with transaction.atomic():
+                    for detail in delivery_pickup_formset.save(commit=False):
+                        detail.page = SitePageSection.Page.DELIVERY
+                        detail.group = "pickup"
+                        detail.save()
+                    heading = delivery_pickup_heading_form.save(commit=False)
+                    heading.page = SitePageSection.Page.DELIVERY
+                    heading.group = "pickup"
+                    if heading.pk:
+                        heading.save(
+                            update_fields=(
+                                "page",
+                                "group",
+                                "section_title",
+                                "section_title_en",
+                                "section_description",
+                                "section_description_en",
+                                "value",
+                                "value_en",
+                                "url",
+                            )
+                        )
+                    else:
+                        heading.save()
+                messages.success(
+                    request,
+                    "Pickup information saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Информация о самовывозе сохранена.",
+                )
+                return redirect(f"{request.path}?page={SitePageSection.Page.DELIVERY}")
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_delivery_help"
+            and selected_page == SitePageSection.Page.DELIVERY
+        ):
+            DeliveryHelpFormSet = modelformset_factory(
+                SitePageSection,
+                form=DeliveryHelpCardForm,
+                extra=0,
+            )
+            delivery_help_heading_form = DeliverySectionHeadingForm(
+                request.POST,
+                instance=delivery_help_heading_instance,
+                prefix="delivery-help-heading",
+            )
+            delivery_help_formset = DeliveryHelpFormSet(
+                request.POST,
+                queryset=delivery_help_queryset,
+                prefix="delivery-help",
+            )
+            if (
+                delivery_help_heading_form.is_valid()
+                and delivery_help_formset.is_valid()
+            ):
+                with transaction.atomic():
+                    for help_item in delivery_help_formset.save(commit=False):
+                        help_item.page = SitePageSection.Page.DELIVERY
+                        help_item.group = "notes"
+                        help_item.save()
+                    heading = delivery_help_heading_form.save(commit=False)
+                    heading.page = SitePageSection.Page.DELIVERY
+                    heading.group = "notes"
+                    if heading.pk:
+                        heading.save(
+                            update_fields=(
+                                "page",
+                                "group",
+                                "section_title",
+                                "section_title_en",
+                                "section_description",
+                                "section_description_en",
+                            )
+                        )
+                    else:
+                        heading.save()
+                messages.success(
+                    request,
+                    "Delivery help information saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Полезная информация о доставке сохранена.",
+                )
+                return redirect(f"{request.path}?page={SitePageSection.Page.DELIVERY}")
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_partnership_directions"
+            and selected_page == SitePageSection.Page.PARTNERSHIP
+        ):
+            PartnershipDirectionsFormSet = modelformset_factory(
+                SitePageSection,
+                form=PartnershipDirectionForm,
+                extra=0,
+            )
+            partnership_directions_heading_form = (
+                BusinessClientsSectionHeadingForm(
+                    request.POST,
+                    instance=partnership_directions_heading_instance,
+                    prefix="partnership-directions-heading",
+                )
+            )
+            partnership_directions_formset = PartnershipDirectionsFormSet(
+                request.POST,
+                request.FILES,
+                queryset=partnership_directions_queryset,
+                prefix="partnership-directions",
+            )
+            if (
+                partnership_directions_heading_form.is_valid()
+                and partnership_directions_formset.is_valid()
+            ):
+                with transaction.atomic():
+                    for direction in partnership_directions_formset.save(
+                        commit=False
+                    ):
+                        direction.page = SitePageSection.Page.PARTNERSHIP
+                        direction.group = "directions"
+                        direction.save()
+                    heading = partnership_directions_heading_form.save(
+                        commit=False
+                    )
+                    heading.page = SitePageSection.Page.PARTNERSHIP
+                    heading.group = "directions"
+                    if heading.pk:
+                        heading.save(
+                            update_fields=(
+                                "page",
+                                "group",
+                                "section_title",
+                                "section_title_en",
+                                "section_description",
+                                "section_description_en",
+                            )
+                        )
+                    else:
+                        heading.save()
+                messages.success(
+                    request,
+                    "Partnership directions saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Направления сотрудничества сохранены.",
+                )
+                return redirect(
+                    f"{request.path}?page={SitePageSection.Page.PARTNERSHIP}"
+                )
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_partnership_success"
+            and selected_page == SitePageSection.Page.PARTNERSHIP
+        ):
+            PartnershipSuccessFormSet = modelformset_factory(
+                SitePageSection,
+                form=PartnershipSuccessForm,
+                extra=0,
+            )
+            partnership_success_heading_form = BusinessClientsSectionHeadingForm(
+                request.POST,
+                instance=partnership_success_heading_instance,
+                prefix="partnership-success-heading",
+            )
+            partnership_success_formset = PartnershipSuccessFormSet(
+                request.POST,
+                queryset=partnership_success_queryset,
+                prefix="partnership-success",
+            )
+            if (
+                partnership_success_heading_form.is_valid()
+                and partnership_success_formset.is_valid()
+            ):
+                with transaction.atomic():
+                    for achievement in partnership_success_formset.save(
+                        commit=False
+                    ):
+                        achievement.page = SitePageSection.Page.PARTNERSHIP
+                        achievement.group = "stats"
+                        achievement.save()
+                    heading = partnership_success_heading_form.save(
+                        commit=False
+                    )
+                    heading.page = SitePageSection.Page.PARTNERSHIP
+                    heading.group = "stats"
+                    if heading.pk:
+                        heading.save(
+                            update_fields=(
+                                "page",
+                                "group",
+                                "section_title",
+                                "section_title_en",
+                                "section_description",
+                                "section_description_en",
+                            )
+                        )
+                    else:
+                        heading.save()
+                messages.success(
+                    request,
+                    "Partnership success section saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Раздел об успехах сотрудничества сохранён.",
+                )
+                return redirect(
+                    f"{request.path}?page={SitePageSection.Page.PARTNERSHIP}"
+                )
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_business_clients_steps"
+            and selected_page == SitePageSection.Page.BUSINESS_CLIENTS
+        ):
+            BusinessClientsStepsFormSet = modelformset_factory(
+                SitePageSection,
+                form=BusinessClientsCardForm,
+                extra=0,
+            )
+            business_clients_steps_heading_form = BusinessClientsSectionHeadingForm(
+                request.POST,
+                instance=business_clients_steps_heading_instance,
+                prefix="steps-heading",
+            )
+            business_clients_steps_formset = BusinessClientsStepsFormSet(
+                request.POST,
+                queryset=business_clients_steps_queryset,
+                prefix="steps",
+            )
+            if (
+                business_clients_steps_heading_form.is_valid()
+                and business_clients_steps_formset.is_valid()
+            ):
+                with transaction.atomic():
+                    for step in business_clients_steps_formset.save(commit=False):
+                        step.page = SitePageSection.Page.BUSINESS_CLIENTS
+                        step.group = "steps"
+                        step.save()
+                    heading = business_clients_steps_heading_form.save(commit=False)
+                    heading.page = SitePageSection.Page.BUSINESS_CLIENTS
+                    heading.group = "steps"
+                    if heading.pk:
+                        heading.save(
+                            update_fields=(
+                                "page",
+                                "group",
+                                "section_title",
+                                "section_title_en",
+                                "section_description",
+                                "section_description_en",
+                            )
+                        )
+                    else:
+                        heading.save()
+                messages.success(
+                    request,
+                    "Business client process saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Раздел о порядке работы сохранён.",
+                )
+                return redirect(
+                    f"{request.path}?page={SitePageSection.Page.BUSINESS_CLIENTS}"
+                )
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_business_clients_pricing"
+            and selected_page == SitePageSection.Page.BUSINESS_CLIENTS
+        ):
+            BusinessClientsPricingFormSet = modelformset_factory(
+                SitePageSection,
+                form=BusinessClientsCardForm,
+                extra=0,
+            )
+            BusinessClientsDeliveryFormSet = modelformset_factory(
+                SitePageSection,
+                form=BusinessClientsCardForm,
+                extra=0,
+            )
+            business_clients_payment_heading_form = BusinessClientsPaymentHeadingForm(
+                request.POST,
+                instance=business_clients_payment_heading_instance,
+                prefix="payment-heading",
+            )
+            business_clients_payment_formset = BusinessClientsPricingFormSet(
+                request.POST,
+                queryset=business_clients_payment_queryset,
+                prefix="payment",
+            )
+            business_clients_delivery_heading_form = BusinessClientsSectionTitleForm(
+                request.POST,
+                instance=business_clients_delivery_heading_instance,
+                prefix="delivery-heading",
+            )
+            business_clients_delivery_formset = BusinessClientsDeliveryFormSet(
+                request.POST,
+                queryset=business_clients_delivery_queryset,
+                prefix="delivery",
+            )
+            if (
+                business_clients_payment_heading_form.is_valid()
+                and business_clients_payment_formset.is_valid()
+                and business_clients_delivery_heading_form.is_valid()
+                and business_clients_delivery_formset.is_valid()
+            ):
+                with transaction.atomic():
+                    for card in business_clients_payment_formset.save(commit=False):
+                        card.page = SitePageSection.Page.BUSINESS_CLIENTS
+                        card.group = "payment"
+                        card.save()
+                    for card in business_clients_delivery_formset.save(commit=False):
+                        card.page = SitePageSection.Page.BUSINESS_CLIENTS
+                        card.group = "delivery"
+                        card.save()
+                    payment_heading = (
+                        business_clients_payment_heading_form.save(commit=False)
+                    )
+                    payment_heading.page = SitePageSection.Page.BUSINESS_CLIENTS
+                    payment_heading.group = "payment"
+                    if payment_heading.pk:
+                        payment_heading.save(
+                            update_fields=(
+                                "page",
+                                "group",
+                                "section_title",
+                                "section_title_en",
+                            )
+                        )
+                    else:
+                        payment_heading.save()
+                    delivery_heading = (
+                        business_clients_delivery_heading_form.save(commit=False)
+                    )
+                    delivery_heading.page = SitePageSection.Page.BUSINESS_CLIENTS
+                    delivery_heading.group = "delivery"
+                    if delivery_heading.pk:
+                        delivery_heading.save(
+                            update_fields=(
+                                "page",
+                                "group",
+                                "section_title",
+                                "section_title_en",
+                                "section_description",
+                                "section_description_en",
+                            )
+                        )
+                    else:
+                        delivery_heading.save()
+                messages.success(
+                    request,
+                    "Business client payment and delivery saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Разделы оплаты и доставки сохранены.",
+                )
+                return redirect(
+                    f"{request.path}?page={SitePageSection.Page.BUSINESS_CLIENTS}"
+                )
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_business_clients_calculator"
+            and selected_page == SitePageSection.Page.BUSINESS_CLIENTS
+        ):
+            business_clients_calculator_form = BusinessClientsCalculatorForm(
+                request.POST,
+                request.FILES,
+                instance=business_clients_calculator_instance,
+                prefix="calculator",
+            )
+            if business_clients_calculator_form.is_valid():
+                calculator = business_clients_calculator_form.save(commit=False)
+                calculator.page = SitePageSection.Page.BUSINESS_CLIENTS
+                calculator.group = "calculator"
+                calculator.save()
+                messages.success(
+                    request,
+                    "Business client calculator saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Раздел калькулятора заказа сохранён.",
+                )
+                return redirect(
+                    f"{request.path}?page={SitePageSection.Page.BUSINESS_CLIENTS}"
+                )
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_contact_details"
+            and selected_page == SiteContentBlock.Page.ALL
+        ):
+            contact_details_form = ContactDetailsForm(
+                request.POST,
+                contacts=contact_details_queryset,
+            )
+            if contact_details_form.is_valid():
+                with transaction.atomic():
+                    contact_details_form.save()
+                messages.success(
+                    request,
+                    "Contact details saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Контактные данные сохранены.",
+                )
+                return redirect(
+                    f"{request.path}?page={SiteContentBlock.Page.ALL}"
+                )
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_business_clients_contacts"
+            and selected_page == SiteContentBlock.Page.ALL
+        ):
+            business_clients_contact_form = ContactDetailsForm(
+                request.POST,
+                contacts=business_clients_contacts_queryset,
+                page=SitePageSection.Page.BUSINESS_CLIENTS,
+                group="contacts",
+            )
+            if business_clients_contact_form.is_valid():
+                with transaction.atomic():
+                    business_clients_contact_form.save()
+                messages.success(
+                    request,
+                    "Corporate client contacts saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Контакты для корпоративных клиентов сохранены.",
+                )
+                return redirect(f"{request.path}?page={SiteContentBlock.Page.ALL}")
         else:
             if selected_page == SiteContentBlock.Page.HOME:
                 slide_queryset = HomeHeroSlide.objects.all()
@@ -259,18 +1271,231 @@ def site_content_manager(request, block_id=None):
                     page=selected_page,
                 )
 
-        if selected_page in SitePageSection.Page.values and section_formset is None:
-            SectionFormSet = modelformset_factory(
+    if selected_page == SitePageSection.Page.HOME and home_about_form is None:
+        home_about_form = HomeAboutSectionForm(
+            instance=home_about_instance,
+            secondary_instance=home_about_secondary,
+        )
+    if (
+        selected_page == SitePageSection.Page.CONTACTS
+        and contact_requisites_form is None
+    ):
+        contact_requisites_form = ContactRequisitesForm(
+            instance=contact_requisites_instance,
+            prefix="contact-requisites",
+        )
+    if selected_page == SitePageSection.Page.ABOUT and about_story_form is None:
+        about_story_form = AboutStorySectionForm(instance=about_story_instance)
+    if selected_page == SitePageSection.Page.DELIVERY:
+        if delivery_methods_heading_form is None:
+            delivery_methods_heading_form = DeliverySectionHeadingForm(
+                instance=delivery_methods_heading_instance,
+                prefix="delivery-methods-heading",
+            )
+        if delivery_methods_formset is None:
+            DeliveryMethodsFormSet = modelformset_factory(
                 SitePageSection,
-                form=SitePageSectionForm,
-                extra=1,
-                can_delete=True,
+                form=DeliveryMethodsCardForm,
+                extra=0,
             )
-            section_formset = SectionFormSet(
-                queryset=SitePageSection.objects.filter(page=selected_page),
-                form_kwargs={"page": selected_page},
-                prefix="sections",
+            delivery_methods_formset = DeliveryMethodsFormSet(
+                queryset=delivery_methods_queryset,
+                prefix="delivery-methods",
             )
+        if delivery_pickup_heading_form is None:
+            delivery_pickup_heading_form = DeliveryPickupHeadingForm(
+                instance=delivery_pickup_heading_instance,
+                prefix="delivery-pickup-heading",
+            )
+        if delivery_pickup_formset is None:
+            DeliveryPickupFormSet = modelformset_factory(
+                SitePageSection,
+                form=DeliveryPickupDetailForm,
+                extra=0,
+            )
+            delivery_pickup_formset = DeliveryPickupFormSet(
+                queryset=delivery_pickup_items_queryset,
+                prefix="delivery-pickup",
+            )
+        if delivery_help_heading_form is None:
+            delivery_help_heading_form = DeliverySectionHeadingForm(
+                instance=delivery_help_heading_instance,
+                prefix="delivery-help-heading",
+            )
+        if delivery_help_formset is None:
+            DeliveryHelpFormSet = modelformset_factory(
+                SitePageSection,
+                form=DeliveryHelpCardForm,
+                extra=0,
+            )
+            delivery_help_formset = DeliveryHelpFormSet(
+                queryset=delivery_help_queryset,
+                prefix="delivery-help",
+            )
+    if selected_page == SitePageSection.Page.FAQ and faq_questions_formset is None:
+        FAQQuestionsFormSet = modelformset_factory(
+            SitePageSection,
+            form=FAQQuestionForm,
+            extra=1,
+            can_delete=True,
+        )
+        faq_questions_formset = FAQQuestionsFormSet(
+            queryset=faq_questions_queryset,
+            initial=[{"display_order": faq_questions_queryset.count() + 1}],
+            prefix="faq-questions",
+        )
+    if selected_page == SitePageSection.Page.PACKAGING:
+        PackagingFormSet = modelformset_factory(
+            SitePageSection,
+            form=PackagingCardForm,
+            extra=0,
+        )
+        if packaging_options_heading_form is None:
+            packaging_options_heading_form = BusinessClientsSectionTitleForm(
+                instance=packaging_options_heading_instance,
+                prefix="packaging-options-heading",
+            )
+        if packaging_options_formset is None:
+            packaging_options_formset = PackagingFormSet(
+                queryset=packaging_options_queryset,
+                prefix="packaging-options",
+            )
+        if packaging_extras_heading_form is None:
+            packaging_extras_heading_form = BusinessClientsSectionTitleForm(
+                instance=packaging_extras_heading_instance,
+                prefix="packaging-extras-heading",
+            )
+        if packaging_extras_formset is None:
+            packaging_extras_formset = PackagingFormSet(
+                queryset=packaging_extras_queryset,
+                prefix="packaging-extras",
+            )
+    if selected_page == SitePageSection.Page.PARTNERSHIP:
+        if partnership_directions_heading_form is None:
+            partnership_directions_heading_form = (
+                BusinessClientsSectionHeadingForm(
+                    instance=partnership_directions_heading_instance,
+                    prefix="partnership-directions-heading",
+                )
+            )
+        if partnership_directions_formset is None:
+            PartnershipDirectionsFormSet = modelformset_factory(
+                SitePageSection,
+                form=PartnershipDirectionForm,
+                extra=0,
+            )
+            partnership_directions_formset = PartnershipDirectionsFormSet(
+                queryset=partnership_directions_queryset,
+                prefix="partnership-directions",
+            )
+        if partnership_success_heading_form is None:
+            partnership_success_heading_form = BusinessClientsSectionHeadingForm(
+                instance=partnership_success_heading_instance,
+                prefix="partnership-success-heading",
+            )
+        if partnership_success_formset is None:
+            PartnershipSuccessFormSet = modelformset_factory(
+                SitePageSection,
+                form=PartnershipSuccessForm,
+                extra=0,
+            )
+            partnership_success_formset = PartnershipSuccessFormSet(
+                queryset=partnership_success_queryset,
+                prefix="partnership-success",
+            )
+    if selected_page == SitePageSection.Page.BUSINESS_CLIENTS:
+        if business_clients_steps_heading_form is None:
+            business_clients_steps_heading_form = BusinessClientsSectionHeadingForm(
+                instance=business_clients_steps_heading_instance,
+                prefix="steps-heading",
+            )
+        if business_clients_steps_formset is None:
+            BusinessClientsStepsFormSet = modelformset_factory(
+                SitePageSection,
+                form=BusinessClientsCardForm,
+                extra=0,
+            )
+            business_clients_steps_formset = BusinessClientsStepsFormSet(
+                queryset=business_clients_steps_queryset,
+                prefix="steps",
+            )
+        if business_clients_payment_heading_form is None:
+            business_clients_payment_heading_form = BusinessClientsPaymentHeadingForm(
+                instance=business_clients_payment_heading_instance,
+                prefix="payment-heading",
+            )
+        if business_clients_payment_formset is None:
+            BusinessClientsPricingFormSet = modelformset_factory(
+                SitePageSection,
+                form=BusinessClientsCardForm,
+                extra=0,
+            )
+            business_clients_payment_formset = BusinessClientsPricingFormSet(
+                queryset=business_clients_payment_queryset,
+                prefix="payment",
+            )
+        if business_clients_delivery_heading_form is None:
+            business_clients_delivery_heading_form = (
+                BusinessClientsSectionTitleForm(
+                    instance=business_clients_delivery_heading_instance,
+                    prefix="delivery-heading",
+                )
+            )
+        if business_clients_delivery_formset is None:
+            BusinessClientsDeliveryFormSet = modelformset_factory(
+                SitePageSection,
+                form=BusinessClientsCardForm,
+                extra=0,
+            )
+            business_clients_delivery_formset = BusinessClientsDeliveryFormSet(
+                queryset=business_clients_delivery_queryset,
+                prefix="delivery",
+            )
+        if business_clients_calculator_form is None:
+            business_clients_calculator_form = BusinessClientsCalculatorForm(
+                instance=business_clients_calculator_instance,
+                prefix="calculator",
+            )
+
+    if selected_page == SitePageSection.Page.ABOUT:
+        if about_promises_formset is None:
+            AboutPromisesFormSet = modelformset_factory(
+                SitePageSection,
+                form=AboutPromiseForm,
+                extra=0,
+            )
+            about_promises_formset = AboutPromisesFormSet(
+                queryset=about_promises_queryset,
+                prefix="promises",
+            )
+        if about_values_formset is None:
+            AboutValuesFormSet = modelformset_factory(
+                SitePageSection,
+                form=AboutValueCardForm,
+                extra=0,
+            )
+            about_values_formset = AboutValuesFormSet(
+                queryset=about_values_queryset,
+                prefix="values",
+            )
+        if about_values_heading_form is None:
+            about_values_heading_form = AboutValuesHeadingForm(
+                instance=about_values_heading_instance,
+                prefix="values-heading",
+            )
+    if selected_page == SiteContentBlock.Page.ALL and contact_details_form is None:
+        contact_details_form = ContactDetailsForm(
+            contacts=contact_details_queryset,
+        )
+    if (
+        selected_page == SiteContentBlock.Page.ALL
+        and business_clients_contact_form is None
+    ):
+        business_clients_contact_form = ContactDetailsForm(
+            contacts=business_clients_contacts_queryset,
+            page=SitePageSection.Page.BUSINESS_CLIENTS,
+            group="contacts",
+        )
 
     page_form = SitePageContentForm(
         instance=page_content,
@@ -285,11 +1510,39 @@ def site_content_manager(request, block_id=None):
         {
             "form": form,
             "page_form": content_form,
-            "section_formset": section_formset,
             "slide_formset": slide_formset,
+            "home_about_form": home_about_form,
+            "about_story_form": about_story_form,
+            "about_promises_formset": about_promises_formset,
+            "about_values_formset": about_values_formset,
+            "about_values_heading_form": about_values_heading_form,
+            "contact_details_form": contact_details_form,
+            "contact_requisites_form": contact_requisites_form,
+            "delivery_methods_heading_form": delivery_methods_heading_form,
+            "delivery_methods_formset": delivery_methods_formset,
+            "delivery_pickup_heading_form": delivery_pickup_heading_form,
+            "delivery_pickup_formset": delivery_pickup_formset,
+            "delivery_help_heading_form": delivery_help_heading_form,
+            "delivery_help_formset": delivery_help_formset,
+            "faq_questions_formset": faq_questions_formset,
+            "packaging_options_heading_form": packaging_options_heading_form,
+            "packaging_options_formset": packaging_options_formset,
+            "packaging_extras_heading_form": packaging_extras_heading_form,
+            "packaging_extras_formset": packaging_extras_formset,
+            "business_clients_contact_form": business_clients_contact_form,
+            "business_clients_steps_heading_form": business_clients_steps_heading_form,
+            "business_clients_steps_formset": business_clients_steps_formset,
+            "business_clients_payment_heading_form": business_clients_payment_heading_form,
+            "business_clients_payment_formset": business_clients_payment_formset,
+            "business_clients_delivery_heading_form": business_clients_delivery_heading_form,
+            "business_clients_delivery_formset": business_clients_delivery_formset,
+            "business_clients_calculator_form": business_clients_calculator_form,
+            "partnership_directions_heading_form": partnership_directions_heading_form,
+            "partnership_directions_formset": partnership_directions_formset,
+            "partnership_success_heading_form": partnership_success_heading_form,
+            "partnership_success_formset": partnership_success_formset,
             "editing_block": block,
             "selected_page": selected_page,
-            "site_blocks": page_blocks,
             "selected_page_is_dynamic": selected_page in {
                 SiteContentBlock.Page.CATEGORY,
                 SiteContentBlock.Page.PRODUCT,

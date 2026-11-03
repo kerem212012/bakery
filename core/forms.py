@@ -585,12 +585,1076 @@ SITE_PAGE_SECTION_VALUE_GROUPS = {
     (SitePageSection.Page.FEEDBACK, "contacts"),
     (SitePageSection.Page.PARTNERSHIP, "stats"),
 }
-SITE_PAGE_SECTION_URL_GROUPS = {
-    (SitePageSection.Page.BUSINESS_CLIENTS, "contacts"),
-    (SitePageSection.Page.CONTACTS, "details"),
-    (SitePageSection.Page.FEEDBACK, "contacts"),
-    (SitePageSection.Page.CATALOG, "promos"),
-}
+
+
+class AboutStorySectionForm(forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "section_eyebrow",
+            "section_eyebrow_en",
+            "section_title",
+            "section_title_en",
+            "description",
+            "description_en",
+            "image",
+            "image_alt",
+            "image_alt_en",
+        )
+        widgets = {
+            "section_eyebrow": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_eyebrow_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_title": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 5}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 5}
+            ),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
+            "image_alt": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "image_alt_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if (get_language() or "").startswith("en"):
+            self.fields["section_eyebrow"].label = "Small heading (Russian)"
+            self.fields["section_eyebrow_en"].label = "Small heading (English)"
+            self.fields["section_title"].label = "Heading (Russian)"
+            self.fields["section_title_en"].label = "Heading (English)"
+            self.fields["description"].label = "Story text (Russian)"
+            self.fields["description_en"].label = "Story text (English)"
+            self.fields["image"].label = "Image"
+            self.fields["image_alt"].label = "Image description (Russian)"
+            self.fields["image_alt_en"].label = "Image description (English)"
+            self.fields["is_active"].label = "Published"
+        else:
+            self.fields["section_eyebrow"].label = "Надзаголовок (русский)"
+            self.fields["section_eyebrow_en"].label = "Надзаголовок (английский)"
+            self.fields["section_title"].label = "Заголовок (русский)"
+            self.fields["section_title_en"].label = "Заголовок (английский)"
+            self.fields["description"].label = "Текст истории (русский)"
+            self.fields["description_en"].label = "Текст истории (английский)"
+            self.fields["image"].label = "Изображение"
+            self.fields["image_alt"].label = "Описание изображения (русский)"
+            self.fields["image_alt_en"].label = "Описание изображения (английский)"
+            self.fields["is_active"].label = "Опубликовано"
+            self.fields["image"].help_text = "JPG, PNG или WebP."
+
+    def save(self, commit=True):
+        section = super().save(commit=False)
+        section.page = SitePageSection.Page.ABOUT
+        section.group = "story"
+        section.display_order = 0
+        if commit:
+            section.save()
+        return section
+
+
+class AboutPromiseForm(forms.ModelForm):
+    display_order = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(
+            attrs={"class": "site-content-form-control", "min": 1}
+        ),
+    )
+
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "display_order",
+            "is_active",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and self.instance.pk:
+            self.initial["display_order"] = self.instance.display_order + 1
+        if (get_language() or "").startswith("en"):
+            labels = {
+                "title": "Title (Russian)",
+                "title_en": "Title (English)",
+                "description": "Description (Russian)",
+                "description_en": "Description (English)",
+                "display_order": "Display order",
+                "is_active": "Published",
+            }
+        else:
+            labels = {
+                "title": "Заголовок (русский)",
+                "title_en": "Заголовок (английский)",
+                "description": "Описание (русский)",
+                "description_en": "Описание (английский)",
+                "display_order": "Порядок",
+                "is_active": "Опубликовано",
+            }
+        for field_name, label in labels.items():
+            self.fields[field_name].label = label
+
+    def save(self, commit=True):
+        promise = super().save(commit=False)
+        promise.display_order -= 1
+        if commit:
+            promise.save()
+        return promise
+
+
+class AboutValueCardForm(forms.ModelForm):
+    display_order = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(
+            attrs={"class": "site-content-form-control", "min": 1}
+        ),
+    )
+
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "image",
+            "image_alt",
+            "image_alt_en",
+            "display_order",
+            "is_active",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
+            "image_alt": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "image_alt_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and self.instance.pk:
+            self.initial["display_order"] = self.instance.display_order + 1
+        if (get_language() or "").startswith("en"):
+            labels = {
+                "title": "Title (Russian)",
+                "title_en": "Title (English)",
+                "description": "Description (Russian)",
+                "description_en": "Description (English)",
+                "image": "Image",
+                "image_alt": "Image description (Russian)",
+                "image_alt_en": "Image description (English)",
+                "display_order": "Display order",
+                "is_active": "Published",
+            }
+        else:
+            labels = {
+                "title": "Заголовок (русский)",
+                "title_en": "Заголовок (английский)",
+                "description": "Описание (русский)",
+                "description_en": "Описание (английский)",
+                "image": "Изображение",
+                "image_alt": "Описание изображения (русский)",
+                "image_alt_en": "Описание изображения (английский)",
+                "display_order": "Порядок",
+                "is_active": "Опубликовано",
+            }
+            self.fields["image"].help_text = "JPG, PNG или WebP."
+        for field_name, label in labels.items():
+            self.fields[field_name].label = label
+
+    def save(self, commit=True):
+        value_card = super().save(commit=False)
+        value_card.display_order -= 1
+        if commit:
+            value_card.save()
+        return value_card
+
+
+class AboutValuesHeadingForm(forms.Form):
+    section_eyebrow = forms.CharField(
+        required=False,
+        label="Надзаголовок (русский)",
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    section_eyebrow_en = forms.CharField(
+        required=False,
+        label="Надзаголовок (английский)",
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    section_title = forms.CharField(
+        required=False,
+        label="Заголовок (русский)",
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    section_title_en = forms.CharField(
+        required=False,
+        label="Заголовок (английский)",
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    section_description = forms.CharField(
+        required=False,
+        label="Описание (русский)",
+        widget=forms.Textarea(attrs={"class": "site-content-form-control", "rows": 3}),
+    )
+    section_description_en = forms.CharField(
+        required=False,
+        label="Описание (английский)",
+        widget=forms.Textarea(attrs={"class": "site-content-form-control", "rows": 3}),
+    )
+
+    def __init__(self, *args, instance=None, **kwargs):
+        self.instance = instance
+        initial = kwargs.pop("initial", {})
+        if instance:
+            initial.update(
+                {
+                    field_name: getattr(instance, field_name)
+                    for field_name in (
+                        "section_eyebrow",
+                        "section_eyebrow_en",
+                        "section_title",
+                        "section_title_en",
+                        "section_description",
+                        "section_description_en",
+                    )
+                }
+            )
+        super().__init__(*args, initial=initial, **kwargs)
+        if (get_language() or "").startswith("en"):
+            labels = {
+                "section_eyebrow": "Small heading (Russian)",
+                "section_eyebrow_en": "Small heading (English)",
+                "section_title": "Heading (Russian)",
+                "section_title_en": "Heading (English)",
+                "section_description": "Introduction (Russian)",
+                "section_description_en": "Introduction (English)",
+            }
+            for field_name, label in labels.items():
+                self.fields[field_name].label = label
+
+
+class ContactDetailsForm(forms.Form):
+    phone_value = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    phone_value_en = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    phone_url = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    phone_description = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    phone_description_en = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    email_value = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    email_value_en = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    email_url = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    email_description = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    email_description_en = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    address_value = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"class": "site-content-form-control", "rows": 2}),
+    )
+    address_value_en = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"class": "site-content-form-control", "rows": 2}),
+    )
+    address_url = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    address_description = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+    address_description_en = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "site-content-form-control"}),
+    )
+
+    CONTACTS = (
+        ("phone", "Телефон", "Phone"),
+        ("email", "E-mail", "E-mail"),
+        ("address", "Адрес", "Address"),
+    )
+
+    def __init__(
+        self,
+        *args,
+        contacts=(),
+        page=SitePageSection.Page.CONTACTS,
+        group="details",
+        **kwargs,
+    ):
+        self.contacts = list(contacts)
+        self.page = page
+        self.group = group
+        if not args and not kwargs.get("data"):
+            initial = kwargs.setdefault("initial", {})
+            for index, (prefix, _, _) in enumerate(self.CONTACTS):
+                if index >= len(self.contacts):
+                    continue
+                contact = self.contacts[index]
+                initial[f"{prefix}_value"] = contact.value
+                initial[f"{prefix}_value_en"] = contact.value_en
+                initial[f"{prefix}_url"] = contact.url
+                initial[f"{prefix}_description"] = contact.description
+                initial[f"{prefix}_description_en"] = contact.description_en
+        super().__init__(*args, **kwargs)
+
+        english = (get_language() or "").startswith("en")
+        for prefix, russian_name, english_name in self.CONTACTS:
+            name = english_name if english else russian_name
+            self.fields[f"{prefix}_value"].label = f"{name} (русский)" if english else f"{name} (русский)"
+            self.fields[f"{prefix}_value_en"].label = f"{name} (English)" if english else f"{name} (английский)"
+            self.fields[f"{prefix}_url"].label = (
+                f"{name} link" if english else f"Ссылка ({name.lower()})"
+            )
+            self.fields[f"{prefix}_description"].label = (
+                f"{name} note (Russian)"
+                if english
+                else f"Подпись ({name.lower()}, русский)"
+            )
+            self.fields[f"{prefix}_description_en"].label = (
+                f"{name} note (English)"
+                if english
+                else f"Подпись ({name.lower()}, английский)"
+            )
+
+    def save(self):
+        contacts = []
+        for index, (prefix, russian_name, english_name) in enumerate(self.CONTACTS):
+            contact = (
+                self.contacts[index]
+                if index < len(self.contacts)
+                else SitePageSection(
+                    page=self.page,
+                    group=self.group,
+                    display_order=index,
+                    is_active=True,
+                )
+            )
+            contact.page = self.page
+            contact.group = self.group
+            contact.title = russian_name
+            contact.title_en = english_name
+            contact.value = self.cleaned_data[f"{prefix}_value"]
+            contact.value_en = self.cleaned_data[f"{prefix}_value_en"]
+            contact.url = self.cleaned_data[f"{prefix}_url"]
+            contact.description = self.cleaned_data[f"{prefix}_description"]
+            contact.description_en = self.cleaned_data[
+                f"{prefix}_description_en"
+            ]
+            contact.save()
+            contacts.append(contact)
+        return contacts
+
+
+class ContactRequisitesForm(forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "value",
+            "value_en",
+            "url",
+            "is_active",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "value": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "value_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "url": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if (get_language() or "").startswith("en"):
+            labels = {
+                "title": "Section heading (Russian)",
+                "title_en": "Section heading (English)",
+                "description": "Description (Russian)",
+                "description_en": "Description (English)",
+                "value": "Button text (Russian)",
+                "value_en": "Button text (English)",
+                "url": "Button link",
+                "is_active": "Published",
+            }
+            for field_name, label in labels.items():
+                self.fields[field_name].label = label
+
+
+class DeliveryPageFormMixin:
+    english_labels = {
+        "section_title": "Section heading (Russian)",
+        "section_title_en": "Section heading (English)",
+        "section_description": "Section introduction (Russian)",
+        "section_description_en": "Section introduction (English)",
+        "title": "Title (Russian)",
+        "title_en": "Title (English)",
+        "description": "Description (Russian)",
+        "description_en": "Description (English)",
+        "value": "Note (Russian)",
+        "value_en": "Note (English)",
+        "url": "Map or contact link",
+        "image": "Image",
+        "image_alt": "Image description (Russian)",
+        "image_alt_en": "Image description (English)",
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if (get_language() or "").startswith("en"):
+            for field_name, label in self.english_labels.items():
+                if field_name in self.fields:
+                    self.fields[field_name].label = label
+
+
+class DeliveryMethodsCardForm(DeliveryPageFormMixin, forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "value",
+            "value_en",
+            "image",
+            "image_alt",
+            "image_alt_en",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "value": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 2}
+            ),
+            "value_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 2}
+            ),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
+            "image_alt": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "image_alt_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+        }
+
+
+class DeliverySectionHeadingForm(DeliveryPageFormMixin, forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = ("section_title", "section_title_en", "section_description", "section_description_en")
+        widgets = {
+            "section_title": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 2}
+            ),
+            "section_description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 2}
+            ),
+        }
+
+
+class DeliveryPickupHeadingForm(DeliveryPageFormMixin, forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "section_title",
+            "section_title_en",
+            "section_description",
+            "section_description_en",
+            "value",
+            "value_en",
+            "url",
+        )
+        widgets = {
+            "section_title": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 2}
+            ),
+            "section_description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 2}
+            ),
+            "value": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "value_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "url": forms.TextInput(attrs={"class": "site-content-form-control"}),
+        }
+
+
+class DeliveryPickupDetailForm(DeliveryPageFormMixin, forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = ("title", "title_en", "description", "description_en")
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+        }
+
+
+class DeliveryHelpCardForm(DeliveryPageFormMixin, forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "value",
+            "value_en",
+            "url",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "value": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "value_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "url": forms.TextInput(attrs={"class": "site-content-form-control"}),
+        }
+
+
+class FAQQuestionForm(forms.ModelForm):
+    display_order = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(
+            attrs={"class": "site-content-form-control", "min": 1}
+        ),
+    )
+
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "display_order",
+            "is_active",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 4}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 4}
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and self.instance.pk:
+            self.initial["display_order"] = self.instance.display_order + 1
+        if (get_language() or "").startswith("en"):
+            labels = {
+                "title": "Question (Russian)",
+                "title_en": "Question (English)",
+                "description": "Answer (Russian)",
+                "description_en": "Answer (English)",
+                "display_order": "Display order",
+                "is_active": "Published",
+            }
+        else:
+            labels = {
+                "title": "Вопрос (русский)",
+                "title_en": "Вопрос (английский)",
+                "description": "Ответ (русский)",
+                "description_en": "Ответ (английский)",
+                "display_order": "Порядок",
+                "is_active": "Опубликован",
+            }
+        for field_name, label in labels.items():
+            self.fields[field_name].label = label
+
+    def save(self, commit=True):
+        question = super().save(commit=False)
+        question.display_order -= 1
+        if commit:
+            question.save()
+        return question
+
+
+class BusinessClientsSectionFormMixin:
+    english_labels = {
+        "section_title": "Section heading (Russian)",
+        "section_title_en": "Section heading (English)",
+        "section_description": "Section introduction (Russian)",
+        "section_description_en": "Section introduction (English)",
+        "title": "Title (Russian)",
+        "title_en": "Title (English)",
+        "description": "Text (Russian)",
+        "description_en": "Text (English)",
+        "value": "Button text (Russian)",
+        "value_en": "Button text (English)",
+        "url": "Button link",
+        "image": "Image",
+        "image_alt": "Image description (Russian)",
+        "image_alt_en": "Image description (English)",
+        "is_active": "Published",
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if (get_language() or "").startswith("en"):
+            for field_name, label in self.english_labels.items():
+                if field_name in self.fields:
+                    self.fields[field_name].label = label
+
+
+class BusinessClientsSectionHeadingForm(
+    BusinessClientsSectionFormMixin,
+    forms.ModelForm,
+):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "section_title",
+            "section_title_en",
+            "section_description",
+            "section_description_en",
+        )
+        widgets = {
+            "section_title": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 2}
+            ),
+            "section_description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 2}
+            ),
+        }
+
+
+class BusinessClientsSectionTitleForm(
+    BusinessClientsSectionFormMixin,
+    forms.ModelForm,
+):
+    class Meta:
+        model = SitePageSection
+        fields = ("section_title", "section_title_en")
+        widgets = {
+            "section_title": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+        }
+
+
+class BusinessClientsCardForm(BusinessClientsSectionFormMixin, forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "is_active",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
+            ),
+        }
+
+
+class BusinessClientsPaymentHeadingForm(
+    BusinessClientsSectionFormMixin,
+    forms.ModelForm,
+):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "section_title",
+            "section_title_en",
+        )
+        widgets = {
+            "section_title": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+        }
+
+
+class BusinessClientsCalculatorForm(
+    BusinessClientsSectionFormMixin,
+    forms.ModelForm,
+):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "image",
+            "image_alt",
+            "image_alt_en",
+            "is_active",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
+            "image_alt": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "image_alt_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
+            ),
+        }
+
+
+class PartnershipDirectionForm(BusinessClientsSectionFormMixin, forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "image",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
+        }
+
+
+class PartnershipSuccessForm(BusinessClientsSectionFormMixin, forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = ("title", "title_en", "description", "description_en")
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+        }
+
+
+class HomeAboutSectionForm(forms.ModelForm):
+    description_2 = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"class": "site-content-form-control", "rows": 3}),
+    )
+    description_2_en = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"class": "site-content-form-control", "rows": 3}),
+    )
+
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "section_eyebrow",
+            "section_eyebrow_en",
+            "section_title",
+            "section_title_en",
+            "description",
+            "description_en",
+            "description_2",
+            "description_2_en",
+            "image",
+            "image_alt",
+            "image_alt_en",
+            "is_active",
+        )
+        widgets = {
+            "section_eyebrow": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_eyebrow_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_title": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "section_title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
+            "image_alt": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "image_alt_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
+            ),
+        }
+
+    def __init__(self, *args, secondary_instance=None, **kwargs):
+        self.secondary_instance = secondary_instance
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and secondary_instance:
+            self.initial["description_2"] = secondary_instance.description
+            self.initial["description_2_en"] = secondary_instance.description_en
+
+        if (get_language() or "").startswith("en"):
+            self.fields["section_eyebrow"].label = "Small heading (Russian)"
+            self.fields["section_eyebrow_en"].label = "Small heading (English)"
+            self.fields["section_title"].label = "Heading (Russian)"
+            self.fields["section_title_en"].label = "Heading (English)"
+            self.fields["description"].label = "First paragraph (Russian)"
+            self.fields["description_en"].label = "First paragraph (English)"
+            self.fields["description_2"].label = "Second paragraph (Russian)"
+            self.fields["description_2_en"].label = "Second paragraph (English)"
+            self.fields["image"].label = "Image"
+            self.fields["image_alt"].label = "Image description (Russian)"
+            self.fields["image_alt_en"].label = "Image description (English)"
+            self.fields["is_active"].label = "Published"
+        else:
+            self.fields["section_eyebrow"].label = "Надзаголовок (русский)"
+            self.fields["section_eyebrow_en"].label = "Надзаголовок (английский)"
+            self.fields["section_title"].label = "Заголовок (русский)"
+            self.fields["section_title_en"].label = "Заголовок (английский)"
+            self.fields["description"].label = "Первый абзац (русский)"
+            self.fields["description_en"].label = "Первый абзац (английский)"
+            self.fields["description_2"].label = "Второй абзац (русский)"
+            self.fields["description_2_en"].label = "Второй абзац (английский)"
+            self.fields["image"].label = "Изображение"
+            self.fields["image_alt"].label = "Описание изображения (русский)"
+            self.fields["image_alt_en"].label = "Описание изображения (английский)"
+            self.fields["is_active"].label = "Опубликовано"
+            self.fields["image"].help_text = "JPG, PNG или WebP."
+
+    def save(self, commit=True):
+        section = super().save(commit=False)
+        section.page = SitePageSection.Page.HOME
+        section.group = "home_about"
+        section.display_order = 0
+        if commit:
+            section.save()
+            description = self.cleaned_data["description_2"]
+            description_en = self.cleaned_data["description_2_en"]
+            if self.secondary_instance:
+                secondary = self.secondary_instance
+                secondary.description = description
+                secondary.description_en = description_en
+                secondary.is_active = section.is_active and bool(
+                    description or description_en
+                )
+                secondary.save(
+                    update_fields=("description", "description_en", "is_active")
+                )
+            elif description or description_en:
+                SitePageSection.objects.create(
+                    page=SitePageSection.Page.HOME,
+                    group="home_about",
+                    description=description,
+                    description_en=description_en,
+                    display_order=1,
+                    is_active=section.is_active,
+                )
+        return section
 
 
 class SitePageSectionForm(forms.ModelForm):
@@ -610,7 +1674,6 @@ class SitePageSectionForm(forms.ModelForm):
             "description_en",
             "value",
             "value_en",
-            "url",
             "image",
             "image_alt",
             "image_alt_en",
@@ -647,7 +1710,6 @@ class SitePageSectionForm(forms.ModelForm):
             ),
             "value": forms.TextInput(attrs={"class": "site-content-form-control"}),
             "value_en": forms.TextInput(attrs={"class": "site-content-form-control"}),
-            "url": forms.TextInput(attrs={"class": "site-content-form-control"}),
             "image": forms.ClearableFileInput(
                 attrs={
                     "class": "site-content-form-control",
@@ -685,13 +1747,7 @@ class SitePageSectionForm(forms.ModelForm):
             for section_page, value in SITE_PAGE_SECTION_VALUE_GROUPS
             if section_page == page
         )
-        self.url_groups = tuple(
-            value
-            for section_page, value in SITE_PAGE_SECTION_URL_GROUPS
-            if section_page == page
-        )
         self.show_value_fields = group in self.value_groups
-        self.show_url_field = group in self.url_groups
         if (get_language() or "").startswith("en"):
             self.fields["group"].label = "Content group"
             self.fields["section_eyebrow"].label = "Section small heading (Russian)"
@@ -707,7 +1763,6 @@ class SitePageSectionForm(forms.ModelForm):
             value_labels = {
                 "value": "Displayed value (Russian)",
                 "value_en": "Displayed value (English)",
-                "url": "Link URL",
             }
             for field_name, label in value_labels.items():
                 if field_name in self.fields:
@@ -718,21 +1773,6 @@ class SitePageSectionForm(forms.ModelForm):
             self.fields["display_order"].label = "Display order"
             self.fields["is_active"].label = "Published"
         else:
-            self.fields["value"].label = "Текст кнопки / ссылки (русский)"
-            self.fields["value_en"].label = "Текст кнопки / ссылки (английский)"
-            self.fields["url"].label = "Ссылка кнопки / перехода"
-            self.fields["value"].help_text = (
-                "Используется как текст кнопки или ссылки; для статистики — как значение."
-            )
-            self.fields["value_en"].help_text = (
-                "Английский текст кнопки или ссылки; для статистики — значение."
-            )
-            self.fields["url"].help_text = (
-                "Например: /catalog/, #calculator или mailto:hello@example.com."
-            )
-            self.fields["value"].label = "Значение / подпись"
-            self.fields["value_en"].label = "Значение / подпись на английском"
-            self.fields["url"].label = "Ссылка"
             self.fields["image"].help_text = "JPG, PNG или WebP."
 
     def clean(self):
@@ -741,8 +1781,6 @@ class SitePageSectionForm(forms.ModelForm):
         if (self.page, group) not in SITE_PAGE_SECTION_VALUE_GROUPS:
             cleaned_data["value"] = self.instance.value
             cleaned_data["value_en"] = self.instance.value_en
-        if (self.page, group) not in SITE_PAGE_SECTION_URL_GROUPS:
-            cleaned_data["url"] = self.instance.url
         return cleaned_data
 
     def save(self, commit=True):
@@ -844,6 +1882,43 @@ class AdminOrderStatusForm(forms.Form):
         )
         self.fields["status"].widget.attrs["class"] = "site-content-form-control"
 
+
+class PackagingCardForm(BusinessClientsSectionFormMixin, forms.ModelForm):
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "image",
+            "image_alt",
+            "image_alt_en",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
+            "image_alt": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "image_alt_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+        }
 
 class AdminFeedbackStatusForm(forms.Form):
     status = forms.ChoiceField(choices=())
