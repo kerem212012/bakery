@@ -2,6 +2,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.forms import modelformset_factory
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -18,18 +20,42 @@ from .forms import (
     AdminFeedbackStatusForm,
     AdminOrderStatusForm,
     FeedbackForm,
+    HomeHeroSlideBaseFormSet,
+    HOME_HERO_SLIDE_DEFAULTS,
+    HomeHeroSlideForm,
     PreorderForm,
     SiteContentBlockForm,
+    SitePageContentForm,
+    SitePageSectionForm,
 )
 from .models import (
     FeedbackSubmission,
+    HomeHeroSlide,
     Preorder,
     PreorderAttachment,
     SiteContentBlock,
+    SitePageContent,
+    SitePageSection,
 )
 
 
-@staff_member_required(login_url="admin:login")
+SITE_CONTENT_PERMISSIONS = (
+    "core.add_sitepagecontent",
+    "core.change_sitepagecontent",
+    "core.add_homeheroslide",
+    "core.change_homeheroslide",
+    "core.add_sitecontentblock",
+    "core.change_sitecontentblock",
+    "core.add_sitepagesection",
+    "core.change_sitepagesection",
+)
+
+
+def _can_manage_site_content(user):
+    return user.is_superuser or user.has_perms(SITE_CONTENT_PERMISSIONS)
+
+
+@staff_member_required(login_url="accounts:login")
 def admin_dashboard(request):
     user = request.user
     can_view_products = user.has_perm("catalog.view_product")
@@ -45,7 +71,7 @@ def admin_dashboard(request):
         {
             "can_view_products": can_view_products,
             "can_add_products": user.has_perm("catalog.add_product"),
-            "is_superuser": user.is_superuser,
+            "can_manage_site_content": _can_manage_site_content(user),
             "can_view_categories": can_view_categories,
             "can_add_categories": user.has_perm("catalog.add_category"),
             "can_view_filter_options": can_view_filter_options,
@@ -83,41 +109,192 @@ def admin_dashboard(request):
     )
 
 
-@staff_member_required(login_url="admin:login")
+@staff_member_required(login_url="accounts:login")
 def site_content_manager(request, block_id=None):
-    if not request.user.is_superuser:
+    if not _can_manage_site_content(request.user):
         raise PermissionDenied
 
-    block = (
-        get_object_or_404(SiteContentBlock, pk=block_id)
-        if block_id is not None
-        else None
-    )
-    if request.method == "POST":
-        form = SiteContentBlockForm(
-            request.POST,
-            request.FILES,
-            instance=block,
-        )
-        if form.is_valid():
-            form.save()
-            message = (
-                "Site content saved."
-                if request.LANGUAGE_CODE == "en"
-                else "Контент сайта сохранён."
+    block = get_object_or_404(SiteContentBlock, pk=block_id) if block_id else None
+    page_choices = dict(SiteContentBlock.Page.choices)
+    selected_page = block.page if block else SiteContentBlock.Page.CATALOG
+    if not block:
+        selected_page = request.POST.get("page", selected_page) if request.method == "POST" else request.GET.get("page", selected_page)
+
+    if selected_page not in page_choices:
+        raise Http404("Unknown site content page.")
+
+    page_blocks = SiteContentBlock.objects.filter(page=selected_page)
+    page_content = SitePageContent.objects.filter(page=selected_page).first()
+    content_form = None
+    slide_formset = None
+    section_formset = None
+
+    if block:
+        if request.method == "POST":
+            form = SiteContentBlockForm(
+                request.POST,
+                request.FILES,
+                instance=block,
             )
-            messages.success(request, message)
-            return redirect("site_content_manager")
+            if form.is_valid():
+                saved_block = form.save()
+                message = (
+                    "Site content saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Контент сайта сохранён."
+                )
+                messages.success(request, message)
+                return redirect("site_content_edit", block_id=saved_block.pk)
+        else:
+            form = SiteContentBlockForm(instance=block)
     else:
-        form = SiteContentBlockForm(instance=block)
+        form = SiteContentBlockForm(initial={"page": selected_page})
+        if request.method == "POST" and request.POST.get("action") == "save_home_slides":
+            slide_queryset = HomeHeroSlide.objects.all()
+            slide_initial = HOME_HERO_SLIDE_DEFAULTS[slide_queryset.count() :]
+            SlideFormSet = modelformset_factory(
+                HomeHeroSlide,
+                form=HomeHeroSlideForm,
+                formset=HomeHeroSlideBaseFormSet,
+                extra=max(0, len(HOME_HERO_SLIDE_DEFAULTS) - slide_queryset.count()),
+            )
+            slide_formset = SlideFormSet(
+                request.POST,
+                request.FILES,
+                queryset=slide_queryset,
+                initial=slide_initial,
+                prefix="slides",
+            )
+            if slide_formset.is_valid():
+                slide_formset.save()
+                messages.success(
+                    request,
+                    "Home banners saved." if request.LANGUAGE_CODE == "en" else "Баннеры главной страницы сохранены.",
+                )
+                return redirect(f"{request.path}?page={SiteContentBlock.Page.HOME}")
+        elif request.method == "POST" and request.POST.get("action") == "save_page_content":
+            content_form = SitePageContentForm(
+                request.POST,
+                request.FILES,
+                instance=page_content,
+                page=selected_page,
+            )
+            if content_form.is_valid():
+                saved_content = content_form.save(commit=False)
+                saved_content.page = selected_page
+                saved_content.save()
+                messages.success(
+                    request,
+                    "Page content saved." if request.LANGUAGE_CODE == "en" else "Контент страницы сохранён.",
+                )
+                return redirect(f"{request.path}?page={selected_page}")
+        elif request.method == "POST" and request.POST.get("action") == "save_page_sections":
+            SectionFormSet = modelformset_factory(
+                SitePageSection,
+                form=SitePageSectionForm,
+                extra=1,
+                can_delete=True,
+            )
+            section_formset = SectionFormSet(
+                request.POST,
+                request.FILES,
+                queryset=SitePageSection.objects.filter(page=selected_page),
+                form_kwargs={"page": selected_page},
+                prefix="sections",
+            )
+            if section_formset.is_valid():
+                with transaction.atomic():
+                    for section in section_formset.save(commit=False):
+                        section.page = selected_page
+                        section.save()
+                    for section in section_formset.deleted_objects:
+                        section.delete()
+                messages.success(
+                    request,
+                    "Page sections saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Блоки страницы сохранены.",
+                )
+                return redirect(f"{request.path}?page={selected_page}")
+        elif request.method == "POST" and (
+            request.POST.get("action") == "save_extra_block"
+            or (
+                not request.POST.get("action")
+                and "title" in request.POST
+            )
+        ):
+            form = SiteContentBlockForm(
+                request.POST,
+                request.FILES,
+            )
+            if form.is_valid():
+                saved_block = form.save()
+                messages.success(
+                    request,
+                    "Additional content saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Дополнительный блок сохранён.",
+                )
+                if request.POST.get("action") == "save_extra_block":
+                    return redirect(f"{request.path}?page={selected_page}")
+                return redirect("site_content_edit", block_id=saved_block.pk)
+        else:
+            if selected_page == SiteContentBlock.Page.HOME:
+                slide_queryset = HomeHeroSlide.objects.all()
+                slide_initial = HOME_HERO_SLIDE_DEFAULTS[slide_queryset.count() :]
+                SlideFormSet = modelformset_factory(
+                    HomeHeroSlide,
+                    form=HomeHeroSlideForm,
+                    formset=HomeHeroSlideBaseFormSet,
+                    extra=max(0, len(HOME_HERO_SLIDE_DEFAULTS) - slide_queryset.count()),
+                )
+                slide_formset = SlideFormSet(
+                    queryset=slide_queryset,
+                    initial=slide_initial,
+                    prefix="slides",
+                )
+            elif selected_page in SitePageContent.Page.values:
+                content_form = SitePageContentForm(
+                    instance=page_content,
+                    page=selected_page,
+                )
+
+        if selected_page in SitePageSection.Page.values and section_formset is None:
+            SectionFormSet = modelformset_factory(
+                SitePageSection,
+                form=SitePageSectionForm,
+                extra=1,
+                can_delete=True,
+            )
+            section_formset = SectionFormSet(
+                queryset=SitePageSection.objects.filter(page=selected_page),
+                form_kwargs={"page": selected_page},
+                prefix="sections",
+            )
+
+    page_form = SitePageContentForm(
+        instance=page_content,
+        page=selected_page if selected_page in SitePageContent.Page.values else SitePageContent.Page.CATALOG,
+    ) if not block and selected_page in SitePageContent.Page.values else None
+    if content_form is None:
+        content_form = page_form
 
     return render(
         request,
         "core/site_content_manager.html",
         {
             "form": form,
+            "page_form": content_form,
+            "section_formset": section_formset,
+            "slide_formset": slide_formset,
             "editing_block": block,
-            "site_blocks": SiteContentBlock.objects.all(),
+            "selected_page": selected_page,
+            "site_blocks": page_blocks,
+            "selected_page_is_dynamic": selected_page in {
+                SiteContentBlock.Page.CATEGORY,
+                SiteContentBlock.Page.PRODUCT,
+            },
+            "page_selector": SiteContentBlockForm(initial={"page": selected_page}),
         },
     )
 
@@ -188,7 +365,7 @@ ADMIN_SECTION_CONFIG = {
 }
 
 
-@staff_member_required(login_url="admin:login")
+@staff_member_required(login_url="accounts:login")
 def admin_section(request, section, object_id=None, new=False):
     config = ADMIN_SECTION_CONFIG.get(section)
     if config is None:
@@ -306,7 +483,7 @@ def admin_section(request, section, object_id=None, new=False):
     )
 
 
-@staff_member_required(login_url="admin:login")
+@staff_member_required(login_url="accounts:login")
 def manager_dashboard(request):
     user = request.user
     can_view_orders = user.has_perm("core.view_preorder")
@@ -376,7 +553,7 @@ def manager_dashboard(request):
     )
 
 
-@staff_member_required(login_url="admin:login")
+@staff_member_required(login_url="accounts:login")
 @require_POST
 def manager_update_order_status(request, order_id):
     if not request.user.has_perms(("core.view_preorder", "core.change_preorder")):

@@ -12,11 +12,12 @@
 
         <section class="feedback-hero" aria-labelledby="feedback-heading">
             <div class="feedback-hero-copy">
-                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}We're here to help{% else %}Мы на связи{% endif %}</p>
-                <h1 id="feedback-heading">{% if LANGUAGE_CODE == 'en' %}Feedback{% else %}Обратная связь{% endif %}</h1>
-                <p>{% if LANGUAGE_CODE == 'en' %}Have a question or an idea? Send us a message. We will read it carefully and reply by email.{% else %}Есть вопрос или идея? Напишите нам — мы внимательно прочитаем ваше сообщение и ответим по электронной почте.{% endif %}</p>
+                <p class="eyebrow">{% if site_page_content %}{{ site_page_content.localized_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}We're here to help{% else %}Мы на связи{% endif %}{% endif %}</p>
+                <h1 id="feedback-heading">{% if site_page_content %}{{ site_page_content.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Feedback{% else %}Обратная связь{% endif %}{% endif %}</h1>
+                <p>{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Have a question or an idea? Send us a message. We will read it carefully and reply by email.{% else %}Есть вопрос или идея? Напишите нам — мы внимательно прочитаем ваше сообщение и ответим по электронной почте.{% endif %}{% endif %}</p>
+                {% include "core/_page_content_button.html" %}
             </div>
-            <div class="feedback-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift set with decorated gingerbread{% else %}Подарочный набор с расписными пряниками{% endif %}"></div>
+            <div class="feedback-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift set with decorated gingerbread{% else %}Подарочный набор с расписными пряниками{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
         </section>
 
         <div class="feedback-content">
@@ -77,10 +78,20 @@
 
             <aside class="feedback-aside" aria-label="{% if LANGUAGE_CODE == 'en' %}Other ways to contact us{% else %}Другие способы связи{% endif %}">
                 <span class="contacts-detail-icon" aria-hidden="true">✉</span>
+                {% if site_page_sections.contacts %}
+                    {% with first_contact=site_page_sections.contacts.0 %}
+                        <h2>{{ first_contact.localized_title }}</h2>
+                        <p>{{ first_contact.localized_description }}</p>
+                    {% endwith %}
+                    {% for item in site_page_sections.contacts %}
+                        <a href="{{ item.url }}">{{ item.localized_value }}</a>
+                    {% endfor %}
+                {% else %}
                 <h2>{% if LANGUAGE_CODE == 'en' %}Prefer to email us directly?{% else %}Предпочитаете написать напрямую?{% endif %}</h2>
                 <p>{% if LANGUAGE_CODE == 'en' %}Email us and we will reply within one business day.{% else %}Свяжитесь с нами по электронной почте, и мы ответим в течение рабочего дня.{% endif %}</p>
                 <a href="mailto:hello@lukomorye.example">hello@lukomorye.example</a>
                 <a class="feedback-phone" href="tel:+74951234567">+7 495 123-45-67</a>
+                {% endif %}
             </aside>
         </div>
     </div>

@@ -5,9 +5,10 @@
 {% block content %}
     <section class="catalog-intro">
         <a class="catalog-back-link" href="{% url 'catalog:category_list' %}">← {% if LANGUAGE_CODE == 'en' %}Catalog{% else %}В каталог{% endif %}</a>
-        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Gift catalog{% else %}Каталог подарков{% endif %}</p>
-        <h1>{% if LANGUAGE_CODE == 'en' %}All categories{% else %}Все категории{% endif %}</h1>
-        <p>{% if LANGUAGE_CODE == 'en' %}Choose a category to explore suitable gifts.{% else %}Выберите категорию, чтобы посмотреть подходящие подарки.{% endif %}</p>
+        <p class="eyebrow">{% if site_page_content %}{{ site_page_content.localized_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}Gift catalog{% else %}Каталог подарков{% endif %}{% endif %}</p>
+        <h1>{% if site_page_content %}{{ site_page_content.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}All categories{% else %}Все категории{% endif %}{% endif %}</h1>
+        <p>{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Choose a category to explore suitable gifts.{% else %}Выберите категорию, чтобы посмотреть подходящие подарки.{% endif %}{% endif %}</p>
+        {% include "core/_page_content_button.html" %}
     </section>
 
     <section class="catalog-category-grid" aria-label="{% if LANGUAGE_CODE == 'en' %}All product categories{% else %}Все категории товаров{% endif %}">

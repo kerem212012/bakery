@@ -8,6 +8,13 @@ def preorder_attachment_path(instance, filename):
     return f"preorders/{instance.preorder_id}/{filename}"
 
 
+def localized_content(instance, field_name):
+    language = (get_language() or "").startswith("en")
+    field = f"{field_name}_en" if language else field_name
+    fallback = field_name if language else f"{field_name}_en"
+    return getattr(instance, field) or getattr(instance, fallback)
+
+
 class Preorder(models.Model):
     class Status(models.TextChoices):
         NEW = "new", "Новая"
@@ -161,3 +168,201 @@ class SiteContentBlock(models.Model):
         if (get_language() or "").startswith("en") and self.description_en:
             return self.description_en
         return self.description
+
+
+class SitePageContent(models.Model):
+    class Page(models.TextChoices):
+        ABOUT = "about", "О нас"
+        BUSINESS_CLIENTS = "business_clients", "Корпоративным клиентам"
+        PARTNERSHIP = "corporate", "Сотрудничество"
+        CONTACTS = "contacts", "Контакты"
+        DELIVERY = "delivery", "Доставка"
+        FAQ = "faq", "Вопросы и ответы"
+        FEEDBACK = "feedback", "Обратная связь"
+        PACKAGING = "packaging", "Упаковка"
+        CATALOG = "catalog", "Каталог"
+        CATEGORIES = "categories", "Категории"
+
+    page = models.CharField(
+        "Страница сайта",
+        max_length=24,
+        choices=Page.choices,
+        unique=True,
+    )
+    eyebrow = models.CharField("Надзаголовок", max_length=180, blank=True)
+    eyebrow_en = models.CharField("Надзаголовок на английском", max_length=180, blank=True)
+    title = models.CharField("Заголовок", max_length=180, blank=True)
+    title_en = models.CharField("Заголовок на английском", max_length=180, blank=True)
+    subtitle = models.TextField("Подзаголовок", blank=True)
+    subtitle_en = models.TextField("Подзаголовок на английском", blank=True)
+    description = models.TextField("Описание", blank=True)
+    description_en = models.TextField("Описание на английском", blank=True)
+    button_text = models.CharField("Текст кнопки", max_length=120, blank=True)
+    button_text_en = models.CharField("Текст кнопки на английском", max_length=120, blank=True)
+    button_url = models.CharField("Ссылка кнопки", max_length=500, blank=True)
+    image = models.ImageField(
+        "Фото верхнего блока",
+        upload_to="site-pages/",
+        blank=True,
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
+    )
+    updated_at = models.DateTimeField("Обновлено", auto_now=True)
+
+    class Meta:
+        verbose_name = "контент страницы сайта"
+        verbose_name_plural = "контент страниц сайта"
+
+    def __str__(self):
+        return self.get_page_display()
+
+    @property
+    def localized_eyebrow(self):
+        return localized_content(self, "eyebrow")
+
+    @property
+    def localized_title(self):
+        return localized_content(self, "title")
+
+    @property
+    def localized_subtitle(self):
+        return localized_content(self, "subtitle")
+
+    @property
+    def localized_description(self):
+        return localized_content(self, "description")
+
+    @property
+    def localized_button_text(self):
+        return localized_content(self, "button_text")
+
+
+class SitePageSection(models.Model):
+    class Page(models.TextChoices):
+        HOME = "home", "Главная"
+        ABOUT = "about", "О нас"
+        BUSINESS_CLIENTS = "business_clients", "Корпоративным клиентам"
+        PARTNERSHIP = "corporate", "Сотрудничество"
+        CONTACTS = "contacts", "Контакты"
+        DELIVERY = "delivery", "Доставка"
+        FAQ = "faq", "Вопросы и ответы"
+        FEEDBACK = "feedback", "Обратная связь"
+        PACKAGING = "packaging", "Упаковка"
+        CATALOG = "catalog", "Каталог"
+        CATEGORIES = "categories", "Категории"
+
+    page = models.CharField("Страница сайта", max_length=24, choices=Page.choices)
+    group = models.CharField("Группа контента", max_length=32)
+    section_eyebrow = models.CharField("Надзаголовок раздела", max_length=180, blank=True)
+    section_eyebrow_en = models.CharField(
+        "Надзаголовок раздела на английском", max_length=180, blank=True
+    )
+    section_title = models.CharField("Заголовок раздела", max_length=180, blank=True)
+    section_title_en = models.CharField(
+        "Заголовок раздела на английском", max_length=180, blank=True
+    )
+    section_description = models.TextField("Описание раздела", blank=True)
+    section_description_en = models.TextField(
+        "Описание раздела на английском", blank=True
+    )
+    title = models.CharField("Заголовок", max_length=180, blank=True)
+    title_en = models.CharField("Заголовок на английском", max_length=180, blank=True)
+    description = models.TextField("Текст", blank=True)
+    description_en = models.TextField("Текст на английском", blank=True)
+    value = models.CharField("Значение", max_length=120, blank=True)
+    value_en = models.CharField("Значение на английском", max_length=120, blank=True)
+    url = models.CharField("Ссылка", max_length=500, blank=True)
+    image = models.ImageField(
+        "Изображение",
+        upload_to="site-pages/sections/",
+        blank=True,
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
+    )
+    image_alt = models.CharField("Описание изображения", max_length=180, blank=True)
+    image_alt_en = models.CharField(
+        "Описание изображения на английском", max_length=180, blank=True
+    )
+    display_order = models.PositiveIntegerField("Порядок", default=0)
+    is_active = models.BooleanField("Показывать", default=True)
+
+    class Meta:
+        ordering = ("page", "group", "display_order", "pk")
+        verbose_name = "элемент контента страницы"
+        verbose_name_plural = "элементы контента страниц"
+
+    def __str__(self):
+        return self.title or f"{self.get_page_display()} — {self.group}"
+
+    @property
+    def localized_title(self):
+        return localized_content(self, "title")
+
+    @property
+    def localized_section_title(self):
+        return localized_content(self, "section_title")
+
+    @property
+    def localized_section_eyebrow(self):
+        return localized_content(self, "section_eyebrow")
+
+    @property
+    def localized_section_description(self):
+        return localized_content(self, "section_description")
+
+    @property
+    def localized_description(self):
+        return localized_content(self, "description")
+
+    @property
+    def localized_value(self):
+        return localized_content(self, "value")
+
+    @property
+    def localized_image_alt(self):
+        return localized_content(self, "image_alt")
+
+
+class HomeHeroSlide(models.Model):
+    eyebrow = models.CharField("Надзаголовок", max_length=180, blank=True)
+    eyebrow_en = models.CharField("Надзаголовок на английском", max_length=180, blank=True)
+    title = models.CharField("Заголовок", max_length=180, blank=True)
+    title_en = models.CharField("Заголовок на английском", max_length=180, blank=True)
+    description = models.TextField("Описание", blank=True)
+    description_en = models.TextField("Описание на английском", blank=True)
+    button_text = models.CharField("Текст кнопки", max_length=120, blank=True)
+    button_text_en = models.CharField("Текст кнопки на английском", max_length=120, blank=True)
+    button_url = models.CharField("Ссылка кнопки", max_length=500, blank=True)
+    image = models.ImageField(
+        "Фото баннера",
+        upload_to="site-pages/home/",
+        blank=True,
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
+    )
+    display_order = models.PositiveIntegerField("Порядок", default=0)
+    is_active = models.BooleanField("Показывать", default=True)
+
+    class Meta:
+        ordering = ("display_order", "pk")
+        verbose_name = "баннер главной страницы"
+        verbose_name_plural = "баннеры главной страницы"
+
+    def __str__(self):
+        return self.title or self.get_button_text_display()
+
+    def get_button_text_display(self):
+        return self.button_text or self.button_text_en or f"Баннер {self.pk or ''}"
+
+    @property
+    def localized_eyebrow(self):
+        return localized_content(self, "eyebrow")
+
+    @property
+    def localized_title(self):
+        return localized_content(self, "title")
+
+    @property
+    def localized_description(self):
+        return localized_content(self, "description")
+
+    @property
+    def localized_button_text(self):
+        return localized_content(self, "button_text")

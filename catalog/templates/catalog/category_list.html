@@ -111,7 +111,9 @@
                         <span aria-hidden="true">›</span>
                         <span>{% if LANGUAGE_CODE == 'en' %}Catalog{% else %}Каталог{% endif %}</span>
                     </div>
-                    <h1>{% if LANGUAGE_CODE == 'en' %}Catalog{% else %}Каталог{% endif %}</h1>
+                    <h1>{% if site_page_content %}{{ site_page_content.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Catalog{% else %}Каталог{% endif %}{% endif %}</h1>
+                    {% if site_page_content.localized_description %}<p class="catalog-page-intro">{{ site_page_content.localized_description }}</p>{% endif %}
+                    {% include "core/_page_content_button.html" %}
                     <a class="catalog-category-overview-link" href="{% url 'catalog:categories' %}">{% if LANGUAGE_CODE == 'en' %}All categories{% else %}Все категории{% endif %}</a>
                 </div>
 
@@ -164,6 +166,17 @@
             </div>
 
             <section class="catalog-promo-grid" aria-label="{% if LANGUAGE_CODE == 'en' %}Featured services{% else %}Популярные предложения{% endif %}">
+                {% if site_page_sections.promos %}
+                    {% for item in site_page_sections.promos %}
+                        <a class="catalog-promo-card{% if forloop.counter == 1 %} catalog-promo-corporate{% elif forloop.counter == 2 %} catalog-promo-workshops{% elif forloop.counter == 3 %} catalog-promo-branded{% endif %}" href="{{ item.url }}"{% if item.image %} style="background-image:url('{{ item.image.url }}')"{% endif %}>
+                            <span class="catalog-promo-copy">
+                                <strong>{{ item.localized_title }}</strong>
+                                <span>{{ item.localized_description|linebreaksbr }}</span>
+                                <span class="catalog-promo-arrow" aria-hidden="true">→</span>
+                            </span>
+                        </a>
+                    {% endfor %}
+                {% else %}
                 <a class="catalog-promo-card catalog-promo-corporate" href="{% url 'business_clients' %}">
                     <span class="catalog-promo-copy">
                         <strong>{% if LANGUAGE_CODE == 'en' %}Corporate clients{% else %}Корпоративным<br>клиентам{% endif %}</strong>
@@ -185,6 +198,7 @@
                         <span class="catalog-promo-arrow" aria-hidden="true">→</span>
                     </span>
                 </a>
+                {% endif %}
             </section>
 
             <div class="catalog-grid">

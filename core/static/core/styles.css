@@ -9636,6 +9636,24 @@ a.account-order:hover {
     gap: 18px;
 }
 
+.site-content-page-picker {
+    margin-bottom: 18px;
+}
+
+.site-content-slide-editor h2 {
+    margin-bottom: 24px;
+}
+
+.site-content-slide-editor .site-content-form-grid {
+    align-items: start;
+}
+
+.catalog-page-intro {
+    max-width: 620px;
+    margin: 8px 0 0;
+    color: var(--muted);
+}
+
 .site-content-form-section {
     padding: clamp(20px, 3vw, 32px);
     border: 1px solid var(--line);
@@ -10673,7 +10691,7 @@ input[type="file"].site-content-form-control {
 .account-order-facts dl > div:nth-child(3) dd,
 .admin-dashboard-order-price,
 .manager-order-summary strong {
-    color: #f5eee7;
+    color: black;
     font-weight: 900;
 }
 

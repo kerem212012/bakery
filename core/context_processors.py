@@ -1,4 +1,9 @@
-from .models import SiteContentBlock
+from .models import (
+    HomeHeroSlide,
+    SiteContentBlock,
+    SitePageContent,
+    SitePageSection,
+)
 
 
 PAGE_BY_VIEW_NAME = {
@@ -30,7 +35,13 @@ PRIVATE_VIEW_NAMES = {
 def site_content_blocks(request):
     match = getattr(request, "resolver_match", None)
     if not match or match.view_name in PRIVATE_VIEW_NAMES:
-        return {"site_content_blocks": ()}
+        return {
+            "site_content_blocks": (),
+            "site_page_content": None,
+            "site_home_hero_slides": (),
+            "site_home_hero_configured": False,
+            "site_page_sections": {},
+        }
 
     page = PAGE_BY_VIEW_NAME.get(match.view_name)
     pages = (
@@ -38,9 +49,32 @@ def site_content_blocks(request):
         if page is not None
         else (SiteContentBlock.Page.ALL,)
     )
+    page_sections = {}
+    if page in SitePageSection.Page.values:
+        for section in SitePageSection.objects.filter(
+            page=page,
+            is_active=True,
+        ):
+            page_sections.setdefault(section.group, []).append(section)
     return {
         "site_content_blocks": SiteContentBlock.objects.filter(
             is_active=True,
             page__in=pages,
-        )
+        ),
+        "site_page_content": (
+            SitePageContent.objects.filter(page=page).first()
+            if page in SitePageContent.Page.values
+            else None
+        ),
+        "site_home_hero_slides": (
+            HomeHeroSlide.objects.filter(is_active=True)
+            if page == SiteContentBlock.Page.HOME
+            else ()
+        ),
+        "site_home_hero_configured": (
+            HomeHeroSlide.objects.exists()
+            if page == SiteContentBlock.Page.HOME
+            else False
+        ),
+        "site_page_sections": page_sections,
     }

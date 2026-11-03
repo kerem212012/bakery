@@ -12,7 +12,74 @@ from PIL import Image
 
 from catalog.models import Category, Product
 from .calculator import calculate_quote
-from .models import FeedbackSubmission, Preorder, SiteContentBlock
+from .models import (
+    FeedbackSubmission,
+    HomeHeroSlide,
+    Preorder,
+    SiteContentBlock,
+    SitePageContent,
+    SitePageSection,
+)
+
+
+class SiteContentDjangoAdminTests(TestCase):
+    def test_site_content_models_are_editable_in_django_admin(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="site_content_admin",
+            email="site-content-admin@example.com",
+            password="test-password",
+        )
+        page_content = SitePageContent.objects.create(
+            page=SitePageContent.Page.ABOUT,
+            title="Original title",
+        )
+        hero_slide = HomeHeroSlide.objects.create(title="Home banner")
+        content_block = SiteContentBlock.objects.create(
+            page=SiteContentBlock.Page.ABOUT,
+            title="About block",
+        )
+        self.client.force_login(admin_user)
+
+        model_objects = (
+            ("core_sitepagecontent", page_content),
+            ("core_homeheroslide", hero_slide),
+            ("core_sitecontentblock", content_block),
+        )
+        for model_name, instance in model_objects:
+            with self.subTest(model=model_name):
+                changelist_url = reverse(f"admin:{model_name}_changelist")
+                change_url = reverse(
+                    f"admin:{model_name}_change",
+                    args=(instance.pk,),
+                )
+                self.assertEqual(self.client.get(changelist_url).status_code, 200)
+                self.assertEqual(self.client.get(change_url).status_code, 200)
+
+        response = self.client.post(
+            reverse(
+                "admin:core_sitepagecontent_change",
+                args=(page_content.pk,),
+            ),
+            {
+                "page": SitePageContent.Page.ABOUT,
+                "eyebrow": "",
+                "eyebrow_en": "",
+                "title": "Updated title",
+                "title_en": "",
+                "subtitle": "",
+                "subtitle_en": "",
+                "description": "",
+                "description_en": "",
+                "button_text": "",
+                "button_text_en": "",
+                "button_url": "",
+                "_save": "Save",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        page_content.refresh_from_db()
+        self.assertEqual(page_content.title, "Updated title")
 
 
 class AdminDashboardTests(TestCase):
@@ -23,7 +90,8 @@ class AdminDashboardTests(TestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/admin/login/", response["Location"])
+        self.assertIn(reverse("accounts:login"), response["Location"])
+        self.assertNotIn("/admin/login/", response["Location"])
 
         customer = get_user_model().objects.create_user(
             username="dashboard_customer",
@@ -33,7 +101,19 @@ class AdminDashboardTests(TestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/admin/login/", response["Location"])
+        self.assertIn(reverse("accounts:login"), response["Location"])
+        self.assertNotIn("/admin/login/", response["Location"])
+
+    def test_site_content_editor_redirects_to_site_login(self):
+        response = self.client.get(reverse("site_content_manager"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("accounts:login"), response["Location"])
+        self.assertIn(
+            reverse("site_content_manager"),
+            response["Location"],
+        )
+        self.assertNotIn("/admin/login/", response["Location"])
 
     def test_staff_dashboard_shows_management_links_and_catalog_counts(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -54,7 +134,7 @@ class AdminDashboardTests(TestCase):
         self.assertContains(response, "Панель управления")
         self.assertContains(response, reverse("admin_section_new", args=("products",)))
         self.assertContains(response, reverse("site_content_manager"))
-        self.assertContains(response, "Фото и описания сайта")
+        self.assertContains(response, "Редактировать контент страниц")
         self.assertContains(response, reverse("admin_section", args=("categories",)))
         self.assertContains(response, reverse("admin_section", args=("orders",)))
         self.assertContains(response, reverse("admin_section", args=("filters",)))
@@ -72,7 +152,7 @@ class AdminDashboardTests(TestCase):
             existing_active_product_count + 1,
         )
 
-    def test_site_content_editor_is_superuser_only(self):
+    def test_site_content_editor_requires_site_content_permissions(self):
         manager = get_user_model().objects.create_user(
             username="content_manager",
             password="test-password",
@@ -91,8 +171,532 @@ class AdminDashboardTests(TestCase):
         self.client.force_login(admin_user)
         response = self.client.get(reverse("site_content_manager"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Добавить контент на сайт")
-        self.assertContains(response, "не Django-админка")
+        self.assertContains(response, "Редактировать страницы сайта")
+        self.assertContains(response, "Выберите страницу")
+        self.assertContains(response, 'option value="catalog" selected')
+        self.assertNotContains(response, 'option value="home" selected')
+
+    def test_staff_with_site_content_permissions_can_edit_page_content(self):
+        manager = get_user_model().objects.create_user(
+            username="permitted_content_manager",
+            password="test-password",
+            is_staff=True,
+        )
+        page_content = SitePageContent.objects.create(
+            page=SitePageContent.Page.ABOUT,
+            title="Before edit",
+        )
+        permissions = Permission.objects.filter(
+            content_type__app_label="core",
+            codename__in=(
+                "add_sitepagecontent",
+                "change_sitepagecontent",
+                "add_homeheroslide",
+                "change_homeheroslide",
+                "add_sitecontentblock",
+                "change_sitecontentblock",
+                "add_sitepagesection",
+                "change_sitepagesection",
+            ),
+        )
+        manager.user_permissions.add(*permissions)
+        self.client.force_login(manager)
+
+        dashboard_response = self.client.get(reverse("admin_dashboard"))
+        editor_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageContent.Page.ABOUT},
+        )
+
+        self.assertEqual(dashboard_response.status_code, 200)
+        self.assertContains(dashboard_response, "Редактировать контент страниц")
+        self.assertEqual(editor_response.status_code, 200)
+        self.assertContains(editor_response, "Редактировать страницы сайта")
+
+        save_response = self.client.post(
+            reverse("site_content_manager"),
+            {
+                "action": "save_page_content",
+                "page": SitePageContent.Page.ABOUT,
+                "eyebrow": "",
+                "eyebrow_en": "",
+                "title": "After edit",
+                "title_en": "",
+                "subtitle": "",
+                "subtitle_en": "",
+                "description": "",
+                "description_en": "",
+                "button_text": "",
+                "button_text_en": "",
+                "button_url": "",
+            },
+        )
+
+        self.assertRedirects(
+            save_response,
+            f"{reverse('site_content_manager')}?page=about",
+        )
+        page_content.refresh_from_db()
+        self.assertEqual(page_content.title, "After edit")
+
+    def test_selecting_page_loads_its_existing_content_for_editing(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="existing_content_admin",
+            email="existing-content-admin@example.com",
+            password="test-password",
+        )
+        page_content = SitePageContent.objects.create(
+            page=SitePageContent.Page.CATALOG,
+            title="Catalog content to edit",
+            description="Saved catalog description",
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.CATALOG},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_form"].instance, page_content)
+        self.assertContains(response, "Catalog content to edit")
+        self.assertContains(response, "Saved catalog description")
+
+    def test_selecting_page_with_multiple_blocks_shows_page_specific_choices(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="multiple_content_admin",
+            email="multiple-content-admin@example.com",
+            password="test-password",
+        )
+        SiteContentBlock.objects.create(
+            page=SiteContentBlock.Page.ABOUT,
+            title="First about block",
+        )
+        SiteContentBlock.objects.create(
+            page=SiteContentBlock.Page.ABOUT,
+            title="Second about block",
+        )
+        SiteContentBlock.objects.create(
+            page=SiteContentBlock.Page.CATALOG,
+            title="Catalog block",
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.ABOUT},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"].instance.pk, None)
+        self.assertEqual(
+            list(response.context["site_blocks"].values_list("title", flat=True)),
+            ["First about block", "Second about block"],
+        )
+        self.assertContains(response, 'option value="about" selected')
+        self.assertNotContains(response, "Catalog block")
+
+    def test_page_picker_switches_from_editing_one_page_to_another(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="switch_content_admin",
+            email="switch-content-admin@example.com",
+            password="test-password",
+        )
+        about_content = SitePageContent.objects.create(
+            page=SitePageContent.Page.ABOUT,
+            title="About page content",
+        )
+        catalog_content = SitePageContent.objects.create(
+            page=SitePageContent.Page.CATALOG,
+            title="Catalog page content",
+        )
+        self.client.force_login(admin_user)
+
+        about_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageContent.Page.ABOUT},
+        )
+        catalog_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageContent.Page.CATALOG},
+        )
+
+        self.assertEqual(about_response.context["page_form"].instance, about_content)
+        self.assertEqual(catalog_response.context["page_form"].instance, catalog_content)
+        self.assertContains(about_response, "About page content")
+        self.assertContains(catalog_response, "Catalog page content")
+        self.assertNotContains(catalog_response, "About page content")
+
+    def test_page_picker_loads_page_specific_editor_fields(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="page_content_fields_admin",
+            email="page-content-fields-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        about_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageContent.Page.ABOUT},
+        )
+        faq_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageContent.Page.FAQ},
+        )
+        home_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.HOME},
+        )
+
+        self.assertNotIn("button_text", about_response.context["page_form"].fields)
+        self.assertNotIn("button_url", about_response.context["page_form"].fields)
+        self.assertIn("image", about_response.context["page_form"].fields)
+        self.assertNotIn("button_text", faq_response.context["page_form"].fields)
+        self.assertNotIn("button_url", faq_response.context["page_form"].fields)
+        self.assertEqual(home_response.context["slide_formset"].total_form_count(), 3)
+        self.assertEqual(
+            home_response.context["slide_formset"].forms[1]["title"].value(),
+            "Тёплые моменты в каждой детали",
+        )
+
+    def test_page_content_button_fields_are_hidden_on_every_page(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="all_page_button_fields_admin",
+            email="all-page-button-fields@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        pages = (
+            SitePageContent.Page.ABOUT,
+            SitePageContent.Page.BUSINESS_CLIENTS,
+            SitePageContent.Page.PARTNERSHIP,
+            SitePageContent.Page.CONTACTS,
+            SitePageContent.Page.DELIVERY,
+            SitePageContent.Page.FAQ,
+            SitePageContent.Page.FEEDBACK,
+            SitePageContent.Page.PACKAGING,
+            SitePageContent.Page.CATALOG,
+            SitePageContent.Page.CATEGORIES,
+        )
+        for page in pages:
+            with self.subTest(page=page):
+                response = self.client.get(
+                    reverse("site_content_manager"),
+                    {"page": page},
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertFalse(
+                    {"button_text", "button_text_en", "button_url"}
+                    & set(response.context["page_form"].fields)
+                )
+
+    def test_section_editor_hides_button_fields_but_keeps_nonbutton_values(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="section_field_visibility_admin",
+            email="section-field-visibility@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        home_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageSection.Page.HOME},
+        )
+        about_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageSection.Page.ABOUT},
+        )
+        home_forms = {
+            form.instance.group: form
+            for form in home_response.context["section_formset"].forms
+            if form.instance.pk
+        }
+        about_forms = {
+            form.instance.group: form
+            for form in about_response.context["section_formset"].forms
+            if form.instance.pk
+        }
+
+        self.assertFalse(home_forms["home_about"].show_value_fields)
+        self.assertFalse(home_forms["home_about"].show_url_field)
+        self.assertIn("value", about_forms["stats"].fields)
+        self.assertIn("value_en", about_forms["stats"].fields)
+        self.assertFalse(about_forms["stats"].show_url_field)
+
+    def test_page_content_button_edits_are_rendered_on_every_static_page(self):
+        pages = (
+            (SitePageContent.Page.ABOUT, "about"),
+            (SitePageContent.Page.BUSINESS_CLIENTS, "business_clients"),
+            (SitePageContent.Page.PARTNERSHIP, "corporate"),
+            (SitePageContent.Page.CONTACTS, "contacts"),
+            (SitePageContent.Page.DELIVERY, "delivery"),
+            (SitePageContent.Page.FAQ, "faq"),
+            (SitePageContent.Page.FEEDBACK, "feedback"),
+            (SitePageContent.Page.PACKAGING, "packaging"),
+            (SitePageContent.Page.CATALOG, "catalog:category_list"),
+            (SitePageContent.Page.CATEGORIES, "catalog:categories"),
+        )
+        for page, route_name in pages:
+            with self.subTest(page=page):
+                SitePageContent.objects.create(
+                    page=page,
+                    title="Page title",
+                    title_en="Page title",
+                    button_text="Связаться",
+                    button_text_en="Contact us",
+                    button_url="/custom-action/",
+                )
+
+                response = self.client.get(reverse(route_name))
+
+                self.assertContains(response, 'href="/custom-action/"')
+                self.assertContains(response, "Связаться")
+
+    def test_page_picker_exposes_structured_content_for_every_static_page(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="all_page_sections_admin",
+            email="all-page-sections-admin@example.com",
+            password="test-pass-123",
+        )
+        self.client.force_login(admin_user)
+        pages = (
+            SitePageSection.Page.HOME,
+            SitePageSection.Page.ABOUT,
+            SitePageSection.Page.BUSINESS_CLIENTS,
+            SitePageSection.Page.PARTNERSHIP,
+            SitePageSection.Page.CONTACTS,
+            SitePageSection.Page.DELIVERY,
+            SitePageSection.Page.FAQ,
+            SitePageSection.Page.FEEDBACK,
+            SitePageSection.Page.PACKAGING,
+            SitePageSection.Page.CATALOG,
+            SitePageSection.Page.CATEGORIES,
+        )
+
+        for page in pages:
+            with self.subTest(page=page):
+                response = self.client.get(
+                    reverse("site_content_manager"),
+                    {"page": page},
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertIsNotNone(response.context["section_formset"])
+                self.assertContains(response, "Разделы и карточки страницы")
+
+    def test_page_content_save_updates_public_page_intro(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="page_content_saver",
+            email="page-content-saver@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        response = self.client.post(
+            reverse("site_content_manager"),
+            {
+                "action": "save_page_content",
+                "page": SitePageContent.Page.ABOUT,
+                "eyebrow": "Новая подпись",
+                "eyebrow_en": "New eyebrow",
+                "title": "Новый заголовок о нас",
+                "title_en": "New about heading",
+                "subtitle": "Новый подзаголовок",
+                "subtitle_en": "New subtitle",
+                "description": "Новое описание страницы",
+                "description_en": "New page description",
+                "button_text": "Связаться",
+                "button_text_en": "Contact",
+                "button_url": "/contacts/",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=about",
+        )
+        self.assertEqual(SitePageContent.objects.get().page, SitePageContent.Page.ABOUT)
+        about_response = self.client.get(reverse("about"))
+        self.assertContains(about_response, "Новый заголовок о нас")
+        self.assertContains(about_response, "Новое описание страницы")
+        self.assertContains(about_response, 'href="/contacts/"')
+
+    def test_page_sections_save_and_render_structured_about_content(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="page_section_saver",
+            email="page-section-saver@example.com",
+            password="test-pass-123",
+        )
+        SitePageSection.objects.filter(page=SitePageSection.Page.ABOUT).delete()
+        self.client.force_login(admin_user)
+
+        response = self.client.post(
+            reverse("site_content_manager"),
+            {
+                "action": "save_page_sections",
+                "page": SitePageSection.Page.ABOUT,
+                "sections-TOTAL_FORMS": "1",
+                "sections-INITIAL_FORMS": "0",
+                "sections-MIN_NUM_FORMS": "0",
+                "sections-MAX_NUM_FORMS": "1000",
+                "sections-0-group": "promises",
+                "sections-0-title": "Carefully selected ingredients",
+                "sections-0-title_en": "Carefully selected ingredients",
+                "sections-0-description": "Edited promise text",
+                "sections-0-description_en": "Edited promise text",
+                "sections-0-display_order": "0",
+                "sections-0-is_active": "on",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=about",
+        )
+        section = SitePageSection.objects.get(page=SitePageSection.Page.ABOUT)
+        self.assertEqual(section.group, "promises")
+        about_response = self.client.get(reverse("about"))
+        self.assertContains(about_response, "Carefully selected ingredients")
+        self.assertContains(about_response, "Edited promise text")
+
+    def test_page_section_editor_hides_button_text_and_url(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="page_section_button_editor",
+            email="page-section-button-editor@example.com",
+            password="test-password",
+        )
+        SitePageSection.objects.filter(page=SitePageSection.Page.HOME).delete()
+        SitePageSection.objects.create(
+            page=SitePageSection.Page.HOME,
+            group="home_about",
+            title="About our bakery",
+        )
+        self.client.force_login(admin_user)
+
+        editor_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageSection.Page.HOME},
+        )
+
+        about_form = next(
+            form
+            for form in editor_response.context["section_formset"].forms
+            if form.instance.group == "home_about"
+        )
+        self.assertFalse(about_form.show_value_fields)
+        self.assertFalse(about_form.show_url_field)
+
+    def test_selected_page_content_renders_on_each_static_page(self):
+        pages = (
+            (SitePageContent.Page.ABOUT, "about", "Custom about heading"),
+            (
+                SitePageContent.Page.BUSINESS_CLIENTS,
+                "business_clients",
+                "Custom business heading",
+            ),
+            (SitePageContent.Page.PARTNERSHIP, "corporate", "Custom partner heading"),
+            (SitePageContent.Page.CONTACTS, "contacts", "Custom contacts heading"),
+            (SitePageContent.Page.DELIVERY, "delivery", "Custom delivery heading"),
+            (SitePageContent.Page.FAQ, "faq", "Custom FAQ heading"),
+            (SitePageContent.Page.FEEDBACK, "feedback", "Custom feedback heading"),
+            (SitePageContent.Page.PACKAGING, "packaging", "Custom packaging heading"),
+            (SitePageContent.Page.CATALOG, "catalog:category_list", "Custom catalog heading"),
+            (SitePageContent.Page.CATEGORIES, "catalog:categories", "Custom categories heading"),
+        )
+        for page, route_name, heading in pages:
+            with self.subTest(page=page):
+                SitePageContent.objects.create(page=page, title=heading)
+                response = self.client.get(reverse(route_name))
+                self.assertContains(response, heading)
+
+    def test_page_content_photo_is_used_as_the_page_hero_image(self):
+        image_buffer = BytesIO()
+        Image.new("RGB", (1, 1), color="white").save(image_buffer, format="PNG")
+
+        with TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                page_content = SitePageContent.objects.create(
+                    page=SitePageContent.Page.ABOUT,
+                    image=SimpleUploadedFile(
+                        "about-hero.png",
+                        image_buffer.getvalue(),
+                        content_type="image/png",
+                    ),
+                )
+
+                response = self.client.get(reverse("about"))
+
+                self.assertContains(
+                    response,
+                    f"background-image:url('{page_content.image.url}')",
+                )
+
+    def test_home_banner_save_updates_homepage_carousel(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="home_banner_saver",
+            email="home-banner-saver@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        post_data = {
+            "action": "save_home_slides",
+            "page": SiteContentBlock.Page.HOME,
+            "slides-TOTAL_FORMS": "3",
+            "slides-INITIAL_FORMS": "0",
+            "slides-MIN_NUM_FORMS": "0",
+            "slides-MAX_NUM_FORMS": "1000",
+        }
+        for index, slide in enumerate(
+            (
+                {
+                    "eyebrow": "Первая подпись",
+                    "title": "Первый баннер",
+                    "description": "Первое описание",
+                    "button_text": "Первая кнопка",
+                    "button_url": "#popular",
+                },
+                {
+                    "eyebrow": "Вторая подпись",
+                    "title": "Тёплые моменты теперь другие",
+                    "description": "Описание второго баннера",
+                    "button_text": "Открыть каталог",
+                    "button_url": "/catalog/",
+                },
+                {
+                    "eyebrow": "Третья подпись",
+                    "title": "Третий баннер",
+                    "description": "Третье описание",
+                    "button_text": "Подробнее",
+                    "button_url": "/about/",
+                },
+            )
+        ):
+            post_data.update(
+                {
+                    f"slides-{index}-eyebrow": slide["eyebrow"],
+                    f"slides-{index}-eyebrow_en": f"Banner {index + 1}",
+                    f"slides-{index}-title": slide["title"],
+                    f"slides-{index}-title_en": f"Banner heading {index + 1}",
+                    f"slides-{index}-description": slide["description"],
+                    f"slides-{index}-description_en": f"Banner description {index + 1}",
+                    f"slides-{index}-button_text": slide["button_text"],
+                    f"slides-{index}-button_text_en": f"Button {index + 1}",
+                    f"slides-{index}-button_url": slide["button_url"],
+                    f"slides-{index}-display_order": str(index),
+                    f"slides-{index}-is_active": "on",
+                }
+            )
+
+        response = self.client.post(reverse("site_content_manager"), post_data)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=home",
+        )
+        self.assertEqual(HomeHeroSlide.objects.count(), 3)
+        home_response = self.client.get(reverse("home"))
+        self.assertContains(home_response, "Тёплые моменты теперь другие")
+        self.assertContains(home_response, "Описание второго баннера")
+        self.assertContains(home_response, 'href="/catalog/"')
 
     def test_site_content_manager_saves_new_page_block(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -115,11 +719,59 @@ class AdminDashboardTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("site_content_manager"))
         block = SiteContentBlock.objects.get()
+        edit_url = reverse("site_content_edit", args=(block.pk,))
+        self.assertRedirects(response, edit_url)
         self.assertEqual(block.page, SiteContentBlock.Page.ABOUT)
         self.assertEqual(block.title, "Custom page heading")
         self.assertEqual(block.display_order, 2)
+        edit_response = self.client.get(edit_url)
+        self.assertEqual(edit_response.status_code, 200)
+        self.assertContains(edit_response, 'option value="about" selected')
+        about_response = self.client.get(reverse("about"))
+        home_response = self.client.get(reverse("home"))
+        self.assertContains(about_response, "Custom page heading")
+        self.assertNotContains(home_response, "Custom page heading")
+
+    def test_editing_site_content_page_updates_and_stays_on_the_block(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="content_page_editor",
+            email="content-page-editor@example.com",
+            password="content-password",
+        )
+        block = SiteContentBlock.objects.create(
+            page=SiteContentBlock.Page.ABOUT,
+            title="Move this block",
+        )
+        self.client.force_login(admin_user)
+        edit_url = reverse("site_content_edit", args=(block.pk,))
+
+        response = self.client.post(
+            edit_url,
+            {
+                "page": SiteContentBlock.Page.PARTNERSHIP,
+                "title": block.title,
+                "title_en": "",
+                "description": "",
+                "description_en": "",
+                "display_order": "0",
+                "is_active": "on",
+            },
+        )
+
+        self.assertRedirects(response, edit_url)
+        block.refresh_from_db()
+        self.assertEqual(block.page, SiteContentBlock.Page.PARTNERSHIP)
+
+        edit_response = self.client.get(edit_url)
+        self.assertEqual(edit_response.status_code, 200)
+        self.assertEqual(edit_response.context["form"].instance.page, "corporate")
+        self.assertContains(edit_response, 'option value="corporate" selected')
+
+        partnership_response = self.client.get(reverse("corporate"))
+        about_response = self.client.get(reverse("about"))
+        self.assertContains(partnership_response, "Move this block")
+        self.assertNotContains(about_response, "Move this block")
 
     def test_custom_admin_section_requires_view_permission(self):
         manager = get_user_model().objects.create_user(
@@ -392,7 +1044,7 @@ class ManagerDashboardTests(TestCase):
     def test_manager_page_requires_staff_and_order_or_feedback_permission(self):
         response = self.client.get(self.manager_url)
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/admin/login/", response["Location"])
+        self.assertIn(reverse("accounts:login"), response["Location"])
 
         self.client.force_login(self.manager)
         response = self.client.get(self.manager_url)
@@ -866,5 +1518,6 @@ class HomePageCatalogTests(TestCase):
         self.assertContains(response, "Подарки компании")
         self.assertContains(response, "Праздничный набор")
         self.assertContains(response, "Скрытый товар")
+        self.assertNotContains(response, '<span aria-hidden="true">↗</span>')
         self.assertNotContains(response, "Скрытая категория")
         self.assertNotContains(response, "Товар скрытой категории")

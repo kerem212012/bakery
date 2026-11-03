@@ -12,13 +12,26 @@
 
         <section class="contacts-hero" aria-labelledby="contacts-heading">
             <div class="contacts-hero-copy">
-                <h1 id="contacts-heading">{% if LANGUAGE_CODE == 'en' %}Contact{% else %}Контакты{% endif %}</h1>
-                <p>{% if LANGUAGE_CODE == 'en' %}We are always happy to answer your questions, help you choose, and discuss your order.{% else %}Мы всегда на связи и рады ответить на ваши вопросы, помочь с выбором и обсудить заказ.{% endif %}</p>
+                <h1 id="contacts-heading">{% if site_page_content %}{{ site_page_content.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Contact{% else %}Контакты{% endif %}{% endif %}</h1>
+                <p>{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}We are always happy to answer your questions, help you choose, and discuss your order.{% else %}Мы всегда на связи и рады ответить на ваши вопросы, помочь с выбором и обсудить заказ.{% endif %}{% endif %}</p>
+                {% include "core/_page_content_button.html" %}
             </div>
-            <div class="contacts-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Handmade gingerbread with floral decoration{% else %}Пряники ручной работы с цветочным декором{% endif %}"></div>
+            <div class="contacts-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Handmade gingerbread with floral decoration{% else %}Пряники ручной работы с цветочным декором{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
         </section>
 
         <section class="contacts-details" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact information{% else %}Контактная информация{% endif %}">
+            {% if site_page_sections.details %}
+                {% for item in site_page_sections.details %}
+                    <a class="contacts-detail" href="{{ item.url }}">
+                        <span class="contacts-detail-icon" aria-hidden="true">{% cycle "♧" "✉" "⌖" %}</span>
+                        <span class="contacts-detail-copy">
+                            <strong>{{ item.localized_title }}</strong>
+                            <span>{{ item.localized_value|linebreaksbr }}</span>
+                            {% if item.localized_description %}<small>{{ item.localized_description }}</small>{% endif %}
+                        </span>
+                    </a>
+                {% endfor %}
+            {% else %}
             <a class="contacts-detail" href="tel:+74951234567">
                 <span class="contacts-detail-icon" aria-hidden="true">♧</span>
                 <span class="contacts-detail-copy">
@@ -42,6 +55,7 @@
                     <span>{% if LANGUAGE_CODE == 'en' %}12 Pryanichnaya St., building 1,<br>Moscow (Primer Business Center){% else %}г. Москва, ул. Пряничная, д. 12,<br>стр. 1 (Бизнес-центр «Пример»){% endif %}</span>
                 </span>
             </a>
+            {% endif %}
         </section>
 
         <a class="contacts-map" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Open map and get directions in Moscow{% else %}Открыть карту Москвы и построить маршрут{% endif %}">
@@ -56,6 +70,19 @@
         </a>
 
         <section class="contacts-requisites" aria-labelledby="requisites-heading">
+            {% if site_page_sections.requisites %}
+                {% with item=site_page_sections.requisites.0 %}
+                    <div class="contacts-requisites-details">
+                        <h2 id="requisites-heading">{{ item.localized_title }}</h2>
+                        <p>{{ item.localized_description }}</p>
+                    </div>
+                    <a class="contacts-requisites-link" href="{{ item.url }}">
+                        <span class="contacts-detail-icon" aria-hidden="true">▤</span>
+                        <span><strong>{{ item.localized_value }}</strong><small>{{ item.localized_description }}</small></span>
+                        <span class="contacts-requisites-arrow" aria-hidden="true">→</span>
+                    </a>
+                {% endwith %}
+            {% else %}
             <div class="contacts-requisites-details">
                 <h2 id="requisites-heading">{% if LANGUAGE_CODE == 'en' %}Company details{% else %}Реквизиты{% endif %}</h2>
                 <p>{% if LANGUAGE_CODE == 'en' %}Please email us to request company details and documents.{% else %}Для получения реквизитов и документов, пожалуйста, свяжитесь с нами по электронной почте.{% endif %}</p>
@@ -65,6 +92,7 @@
                 <span><strong>{% if LANGUAGE_CODE == 'en' %}Request company details{% else %}Запросить реквизиты{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Email us and we will send the documents{% else %}Напишите нам — отправим документы{% endif %}</small></span>
                 <span class="contacts-requisites-arrow" aria-hidden="true">→</span>
             </a>
+            {% endif %}
         </section>
     </div>
 {% endblock %}

@@ -12,17 +12,26 @@
 
         <section class="packaging-hero" aria-labelledby="packaging-heading">
             <div class="packaging-hero-copy">
-                <h1 id="packaging-heading">{% if LANGUAGE_CODE == 'en' %}Packaging options{% else %}Варианты упаковки{% endif %}</h1>
-                <p>{% if LANGUAGE_CODE == 'en' %}We choose packaging to suit your occasion, order, and brand style.{% else %}Подбираем упаковку под ваш повод, формат заказа и фирменный стиль.{% endif %}</p>
+                <h1 id="packaging-heading">{% if site_page_content %}{{ site_page_content.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Packaging options{% else %}Варианты упаковки{% endif %}{% endif %}</h1>
+                <p>{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}We choose packaging to suit your occasion, order, and brand style.{% else %}Подбираем упаковку под ваш повод, формат заказа и фирменный стиль.{% endif %}{% endif %}</p>
+                {% include "core/_page_content_button.html" %}
             </div>
-            <div class="packaging-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift gingerbread set in elegant packaging{% else %}Набор подарочных пряников в мягкой романтической упаковке{% endif %}"></div>
+            <div class="packaging-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift gingerbread set in elegant packaging{% else %}Набор подарочных пряников в мягкой романтической упаковке{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
         </section>
 
         <section class="packaging-section" aria-labelledby="packaging-main-heading">
             <header class="packaging-section-header">
-                <h2 id="packaging-main-heading">{% if LANGUAGE_CODE == 'en' %}Packaging options{% else %}Основные варианты упаковки{% endif %}</h2>
+                <h2 id="packaging-main-heading">{% if site_page_sections.options %}{{ site_page_sections.options.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Packaging options{% else %}Основные варианты упаковки{% endif %}{% endif %}</h2>
             </header>
             <div class="packaging-grid">
+                {% if site_page_sections.options %}
+                    {% for item in site_page_sections.options %}
+                        <article class="packaging-card">
+                            <div class="packaging-preview{% if forloop.counter == 1 %} packaging-preview-individual{% elif forloop.counter == 2 %} packaging-preview-craft{% elif forloop.counter == 3 %} packaging-preview-box{% elif forloop.counter == 4 %} packaging-preview-premium{% endif %}" role="img" aria-label="{{ item.localized_image_alt }}"{% if item.image %} style="background-image:url('{{ item.image.url }}')"{% endif %}></div>
+                            <div class="packaging-card-copy"><h3>{{ item.localized_title }}</h3>{% if item.localized_description %}<p>{{ item.localized_description }}</p>{% endif %}<span class="packaging-arrow" aria-hidden="true">→</span></div>
+                        </article>
+                    {% endfor %}
+                {% else %}
                 <article class="packaging-card">
                     <div class="packaging-preview packaging-preview-individual" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Custom packaging{% else %}Индивидуальная упаковка{% endif %}"></div>
                     <div class="packaging-card-copy">
@@ -51,15 +60,24 @@
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
+                {% endif %}
             </div>
         </section>
 
         <section class="packaging-section" aria-labelledby="packaging-named-heading">
             <header class="packaging-section-header">
-                <h2 id="packaging-named-heading">{% if LANGUAGE_CODE == 'en' %}Packaging for gift sets{% else %}Упаковка для наборов{% endif %}</h2>
-                <p>{% if LANGUAGE_CODE == 'en' %}We prepare gift sets in a range of packaging options to suit your wishes and event.{% else %}Собираем подарочные наборы в различных вариантах упаковки с учётом ваших пожеланий и формата мероприятия.{% endif %}</p>
+                <h2 id="packaging-named-heading">{% if site_page_sections.gifts %}{{ site_page_sections.gifts.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Packaging for gift sets{% else %}Упаковка для наборов{% endif %}{% endif %}</h2>
+                <p>{% if site_page_sections.gifts %}{{ site_page_sections.gifts.0.localized_section_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}We prepare gift sets in a range of packaging options to suit your wishes and event.{% else %}Собираем подарочные наборы в различных вариантах упаковки с учётом ваших пожеланий и формата мероприятия.{% endif %}{% endif %}</p>
             </header>
             <div class="packaging-grid">
+                {% if site_page_sections.gifts %}
+                    {% for item in site_page_sections.gifts %}
+                        <article class="packaging-card">
+                            <div class="packaging-preview{% if forloop.counter == 1 %} packaging-preview-round{% elif forloop.counter == 2 %} packaging-preview-gift{% elif forloop.counter == 3 %} packaging-preview-transport{% endif %}" role="img" aria-label="{{ item.localized_image_alt }}"{% if item.image %} style="background-image:url('{{ item.image.url }}')"{% endif %}></div>
+                            <div class="packaging-card-copy"><h3>{{ item.localized_title }}</h3>{% if item.localized_description %}<p>{{ item.localized_description }}</p>{% endif %}<span class="packaging-arrow" aria-hidden="true">→</span></div>
+                        </article>
+                    {% endfor %}
+                {% else %}
                 <article class="packaging-card">
                     <div class="packaging-preview packaging-preview-round" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Round box{% else %}Круглая коробка{% endif %}"></div>
                     <div class="packaging-card-copy">
@@ -81,14 +99,23 @@
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
+                {% endif %}
             </div>
         </section>
 
         <section class="packaging-section packaging-section-last" aria-labelledby="packaging-extra-heading">
             <header class="packaging-section-header">
-                <h2 id="packaging-extra-heading">{% if LANGUAGE_CODE == 'en' %}Additional options{% else %}Дополнительные варианты{% endif %}</h2>
+                <h2 id="packaging-extra-heading">{% if site_page_sections.extras %}{{ site_page_sections.extras.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Additional options{% else %}Дополнительные варианты{% endif %}{% endif %}</h2>
             </header>
             <div class="packaging-grid">
+                {% if site_page_sections.extras %}
+                    {% for item in site_page_sections.extras %}
+                        <article class="packaging-card">
+                            <div class="packaging-preview{% if forloop.counter == 1 %} packaging-preview-brand{% elif forloop.counter == 2 %} packaging-preview-plain{% elif forloop.counter == 3 %} packaging-preview-mini{% endif %}" role="img" aria-label="{{ item.localized_image_alt }}"{% if item.image %} style="background-image:url('{{ item.image.url }}')"{% endif %}></div>
+                            <div class="packaging-card-copy"><h3>{{ item.localized_title }}</h3>{% if item.localized_description %}<p>{{ item.localized_description }}</p>{% endif %}<span class="packaging-arrow" aria-hidden="true">→</span></div>
+                        </article>
+                    {% endfor %}
+                {% else %}
                 <article class="packaging-card">
                     <div class="packaging-preview packaging-preview-brand" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Branded box{% else %}Коробка с брендированием{% endif %}"></div>
                     <div class="packaging-card-copy">
@@ -110,6 +137,7 @@
                         <span class="packaging-arrow" aria-hidden="true">→</span>
                     </div>
                 </article>
+                {% endif %}
             </div>
         </section>
     </div>

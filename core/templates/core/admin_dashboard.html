@@ -12,8 +12,8 @@
                 <p>{% if LANGUAGE_CODE == 'en' %}Manage your catalog, orders, and customer messages from one place.{% else %}Управляйте каталогом, заказами и обращениями клиентов в одном месте.{% endif %}</p>
             </div>
             <div class="admin-dashboard-heading-actions">
-                {% if is_superuser %}
-                    <a class="admin-dashboard-site-link admin-dashboard-primary-link" href="{% url 'site_content_manager' %}">{% if LANGUAGE_CODE == 'en' %}Site photos and descriptions{% else %}Фото и описания сайта{% endif %}</a>
+                {% if can_manage_site_content %}
+                    <a class="admin-dashboard-site-link admin-dashboard-primary-link" href="{% url 'site_content_manager' %}">{% if LANGUAGE_CODE == 'en' %}Edit page content{% else %}Редактировать контент страниц{% endif %}</a>
                 {% endif %}
                 {% if can_view_orders or can_view_feedback %}
                     <a class="admin-dashboard-site-link" href="{% url 'manager_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Manager workspace{% else %}Кабинет менеджера{% endif %}</a>
@@ -69,10 +69,10 @@
                 <a href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Dashboard{% else %}Панель управления{% endif %} →</a>
             </div>
             <div class="admin-dashboard-links">
-                {% if is_superuser %}
+                {% if can_manage_site_content %}
                     <a class="admin-dashboard-card" href="{% url 'site_content_manager' %}">
                         <span class="admin-dashboard-card-icon" aria-hidden="true">▧</span>
-                        <span><strong>{% if LANGUAGE_CODE == 'en' %}Site content{% else %}Контент сайта{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Add photos, headings, and descriptions to public pages.{% else %}Добавляйте фотографии, заголовки и описания на страницы сайта.{% endif %}</small></span>
+                        <span><strong>{% if LANGUAGE_CODE == 'en' %}Edit page content{% else %}Редактировать контент страниц{% endif %}</strong><small>{% if LANGUAGE_CODE == 'en' %}Edit photos, headings, and descriptions on public pages.{% else %}Изменяйте фотографии, заголовки и описания страниц сайта.{% endif %}</small></span>
                         <span class="admin-dashboard-card-arrow" aria-hidden="true">→</span>
                     </a>
                 {% endif %}

@@ -2,8 +2,11 @@ from django.contrib import admin
 
 from .models import (
     FeedbackSubmission,
+    HomeHeroSlide,
     Preorder,
     PreorderAttachment,
+    SiteContentBlock,
+    SitePageContent,
 )
 
 
@@ -49,3 +52,27 @@ class FeedbackSubmissionAdmin(admin.ModelAdmin):
     list_editable = ("status",)
     search_fields = ("name", "email", "subject", "message")
     readonly_fields = ("name", "email", "subject", "message", "consent_given", "created_at")
+
+
+@admin.register(SitePageContent)
+class SitePageContentAdmin(admin.ModelAdmin):
+    list_display = ("page", "title", "title_en", "updated_at")
+    list_filter = ("page",)
+    search_fields = ("title", "title_en", "subtitle", "subtitle_en")
+    readonly_fields = ("updated_at",)
+
+
+@admin.register(HomeHeroSlide)
+class HomeHeroSlideAdmin(admin.ModelAdmin):
+    list_display = ("title", "title_en", "display_order", "is_active")
+    list_editable = ("display_order", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("eyebrow", "eyebrow_en", "title", "title_en")
+
+
+@admin.register(SiteContentBlock)
+class SiteContentBlockAdmin(admin.ModelAdmin):
+    list_display = ("title", "page", "display_order", "is_active")
+    list_editable = ("display_order", "is_active")
+    list_filter = ("page", "is_active")
+    search_fields = ("title", "title_en", "description", "description_en")

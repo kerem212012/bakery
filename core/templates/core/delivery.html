@@ -12,19 +12,30 @@
 
         <section class="delivery-hero" aria-labelledby="delivery-heading">
             <div class="delivery-hero-copy">
-                <h1 id="delivery-heading">{% if LANGUAGE_CODE == 'en' %}Delivery<br>and pickup{% else %}Доставка<br>и самовывоз{% endif %}</h1>
-                <p>{% if LANGUAGE_CODE == 'en' %}We deliver across Russia and offer convenient pickup in Moscow.{% else %}Доставляем заказы по всей России и предлагаем удобный самовывоз в Москве.{% endif %}</p>
+                <h1 id="delivery-heading">{% if site_page_content %}{{ site_page_content.localized_title|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Delivery<br>and pickup{% else %}Доставка<br>и самовывоз{% endif %}{% endif %}</h1>
+                <p>{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}We deliver across Russia and offer convenient pickup in Moscow.{% else %}Доставляем заказы по всей России и предлагаем удобный самовывоз в Москве.{% endif %}{% endif %}</p>
+                {% include "core/_page_content_button.html" %}
             </div>
-            <div class="delivery-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}A gift set of gingerbread in beautiful packaging{% else %}Подарочный набор с пряниками в красивой упаковке{% endif %}"></div>
+            <div class="delivery-hero-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}A gift set of gingerbread in beautiful packaging{% else %}Подарочный набор с пряниками в красивой упаковке{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
         </section>
 
         <section class="delivery-methods" aria-labelledby="delivery-methods-heading">
             <header class="delivery-section-heading">
-                <h2 id="delivery-methods-heading">{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</h2>
-                <p>{% if LANGUAGE_CODE == 'en' %}We deliver in Moscow, the Moscow region, and throughout Russia.{% else %}Мы доставляем заказы по Москве, Московской области и по всей России.{% endif %}</p>
+                <h2 id="delivery-methods-heading">{% if site_page_sections.methods %}{{ site_page_sections.methods.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}{% endif %}</h2>
+                <p>{% if site_page_sections.methods %}{{ site_page_sections.methods.0.localized_section_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}We deliver in Moscow, the Moscow region, and throughout Russia.{% else %}Мы доставляем заказы по Москве, Московской области и по всей России.{% endif %}{% endif %}</p>
             </header>
             <div class="delivery-methods-layout">
                 <div class="delivery-method-grid">
+                    {% if site_page_sections.methods %}
+                        {% for item in site_page_sections.methods %}
+                            <article class="delivery-method-card">
+                                <span class="delivery-icon" aria-hidden="true">{% cycle "▱" "⌖" "◇" %}</span>
+                                <h3>{{ item.localized_title|linebreaksbr }}</h3>
+                                <p>{{ item.localized_description }}</p>
+                                {% if item.localized_value %}<p class="delivery-method-note"><span aria-hidden="true">◷</span> {{ item.localized_value }}</p>{% endif %}
+                            </article>
+                        {% endfor %}
+                    {% else %}
                     <article class="delivery-method-card">
                         <span class="delivery-icon" aria-hidden="true">▱</span>
                         <h3>{% if LANGUAGE_CODE == 'en' %}Moscow<br>and Moscow region{% else %}По Москве<br>и Московской области{% endif %}</h3>
@@ -43,21 +54,30 @@
                         <p>{% if LANGUAGE_CODE == 'en' %}We carefully pack every product so it arrives in perfect condition.{% else %}Надёжно упаковываем изделия, чтобы они доехали до вас в идеальном состоянии.{% endif %}</p>
                         <p class="delivery-method-note"><span aria-hidden="true">✓</span> {% if LANGUAGE_CODE == 'en' %}Protective and custom packaging.{% else %}Защитная и индивидуальная упаковка.{% endif %}</p>
                     </article>
+                    {% endif %}
                 </div>
-                <div class="delivery-feature-image" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Packaged gift set of gingerbread{% else %}Упакованный подарочный набор с пряниками{% endif %}"></div>
+                <div class="delivery-feature-image" role="img" aria-label="{% if site_page_sections.methods %}{{ site_page_sections.methods.0.localized_image_alt }}{% elif LANGUAGE_CODE == 'en' %}Packaged gift set of gingerbread{% else %}Упакованный подарочный набор с пряниками{% endif %}"{% if site_page_sections.methods.0.image %} style="background-image:url('{{ site_page_sections.methods.0.image.url }}')"{% endif %}></div>
             </div>
             <div class="delivery-cost">
                 <span class="delivery-info-icon" aria-hidden="true">ⓘ</span>
-                <p><strong>{% if LANGUAGE_CODE == 'en' %}Delivery cost{% else %}Стоимость доставки{% endif %}</strong><br>{% if LANGUAGE_CODE == 'en' %}The exact cost is calculated based on weight, dimensions, and destination. Ask our manager or check when placing your order.{% else %}Точная стоимость рассчитывается индивидуально в зависимости от веса, габаритов и региона. Стоимость и сроки можно уточнить при оформлении заказа или у менеджера.{% endif %}</p>
+                <p><strong>{% if site_page_sections.notes %}{{ site_page_sections.notes.0.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Delivery cost{% else %}Стоимость доставки{% endif %}{% endif %}</strong><br>{% if site_page_sections.notes %}{{ site_page_sections.notes.0.localized_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}The exact cost is calculated based on weight, dimensions, and destination. Ask our manager or check when placing your order.{% else %}Точная стоимость рассчитывается индивидуально в зависимости от веса, габаритов и региона. Стоимость и сроки можно уточнить при оформлении заказа или у менеджера.{% endif %}{% endif %}</p>
             </div>
         </section>
 
         <section class="pickup-section" aria-labelledby="pickup-heading">
             <div class="pickup-copy">
                 <header class="delivery-section-heading">
-                    <h2 id="pickup-heading">{% if LANGUAGE_CODE == 'en' %}Pickup{% else %}Самовывоз{% endif %}</h2>
-                    <p>{% if LANGUAGE_CODE == 'en' %}Collect your completed order from our Moscow office.{% else %}Вы можете самостоятельно забрать готовый заказ в нашем офисе в Москве.{% endif %}</p>
+                    <h2 id="pickup-heading">{% if site_page_sections.pickup %}{{ site_page_sections.pickup.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Pickup{% else %}Самовывоз{% endif %}{% endif %}</h2>
+                    <p>{% if site_page_sections.pickup %}{{ site_page_sections.pickup.0.localized_section_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}Collect your completed order from our Moscow office.{% else %}Вы можете самостоятельно забрать готовый заказ в нашем офисе в Москве.{% endif %}{% endif %}</p>
                 </header>
+                {% if site_page_sections.pickup %}
+                    {% for item in site_page_sections.pickup|slice:"1:" %}
+                        <div class="pickup-detail">
+                            <span class="delivery-icon" aria-hidden="true">{% cycle "⌖" "◷" %}</span>
+                            <p><strong>{{ item.localized_title }}</strong><br>{{ item.localized_description|linebreaksbr }}</p>
+                        </div>
+                    {% endfor %}
+                {% else %}
                 <div class="pickup-detail">
                     <span class="delivery-icon" aria-hidden="true">⌖</span>
                     <p><strong>{% if LANGUAGE_CODE == 'en' %}Address{% else %}Адрес{% endif %}</strong><br>{% if LANGUAGE_CODE == 'en' %}12 Pryanichnaya St., building 1, Moscow<br>(Primer Business Center){% else %}г. Москва, ул. Пряничная, д. 12, стр. 1<br>(Бизнес-центр «Пример»){% endif %}</p>
@@ -66,11 +86,12 @@
                     <span class="delivery-icon" aria-hidden="true">◷</span>
                     <p><strong>{% if LANGUAGE_CODE == 'en' %}Opening hours{% else %}Время работы{% endif %}</strong><br>{% if LANGUAGE_CODE == 'en' %}Daily, 9:00 am–9:00 pm{% else %}Ежедневно с 9:00 до 21:00{% endif %}</p>
                 </div>
-                <a class="button button-dark pickup-route" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201" target="_blank" rel="noopener noreferrer">
-                    {% if LANGUAGE_CODE == 'en' %}Get directions{% else %}Построить маршрут{% endif %} <span aria-hidden="true">→</span>
+                {% endif %}
+                <a class="button button-dark pickup-route" href="{% if site_page_sections.pickup and site_page_sections.pickup.0.url %}{{ site_page_sections.pickup.0.url }}{% else %}https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201{% endif %}" target="_blank" rel="noopener noreferrer">
+                    {% if site_page_sections.pickup and site_page_sections.pickup.0.localized_value %}{{ site_page_sections.pickup.0.localized_value }}{% else %}{% if LANGUAGE_CODE == 'en' %}Get directions{% else %}Построить маршрут{% endif %}{% endif %} <span aria-hidden="true">→</span>
                 </a>
             </div>
-            <a class="pickup-map" href="https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Open map and get directions to the office{% else %}Открыть карту и построить маршрут до офиса{% endif %}">
+            <a class="pickup-map" href="{% if site_page_sections.pickup and site_page_sections.pickup.0.url %}{{ site_page_sections.pickup.0.url }}{% else %}https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201{% endif %}" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Open map and get directions to the office{% else %}Открыть карту и построить маршрут до офиса{% endif %}">
                 <span class="map-area map-area-one">{% if LANGUAGE_CODE == 'en' %}TVERSKOY{% else %}ТВЕРСКОЙ{% endif %}</span>
                 <span class="map-area map-area-two">{% if LANGUAGE_CODE == 'en' %}ARBAT{% else %}АРБАТ{% endif %}</span>
                 <span class="map-area map-area-three">{% if LANGUAGE_CODE == 'en' %}KITAI-GOROD{% else %}КИТАЙ-ГОРОД{% endif %}</span>
@@ -83,9 +104,17 @@
 
         <section class="delivery-help" aria-labelledby="delivery-help-heading">
             <header class="delivery-section-heading">
-                <h2 id="delivery-help-heading">{% if LANGUAGE_CODE == 'en' %}Useful information{% else %}Полезная информация{% endif %}</h2>
+                <h2 id="delivery-help-heading">{% if site_page_sections.notes %}{{ site_page_sections.notes.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Useful information{% else %}Полезная информация{% endif %}{% endif %}</h2>
             </header>
             <div class="delivery-help-grid">
+                {% if site_page_sections.notes %}
+                    {% for item in site_page_sections.notes|slice:"1:" %}
+                        <article class="delivery-help-item">
+                            <span class="delivery-icon" aria-hidden="true">{% cycle "▦" "◷" "✓" %}</span>
+                            <div><h3>{{ item.localized_title }}</h3><p>{{ item.localized_description }}</p>{% if item.url %}<a href="{{ item.url }}">{{ item.localized_value }} →</a>{% endif %}</div>
+                        </article>
+                    {% endfor %}
+                {% else %}
                 <article class="delivery-help-item">
                     <span class="delivery-icon" aria-hidden="true">▦</span>
                     <div><h3>{% if LANGUAGE_CODE == 'en' %}Production time{% else %}Сроки изготовления{% endif %}</h3><p>{% if LANGUAGE_CODE == 'en' %}Timing depends on the complexity and size of your order. Please confirm current availability with our manager.{% else %}Сроки зависят от сложности и объёма заказа. Актуальные даты уточняйте у менеджера.{% endif %}</p></div>
@@ -102,6 +131,7 @@
                     <span class="delivery-icon" aria-hidden="true">♧</span>
                     <div><h3>{% if LANGUAGE_CODE == 'en' %}Questions?{% else %}Вопросы{% endif %}</h3><p>{% if LANGUAGE_CODE == 'en' %}We are happy to help with any delivery questions.{% else %}Если остались вопросы по доставке, мы всегда на связи.{% endif %}</p><a href="mailto:hello@lukomorye.example">{% if LANGUAGE_CODE == 'en' %}Email us{% else %}Написать нам{% endif %} →</a></div>
                 </article>
+                {% endif %}
             </div>
         </section>
     </div>

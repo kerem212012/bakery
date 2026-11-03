@@ -6,11 +6,26 @@
     <div class="faq-page">
         <header class="faq-header" aria-label="{% if LANGUAGE_CODE == 'en' %}Frequently asked questions{% else %}Частые вопросы{% endif %}">
             <span class="faq-header-rule" aria-hidden="true"></span>
-            <h1>{% if LANGUAGE_CODE == 'en' %}FREQUENTLY ASKED QUESTIONS{% else %}ЧАСТЫЕ ВОПРОСЫ{% endif %}</h1>
+            <h1>{% if site_page_content %}{{ site_page_content.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}FREQUENTLY ASKED QUESTIONS{% else %}ЧАСТЫЕ ВОПРОСЫ{% endif %}{% endif %}</h1>
             <span class="faq-header-rule" aria-hidden="true"></span>
         </header>
+        {% include "core/_page_content_button.html" %}
 
         <div class="faq-grid" aria-label="{% if LANGUAGE_CODE == 'en' %}Frequently asked questions{% else %}Частые вопросы{% endif %}">
+            {% if site_page_sections.questions %}
+                {% for item in site_page_sections.questions %}
+                    <article class="faq-item">
+                        <button class="faq-question" type="button" aria-expanded="false">
+                            <span class="faq-number">{{ forloop.counter|stringformat:"02d" }}</span>
+                            <span class="faq-text">{{ item.localized_title }}</span>
+                            <span class="faq-toggle" aria-hidden="true">+</span>
+                        </button>
+                        <div class="faq-answer">
+                            <p>{{ item.localized_description }}</p>
+                        </div>
+                    </article>
+                {% endfor %}
+            {% else %}
             {% for item in faq_items %}
                 <article class="faq-item">
                     <button class="faq-question" type="button" aria-expanded="false">
@@ -23,6 +38,7 @@
                     </div>
                 </article>
             {% endfor %}
+            {% endif %}
         </div>
     </div>
 

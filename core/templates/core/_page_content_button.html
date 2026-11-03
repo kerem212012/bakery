@@ -1,0 +1,3 @@
+{% if site_page_content and site_page_content.localized_button_text and site_page_content.button_url %}
+    <a class="button button-dark" href="{{ site_page_content.button_url }}">{{ site_page_content.localized_button_text }} <span aria-hidden="true">→</span></a>
+{% endif %}

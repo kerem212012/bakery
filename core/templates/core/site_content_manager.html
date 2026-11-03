@@ -8,8 +8,8 @@
         <header class="admin-dashboard-heading">
             <div>
                 <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Website editor{% else %}Редактор сайта{% endif %}</p>
-                <h1>{% if editing_block %}{% if LANGUAGE_CODE == 'en' %}Edit site content{% else %}Редактировать контент{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Add site content{% else %}Добавить контент на сайт{% endif %}{% endif %}</h1>
-                <p>{% if LANGUAGE_CODE == 'en' %}Add a photo, heading, and description to a public page. This is a separate website editor, not the Django admin.{% else %}Добавьте фото, заголовок и описание на нужную страницу сайта. Это отдельный редактор сайта, не Django-админка.{% endif %}</p>
+                <h1>{% if editing_block %}{% if LANGUAGE_CODE == 'en' %}Edit extra content{% else %}Редактировать дополнительный блок{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Edit page content{% else %}Редактировать страницы сайта{% endif %}{% endif %}</h1>
+                <p>{% if LANGUAGE_CODE == 'en' %}Choose a page to edit its introduction, structured content sections, cards, and images. Home includes its banner slides.{% else %}Выберите страницу, чтобы изменить вступление, разделы, карточки и изображения. Для главной страницы доступны слайды баннера.{% endif %}</p>
             </div>
             <a class="admin-dashboard-site-link" href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Back to dashboard{% else %}Назад в панель{% endif %}</a>
         </header>
@@ -22,99 +22,208 @@
             </div>
         {% endif %}
 
-        <form class="site-content-editor" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            {% if form.non_field_errors %}
-                <div class="site-content-form-errors">{{ form.non_field_errors }}</div>
-            {% endif %}
-            <div class="site-content-form-section">
-                <h2>{% if LANGUAGE_CODE == 'en' %}Where should it appear?{% else %}Где показать блок?{% endif %}</h2>
-                <div class="site-content-form-field">
-                    <label for="{{ form.page.id_for_label }}">{{ form.page.label }}</label>
-                    {{ form.page }}
-                    {{ form.page.errors }}
-                </div>
-            </div>
-
-            <div class="site-content-form-section">
-                <h2>{% if LANGUAGE_CODE == 'en' %}Headings and descriptions{% else %}Заголовки и описания{% endif %}</h2>
-                <div class="site-content-form-grid">
+        {% if editing_block %}
+            <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% for field in form %}
                     <div class="site-content-form-field">
-                        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
-                        {{ form.title }}
-                        {{ form.title.errors }}
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {{ field.errors }}
+                        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
                     </div>
-                    <div class="site-content-form-field">
-                        <label for="{{ form.title_en.id_for_label }}">{{ form.title_en.label }}</label>
-                        {{ form.title_en }}
-                        {{ form.title_en.errors }}
-                    </div>
-                    <div class="site-content-form-field">
-                        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
-                        {{ form.description }}
-                        {{ form.description.errors }}
-                    </div>
-                    <div class="site-content-form-field">
-                        <label for="{{ form.description_en.id_for_label }}">{{ form.description_en.label }}</label>
-                        {{ form.description_en }}
-                        {{ form.description_en.errors }}
-                    </div>
-                </div>
-            </div>
-
-            <div class="site-content-form-section">
-                <h2>{% if LANGUAGE_CODE == 'en' %}Photo and publishing{% else %}Фото и публикация{% endif %}</h2>
-                <div class="site-content-form-field">
-                    <label for="{{ form.image.id_for_label }}">{{ form.image.label }}</label>
-                    {{ form.image }}
-                    {% if form.image.help_text %}<small>{{ form.image.help_text }}</small>{% endif %}
-                    {{ form.image.errors }}
-                    {% if editing_block.image %}
-                        <img class="site-content-editor-preview" src="{{ editing_block.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current photo{% else %}Текущее фото{% endif %}">
-                    {% endif %}
-                </div>
-                <div class="site-content-form-options">
-                    <div class="site-content-form-field">
-                        <label for="{{ form.display_order.id_for_label }}">{{ form.display_order.label }}</label>
-                        {{ form.display_order }}
-                        {{ form.display_order.errors }}
-                    </div>
-                    <label class="site-content-published">{{ form.is_active }}<span>{{ form.is_active.label }}</span></label>
-                </div>
-            </div>
-
-            <div class="site-content-form-actions">
-                <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save and publish{% else %}Сохранить{% endif %}</button>
-                {% if editing_block %}
+                {% endfor %}
+                <div class="site-content-form-actions">
+                    <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save{% else %}Сохранить{% endif %}</button>
                     <a class="admin-dashboard-site-link" href="{% url 'site_content_manager' %}">{% if LANGUAGE_CODE == 'en' %}Cancel{% else %}Отмена{% endif %}</a>
-                {% endif %}
-            </div>
-        </form>
+                </div>
+            </form>
+        {% else %}
+            <form class="site-content-page-picker" method="get">
+                <div class="site-content-form-section">
+                    <h2>{% if LANGUAGE_CODE == 'en' %}Choose page content{% else %}Выберите страницу{% endif %}</h2>
+                    <div class="site-content-form-field">
+                        <label for="site-content-page-picker">{{ page_selector.page.label }}</label>
+                        <select id="site-content-page-picker" name="page" class="site-content-form-control" onchange="this.form.requestSubmit()">
+                            {% for value, label in page_selector.fields.page.choices %}
+                                <option value="{{ value }}"{% if value == selected_page %} selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </form>
 
-        <section class="site-content-existing">
-            <div class="admin-dashboard-section-heading">
-                <div>
-                    <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Published blocks{% else %}Блоки сайта{% endif %}</p>
-                    <h2>{% if LANGUAGE_CODE == 'en' %}Existing content{% else %}Добавленный контент{% endif %}</h2>
-                </div>
-            </div>
-            {% if site_blocks %}
-                <div class="site-content-existing-list">
-                    {% for block in site_blocks %}
-                        <article class="site-content-existing-item">
-                            {% if block.image %}<img src="{{ block.image.url }}" alt="">{% endif %}
-                            <div>
-                                <span class="site-content-existing-page">{{ block.get_page_display }}</span>
-                                <h3>{{ block.localized_title|default:block.get_page_display }}</h3>
-                                <small>{% if block.is_active %}{% if LANGUAGE_CODE == 'en' %}Published{% else %}Опубликовано{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Hidden{% else %}Скрыто{% endif %}{% endif %}</small>
+            {% if selected_page == 'home' and slide_formset %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_home_slides">
+                    {{ slide_formset.management_form }}
+                    {% if slide_formset.non_form_errors %}<div class="site-content-form-errors">{{ slide_formset.non_form_errors }}</div>{% endif %}
+                    {% for slide_form in slide_formset %}
+                        <section class="site-content-form-section site-content-slide-editor">
+                            <h2>{% if LANGUAGE_CODE == 'en' %}Banner {{ forloop.counter }}{% else %}Баннер {{ forloop.counter }}{% endif %}</h2>
+                            {% for hidden in slide_form.hidden_fields %}{{ hidden }}{% endfor %}
+                            <div class="site-content-form-grid">
+                                {% for field in slide_form.visible_fields %}
+                                    <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                        {% if field.name == 'is_active' %}
+                                            <label>{{ field }}<span>{{ field.label }}</span></label>
+                                        {% else %}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        {% endif %}
+                                        {{ field.errors }}
+                                        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                    </div>
+                                {% endfor %}
                             </div>
-                            <a class="admin-dashboard-site-link" href="{% url 'site_content_edit' block.pk %}">{% if LANGUAGE_CODE == 'en' %}Edit{% else %}Изменить{% endif %}</a>
-                        </article>
+                            {% if slide_form.instance.image %}
+                                <img class="site-content-editor-preview" src="{{ slide_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current banner{% else %}Текущий баннер{% endif %}">
+                            {% endif %}
+                        </section>
                     {% endfor %}
-                </div>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save and publish banners{% else %}Сохранить баннеры{% endif %}</button>
+                    </div>
+                </form>
+            {% elif page_form %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_page_content">
+                    {% if page_form.non_field_errors %}<div class="site-content-form-errors">{{ page_form.non_field_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Top banner / introduction{% else %}Верхний блок страницы{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in page_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if page_form.instance.image %}
+                            <img class="site-content-editor-preview" src="{{ page_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current page photo{% else %}Текущее фото страницы{% endif %}">
+                        {% endif %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save and publish{% else %}Сохранить и опубликовать{% endif %}</button>
+                    </div>
+                </form>
+            {% elif selected_page_is_dynamic %}
+                <section class="site-content-form-section">
+                    <h2>{% if LANGUAGE_CODE == 'en' %}This page uses catalog content{% else %}Эта страница использует данные каталога{% endif %}</h2>
+                    <p>{% if selected_page == 'category' %}{% if LANGUAGE_CODE == 'en' %}Category headings, descriptions, and photos are edited with category details.{% else %}Заголовок, описание и фото страницы категории меняются в настройках категории.{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Product headings, descriptions, and photos are edited with product details.{% else %}Заголовок, описание и фото страницы товара меняются в карточке товара.{% endif %}{% endif %}</p>
+                    <a class="admin-dashboard-site-link admin-dashboard-primary-link" href="{% if selected_page == 'category' %}{% url 'admin_section' 'categories' %}{% else %}{% url 'admin_section' 'products' %}{% endif %}">{% if LANGUAGE_CODE == 'en' %}Open catalog editor{% else %}Открыть редактор каталога{% endif %}</a>
+                </section>
             {% else %}
-                <p class="site-content-empty">{% if LANGUAGE_CODE == 'en' %}No content blocks yet. Add the first one above.{% else %}Пока нет блоков контента. Добавьте первый выше.{% endif %}</p>
+                <section class="site-content-form-section">
+                    <p>{% if LANGUAGE_CODE == 'en' %}Choose a specific page to edit its top content.{% else %}Выберите конкретную страницу, чтобы изменить её верхний блок.{% endif %}</p>
+                </section>
             {% endif %}
-        </section>
+
+            {% if section_formset %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_page_sections">
+                    {{ section_formset.management_form }}
+                    {% if section_formset.non_form_errors %}<div class="site-content-form-errors">{{ section_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Page sections and cards{% else %}Разделы и карточки страницы{% endif %}</h2>
+                        <p>{% if LANGUAGE_CODE == 'en' %}Edit the structured text and images used in this page's content. For buttons and links, edit the button/link text and URL fields. Choose the matching content group to keep each item in its existing layout. Delete an item to hide it.{% else %}Изменяйте тексты и изображения страницы. Чтобы изменить кнопку или ссылку, отредактируйте поля текста кнопки/ссылки и URL. Выберите подходящую группу, чтобы сохранить расположение элементов. Чтобы скрыть элемент, отметьте его удаление.{% endif %}</p>
+                        {% for section_form in section_formset %}
+                            <article class="site-content-form-section site-content-slide-editor" data-value-groups="{{ section_form.value_groups|join:',' }}" data-url-groups="{{ section_form.url_groups|join:',' }}">
+                                {% for hidden in section_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Content item {{ forloop.counter }}{% else %}Элемент {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in section_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' or field.name == 'DELETE' %} site-content-published{% endif %}"{% if field.name == 'value' or field.name == 'value_en' %} data-section-value-field{% if not section_form.show_value_fields %} hidden{% endif %}{% elif field.name == 'url' %} data-section-url-field{% if not section_form.show_url_field %} hidden{% endif %}{% endif %}>
+                                            {% if field.name == 'is_active' or field.name == 'DELETE' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if section_form.instance.image %}
+                                    <img class="site-content-editor-preview" src="{{ section_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current section image{% else %}Текущее изображение блока{% endif %}">
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save page sections{% else %}Сохранить разделы страницы{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            <section class="site-content-existing">
+                <div class="admin-dashboard-section-heading">
+                    <div>
+                        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Extra content blocks{% else %}Дополнительные блоки{% endif %}</p>
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Additional page content{% else %}Дополнительный контент страницы{% endif %}</h2>
+                    </div>
+                </div>
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_extra_block">
+                    <div class="site-content-form-grid">
+                        {% for field in form %}
+                            <div class="site-content-form-field">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {{ field.errors }}
+                                {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button class="admin-dashboard-site-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Add extra content{% else %}Добавить дополнительный блок{% endif %}</button>
+                </form>
+                {% if site_blocks %}
+                    <div class="site-content-existing-list">
+                        {% for block in site_blocks %}
+                            <article class="site-content-existing-item">
+                                {% if block.image %}<img src="{{ block.image.url }}" alt="">{% endif %}
+                                <div>
+                                    <span class="site-content-existing-page">{{ block.get_page_display }}</span>
+                                    <h3>{{ block.localized_title|default:block.get_page_display }}</h3>
+                                    <small>{% if block.is_active %}{% if LANGUAGE_CODE == 'en' %}Published{% else %}Опубликовано{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Hidden{% else %}Скрыто{% endif %}{% endif %}</small>
+                                </div>
+                                <a class="admin-dashboard-site-link" href="{% url 'site_content_edit' block.pk %}">{% if LANGUAGE_CODE == 'en' %}Edit{% else %}Изменить{% endif %}</a>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </section>
+        {% endif %}
     </section>
+    {% if section_formset %}
+        <script>
+            document.querySelectorAll("[data-value-groups]").forEach((item) => {
+                const group = item.querySelector('select[name$="-group"]');
+                if (!group) return;
+                const valueGroups = item.dataset.valueGroups.split(",").filter(Boolean);
+                const urlGroups = item.dataset.urlGroups.split(",").filter(Boolean);
+                const updateFields = () => {
+                    item.querySelectorAll("[data-section-value-field]").forEach((field) => {
+                        field.hidden = !valueGroups.includes(group.value);
+                    });
+                    item.querySelectorAll("[data-section-url-field]").forEach((field) => {
+                        field.hidden = !urlGroups.includes(group.value);
+                    });
+                };
+                group.addEventListener("change", updateFields);
+                updateFields();
+            });
+        </script>
+    {% endif %}
 {% endblock %}

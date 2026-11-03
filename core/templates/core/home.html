@@ -40,6 +40,18 @@
             <section class="hero" aria-label="{% if LANGUAGE_CODE == 'en' %}Featured offers{% else %}Главные предложения{% endif %}">
                 <div class="hero-viewport" id="hero-viewport">
                     <div class="hero-track" id="hero-track">
+                        {% if site_home_hero_configured %}
+                            {% for slide in site_home_hero_slides %}
+                                <article class="hero-slide{% if forloop.counter0 == 0 %} hero-slide-gifts{% elif forloop.counter0 == 1 %} hero-slide-sweets{% else %} hero-slide-team{% endif %}"{% if slide.image %} style="background-image:url('{{ slide.image.url }}')"{% endif %} aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}"{% if not forloop.first %} inert{% endif %}>
+                                    <div class="hero-content">
+                                        <p class="eyebrow">{{ slide.localized_eyebrow }}</p>
+                                        <h1>{{ slide.localized_title }}</h1>
+                                        <p class="hero-description">{{ slide.localized_description }}</p>
+                                        <a class="button button-light" href="{{ slide.button_url }}">{{ slide.localized_button_text }} <span aria-hidden="true">→</span></a>
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        {% else %}
                         <article class="hero-slide hero-slide-gifts" aria-hidden="false">
                             <div class="hero-content">
                                 <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Made for your business{% else %}Авторские решения для вашего бизнеса{% endif %}</p>
@@ -64,14 +76,21 @@
                                 <a class="button button-light" href="mailto:hello@lukomorye.example">{% if LANGUAGE_CODE == 'en' %}Discuss a project{% else %}Обсудить проект{% endif %} <span aria-hidden="true">→</span></a>
                             </div>
                         </article>
+                        {% endif %}
                     </div>
                 </div>
                 <button class="hero-arrow hero-arrow-previous" type="button" data-hero-direction="-1" aria-label="{% if LANGUAGE_CODE == 'en' %}Previous banner{% else %}Предыдущий баннер{% endif %}"><span aria-hidden="true">‹</span></button>
                 <button class="hero-arrow hero-arrow-next" type="button" data-hero-direction="1" aria-label="{% if LANGUAGE_CODE == 'en' %}Next banner{% else %}Следующий баннер{% endif %}"><span aria-hidden="true">›</span></button>
                 <div class="hero-pagination" aria-label="{% if LANGUAGE_CODE == 'en' %}Choose a banner{% else %}Выбрать баннер{% endif %}">
+                    {% if site_home_hero_configured %}
+                        {% for slide in site_home_hero_slides %}
+                            <button class="hero-dot{% if forloop.first %} is-active{% endif %}" type="button" data-hero-slide="{{ forloop.counter0 }}" aria-label="{% if LANGUAGE_CODE == 'en' %}Banner {{ forloop.counter }}{% else %}Баннер {{ forloop.counter }}{% endif %}" aria-current="{% if forloop.first %}true{% else %}false{% endif %}"></button>
+                        {% endfor %}
+                    {% else %}
                     <button class="hero-dot is-active" type="button" data-hero-slide="0" aria-label="{% if LANGUAGE_CODE == 'en' %}Banner 1{% else %}Баннер 1{% endif %}" aria-current="true"></button>
                     <button class="hero-dot" type="button" data-hero-slide="1" aria-label="{% if LANGUAGE_CODE == 'en' %}Banner 2{% else %}Баннер 2{% endif %}" aria-current="false"></button>
                     <button class="hero-dot" type="button" data-hero-slide="2" aria-label="{% if LANGUAGE_CODE == 'en' %}Banner 3{% else %}Баннер 3{% endif %}" aria-current="false"></button>
+                    {% endif %}
                 </div>
             </section>
 
@@ -80,11 +99,11 @@
             <section class="section popular-section" id="popular">
                 <div class="section-heading">
                     <div>
-                        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}For special moments{% else %}Для важных моментов{% endif %}</p>
-                        <h2>{% if LANGUAGE_CODE == 'en' %}Popular picks{% else %}Популярные позиции{% endif %}</h2>
+                        <p class="eyebrow">{% if site_page_sections.popular %}{{ site_page_sections.popular.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}For special moments{% else %}Для важных моментов{% endif %}{% endif %}</p>
+                        <h2>{% if site_page_sections.popular %}{{ site_page_sections.popular.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Popular picks{% else %}Популярные позиции{% endif %}{% endif %}</h2>
                     </div>
                     <div class="popular-heading-actions">
-                        <a class="text-link" href="{% url 'catalog:category_list' %}">{% if LANGUAGE_CODE == 'en' %}View all{% else %}Смотреть все{% endif %} <span aria-hidden="true">→</span></a>
+                        <a class="text-link" href="{% if site_page_sections.popular and site_page_sections.popular.0.url %}{{ site_page_sections.popular.0.url }}{% else %}{% url 'catalog:category_list' %}{% endif %}">{% if site_page_sections.popular and site_page_sections.popular.0.localized_value %}{{ site_page_sections.popular.0.localized_value }}{% else %}{% if LANGUAGE_CODE == 'en' %}View all{% else %}Смотреть все{% endif %}{% endif %} <span aria-hidden="true">→</span></a>
                         <div class="slider-controls">
                             <button class="slider-arrow popular-arrow" type="button" data-popular-direction="-1" aria-label="{% if LANGUAGE_CODE == 'en' %}Previous popular picks{% else %}Предыдущие популярные позиции{% endif %}">
                                 <span aria-hidden="true">‹</span>
@@ -95,7 +114,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="popular-grid" id="popular-track" tabindex="0" aria-label="{% if LANGUAGE_CODE == 'en' %}Popular gifts{% else %}Популярные подарки{% endif %}">
+                <div class="popular-grid" id="popular-track" tabindex="0" aria-label="{% if LANGUAGE_CODE == 'en' %}Catalog{% else %}Каталог{% endif %}">
                     {% for product in popular_products %}
                         <a class="product-card" href="{% url 'catalog:category_detail' product.category.slug %}">
                             {% if product.display_image_url %}
@@ -117,20 +136,24 @@
 
             <section class="about-section" id="about">
                 <div class="about-copy">
-                    <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}About us{% else %}О компании{% endif %}</p>
-                    <h2>{% if LANGUAGE_CODE == 'en' %}Lukomorye — ideas, crafted in every detail.{% else %}Лукоморье — идеи, воплощённые в деталях.{% endif %}</h2>
-                    <p>{% if LANGUAGE_CODE == 'en' %}We create corporate gifts that express gratitude and strengthen relationships.{% else %}Мы создаём корпоративные подарки, которые помогают выразить благодарность и укрепить отношения.{% endif %}</p>
-                    <p>{% if LANGUAGE_CODE == 'en' %}From concept to packaging, every detail is considered to make your gift memorable and truly delightful.{% else %}От концепции до упаковки — продумываем каждую мелочь, чтобы ваш подарок запомнился и по-настоящему порадовал.{% endif %}</p>
-                    <a class="button button-dark" href="{% url 'about' %}">{% if LANGUAGE_CODE == 'en' %}More about us{% else %}Подробнее о компании{% endif %} <span aria-hidden="true">→</span></a>
+                    <p class="eyebrow">{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}About us{% else %}О компании{% endif %}{% endif %}</p>
+                    <h2>{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Lukomorye — ideas, crafted in every detail.{% else %}Лукоморье — идеи, воплощённые в деталях.{% endif %}{% endif %}</h2>
+                    {% if site_page_sections.home_about %}
+                        {% for item in site_page_sections.home_about %}<p>{{ item.localized_description }}</p>{% endfor %}
+                    {% else %}
+                        <p>{% if LANGUAGE_CODE == 'en' %}We create corporate gifts that express gratitude and strengthen relationships.{% else %}Мы создаём корпоративные подарки, которые помогают выразить благодарность и укрепить отношения.{% endif %}</p>
+                        <p>{% if LANGUAGE_CODE == 'en' %}From concept to packaging, every detail is considered to make your gift memorable and truly delightful.{% else %}От концепции до упаковки — продумываем каждую мелочь, чтобы ваш подарок запомнился и по-настоящему порадовал.{% endif %}</p>
+                    {% endif %}
+                    <a class="button button-dark" href="{% if site_page_sections.home_about and site_page_sections.home_about.0.url %}{{ site_page_sections.home_about.0.url }}{% else %}{% url 'about' %}{% endif %}">{% if site_page_sections.home_about and site_page_sections.home_about.0.localized_value %}{{ site_page_sections.home_about.0.localized_value }}{% else %}{% if LANGUAGE_CODE == 'en' %}More about us{% else %}Подробнее о компании{% endif %}{% endif %} <span aria-hidden="true">→</span></a>
                 </div>
-                <div class="about-photo" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}A baker decorates handmade cookies{% else %}Мастер украшает авторское печенье{% endif %}"></div>
+                <div class="about-photo" role="img" aria-label="{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_image_alt }}{% elif LANGUAGE_CODE == 'en' %}A baker decorates handmade cookies{% else %}Мастер украшает авторское печенье{% endif %}"{% if site_page_sections.home_about.0.image %} style="background-image:url('{{ site_page_sections.home_about.0.image.url }}')"{% endif %}></div>
             </section>
 
             <section class="section catalog-section" id="catalog">
                 <div class="section-heading">
                     <div>
-                        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Made for your brand{% else %}Для вашего бренда{% endif %}</p>
-                        <h2>{% if LANGUAGE_CODE == 'en' %}Popular gift sets{% else %}Популярные наборы{% endif %}</h2>
+                        <p class="eyebrow">{% if site_page_sections.catalog %}{{ site_page_sections.catalog.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}Made for your brand{% else %}Для вашего бренда{% endif %}{% endif %}</p>
+                        <h2>{% if site_page_sections.catalog %}{{ site_page_sections.catalog.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Popular gift sets{% else %}Популярные наборы{% endif %}{% endif %}</h2>
                     </div>
                 </div>
                 <div class="catalog-grid">
@@ -142,20 +165,20 @@
                                 <span class="catalog-photo catalog-photo-placeholder" role="img" aria-label="{{ product.localized_name }}"></span>
                             {% endif %}
                             <span class="catalog-title">{{ product.localized_name }}</span>
-                            <span class="catalog-caption">{{ product.category.localized_name }}{% if product.price %}<span class="catalog-caption-price"> · {{ product.price }} ₽</span>{% endif %} <span aria-hidden="true">↗</span></span>
+                            <span class="catalog-caption">{{ product.category.localized_name }}{% if product.price %}<span class="catalog-caption-price">{{ product.price }} ₽</span>{% endif %}</span>
                         </article>
                     {% empty %}
                         <p class="catalog-empty">{% if LANGUAGE_CODE == 'en' %}Products coming soon.{% else %}Товары скоро появятся.{% endif %}</p>
                     {% endfor %}
                 </div>
-                <a class="text-link catalog-all-link" href="{% url 'catalog:category_list' %}">{% if LANGUAGE_CODE == 'en' %}Browse catalog{% else %}Смотреть каталог{% endif %} <span aria-hidden="true">→</span></a>
+                <a class="text-link catalog-all-link" href="{% if site_page_sections.catalog and site_page_sections.catalog.0.url %}{{ site_page_sections.catalog.0.url }}{% else %}{% url 'catalog:category_list' %}{% endif %}">{% if site_page_sections.catalog and site_page_sections.catalog.0.localized_value %}{{ site_page_sections.catalog.0.localized_value }}{% else %}{% if LANGUAGE_CODE == 'en' %}Browse catalog{% else %}Смотреть каталог{% endif %}{% endif %} <span aria-hidden="true">→</span></a>
             </section>
 
             <section class="calculator-section" id="calculator">
                 <div class="calculator-heading">
-                    <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Price calculator{% else %}Калькулятор{% endif %}</p>
-                    <h2>{% if LANGUAGE_CODE == 'en' %}Calculate the price<br>of your gingerbread{% else %}Рассчитайте стоимость<br>ваших пряников{% endif %}</h2>
-                    <p>{% if LANGUAGE_CODE == 'en' %}Choose your options to get an estimate of the price, timeline, and order terms.{% else %}Выберите параметры — и получите предварительный расчёт стоимости, сроков и условий заказа.{% endif %}</p>
+                    <p class="eyebrow">{% if site_page_sections.calculator %}{{ site_page_sections.calculator.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}Price calculator{% else %}Калькулятор{% endif %}{% endif %}</p>
+                    <h2>{% if site_page_sections.calculator %}{{ site_page_sections.calculator.0.localized_section_title|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Calculate the price<br>of your gingerbread{% else %}Рассчитайте стоимость<br>ваших пряников{% endif %}{% endif %}</h2>
+                    <p>{% if site_page_sections.calculator %}{{ site_page_sections.calculator.0.localized_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}Choose your options to get an estimate of the price, timeline, and order terms.{% else %}Выберите параметры — и получите предварительный расчёт стоимости, сроков и условий заказа.{% endif %}{% endif %}</p>
                 </div>
 
                 {% if messages %}
@@ -348,12 +371,17 @@
             </section>
 
             <section class="partners-section" aria-labelledby="partners-heading">
-                <h2 id="partners-heading" class="partners-heading">{% if LANGUAGE_CODE == 'en' %}Our partners{% else %}Наши партнёры{% endif %}</h2>
+                <h2 id="partners-heading" class="partners-heading">{% if site_page_sections.partners %}{{ site_page_sections.partners.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Our partners{% else %}Наши партнёры{% endif %}{% endif %}</h2>
                 <div class="partners-carousel">
                     <button class="partners-arrow" type="button" data-partners-direction="-1" aria-label="{% if LANGUAGE_CODE == 'en' %}Previous partners{% else %}Предыдущие партнёры{% endif %}">
                         <span aria-hidden="true">‹</span>
                     </button>
                     <div class="partners-track" id="partners-track" tabindex="0" aria-label="{% if LANGUAGE_CODE == 'en' %}Partners{% else %}Партнёры{% endif %}">
+                        {% if site_page_sections.partners %}
+                            {% for partner in site_page_sections.partners %}
+                                <div class="partner-logo">{% if partner.image %}<img src="{{ partner.image.url }}" alt="{{ partner.localized_image_alt }}">{% else %}{{ partner.localized_title }}{% endif %}</div>
+                            {% endfor %}
+                        {% else %}
                         <div class="partner-logo">◉ СБЕР</div>
                         <div class="partner-logo partner-vtb">ВТБ</div>
                         <div class="partner-logo partner-gazprom">Газпром</div>
@@ -363,6 +391,7 @@
                         <div class="partner-logo partner-rosneft">Роснефть</div>
                         <div class="partner-logo partner-sogaz">согаз</div>
                         <div class="partner-logo partner-loreal">L’ORÉAL</div>
+                        {% endif %}
                     </div>
                     <button class="partners-arrow" type="button" data-partners-direction="1" aria-label="{% if LANGUAGE_CODE == 'en' %}Next partners{% else %}Следующие партнёры{% endif %}">
                         <span aria-hidden="true">›</span>

@@ -12,26 +12,38 @@
 
         <section class="partnership-hero" aria-labelledby="partnership-heading">
             <div class="partnership-hero-copy">
-                <p class="partnership-kicker">{% if LANGUAGE_CODE == 'en' %}Home / Partnership{% else %}Главная / Партнёрство{% endif %}</p>
-                <h1 id="partnership-heading">{% if LANGUAGE_CODE == 'en' %}Partner with Lukomorye{% else %}Партнёрство с Лукоморье{% endif %}</h1>
-                <p class="partnership-subtitle">{% if LANGUAGE_CODE == 'en' %}Open to collaboration<br>and new opportunities{% else %}Открыты к сотрудничеству<br>и новым возможностям{% endif %}</p>
-                <p class="partnership-description">{% if LANGUAGE_CODE == 'en' %}We value your interest in our brand and welcome new partnerships. Get in touch, and our manager will discuss the opportunities with you.{% else %}Мы ценим интерес к нашему бренду и всегда открыты к сотрудничеству. Заполните форму, и наш менеджер свяжется с вами для обсуждения перспектив партнёрства.{% endif %}</p>
-                <a class="button button-dark" href="mailto:hello@lukomorye.example?subject=Стать%20партнёром">
-                    {% if LANGUAGE_CODE == 'en' %}Become a partner{% else %}Стать партнёром{% endif %} <span aria-hidden="true">→</span>
+                <p class="partnership-kicker">{% if site_page_content %}{{ site_page_content.localized_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}Home / Partnership{% else %}Главная / Партнёрство{% endif %}{% endif %}</p>
+                <h1 id="partnership-heading">{% if site_page_content %}{{ site_page_content.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Partner with Lukomorye{% else %}Партнёрство с Лукоморье{% endif %}{% endif %}</h1>
+                <p class="partnership-subtitle">{% if site_page_content %}{{ site_page_content.localized_subtitle|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Open to collaboration<br>and new opportunities{% else %}Открыты к сотрудничеству<br>и новым возможностям{% endif %}{% endif %}</p>
+                <p class="partnership-description">{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}We value your interest in our brand and welcome new partnerships. Get in touch, and our manager will discuss the opportunities with you.{% else %}Мы ценим интерес к нашему бренду и всегда открыты к сотрудничеству. Заполните форму, и наш менеджер свяжется с вами для обсуждения перспектив партнёрства.{% endif %}{% endif %}</p>
+                <a class="button button-dark" href="{% if site_page_content and site_page_content.button_url %}{{ site_page_content.button_url }}{% else %}mailto:hello@lukomorye.example?subject=Стать%20партнёром{% endif %}">
+                    {% if site_page_content %}{{ site_page_content.localized_button_text }}{% else %}{% if LANGUAGE_CODE == 'en' %}Become a partner{% else %}Стать партнёром{% endif %}{% endif %} <span aria-hidden="true">→</span>
                 </a>
             </div>
-            <div class="partnership-hero-media" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift boxes with gingerbread{% else %}Подарочные наборы с пряниками в коробке{% endif %}"></div>
+            <div class="partnership-hero-media" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift boxes with gingerbread{% else %}Подарочные наборы с пряниками в коробке{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
         </section>
 
         <section class="partnership-directions" aria-labelledby="partnership-directions-heading">
             <header class="partnership-section-heading">
                 <span class="partnership-section-rule" aria-hidden="true"></span>
-                <h2 id="partnership-directions-heading">{% if LANGUAGE_CODE == 'en' %}Partnership opportunities{% else %}Направления сотрудничества{% endif %}</h2>
+                <h2 id="partnership-directions-heading">{% if site_page_sections.directions %}{{ site_page_sections.directions.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Partnership opportunities{% else %}Направления сотрудничества{% endif %}{% endif %}</h2>
                 <span class="partnership-section-rule" aria-hidden="true"></span>
             </header>
-            <p class="partnership-section-copy">{% if LANGUAGE_CODE == 'en' %}We offer flexible terms and welcome different types of partnerships.{% else %}Мы предлагаем гибкие условия и открыты к разным форматам партнёрства.{% endif %}</p>
+            <p class="partnership-section-copy">{% if site_page_sections.directions %}{{ site_page_sections.directions.0.localized_section_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}We offer flexible terms and welcome different types of partnerships.{% else %}Мы предлагаем гибкие условия и открыты к разным форматам партнёрства.{% endif %}{% endif %}</p>
 
             <div class="partnership-card-grid">
+                {% if site_page_sections.directions %}
+                    {% for item in site_page_sections.directions %}
+                        <article class="partnership-card">
+                            <div class="partnership-card-visual{% if forloop.counter == 1 %} partnership-visual-franchise{% elif forloop.counter == 2 %} partnership-visual-ad{% elif forloop.counter == 3 %} partnership-visual-space{% elif forloop.counter == 4 %} partnership-visual-bloggers{% elif forloop.counter == 5 %} partnership-visual-suppliers{% elif forloop.counter == 6 %} partnership-visual-logistics{% endif %}"{% if item.image %} style="background-image:url('{{ item.image.url }}')"{% endif %}></div>
+                            <div class="partnership-card-content">
+                                <h3>{{ item.localized_title }}</h3>
+                                <p>{{ item.localized_description }}</p>
+                            </div>
+                            <span class="partnership-card-arrow" aria-hidden="true">→</span>
+                        </article>
+                    {% endfor %}
+                {% else %}
                 <article class="partnership-card">
                     <div class="partnership-card-visual partnership-visual-franchise"></div>
                     <div class="partnership-card-content">
@@ -85,18 +97,27 @@
                     </div>
                     <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
+                {% endif %}
             </div>
         </section>
 
         <section class="partnership-success" aria-labelledby="partnership-success-heading">
             <header class="partnership-section-heading">
                 <span class="partnership-section-rule" aria-hidden="true"></span>
-                <h2 id="partnership-success-heading">{% if LANGUAGE_CODE == 'en' %}Our success creates opportunities{% else %}Наши успехи — ваши возможности{% endif %}</h2>
+                <h2 id="partnership-success-heading">{% if site_page_sections.stats %}{{ site_page_sections.stats.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Our success creates opportunities{% else %}Наши успехи — ваши возможности{% endif %}{% endif %}</h2>
                 <span class="partnership-section-rule" aria-hidden="true"></span>
             </header>
-            <p class="partnership-section-copy">{% if LANGUAGE_CODE == 'en' %}We keep growing and building our brand together with our partners.{% else %}Мы не останавливаемся на достигнутом и развиваем бренд вместе с партнёрами.{% endif %}</p>
+            <p class="partnership-section-copy">{% if site_page_sections.stats %}{{ site_page_sections.stats.0.localized_section_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}We keep growing and building our brand together with our partners.{% else %}Мы не останавливаемся на достигнутом и развиваем бренд вместе с партнёрами.{% endif %}{% endif %}</p>
 
             <div class="partnership-stats">
+                {% if site_page_sections.stats %}
+                    {% for item in site_page_sections.stats %}
+                        <div class="partnership-stat">
+                            <strong>{{ item.localized_title }}</strong>
+                            <span>{{ item.localized_description }}</span>
+                        </div>
+                    {% endfor %}
+                {% else %}
                 <div class="partnership-stat">
                     <strong>3+</strong>
                     <span>{% if LANGUAGE_CODE == 'en' %}million people<br>engaged on social media{% else %}миллиона человек<br>уже вовлечены в социальные сети{% endif %}</span>
@@ -113,20 +134,21 @@
                     <strong>15%</strong>
                     <span>{% if LANGUAGE_CODE == 'en' %}average increase in<br>spend on joint projects{% else %}в среднем увеличивается<br>чек при совместных проектах{% endif %}</span>
                 </div>
+                {% endif %}
             </div>
 
-            <p class="partnership-summary">{% if LANGUAGE_CODE == 'en' %}Our experience working with brands, high quality standards, and openness to new ideas make a partnership with Lukomorye promising and rewarding.{% else %}Многолетний опыт в работе с брендами, высокий уровень качества и постоянный интерес к новому формату партнёрства — всё это делает сотрудничество с Лукоморье выгодным и перспективным.{% endif %}</p>
+            <p class="partnership-summary">{% if site_page_sections.summary %}{{ site_page_sections.summary.0.localized_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}Our experience working with brands, high quality standards, and openness to new ideas make a partnership with Lukomorye promising and rewarding.{% else %}Многолетний опыт в работе с брендами, высокий уровень качества и постоянный интерес к новому формату партнёрства — всё это делает сотрудничество с Лукоморье выгодным и перспективным.{% endif %}{% endif %}</p>
 
             <div class="partnership-cta-wrap">
-                <a class="button button-dark partnership-button" href="mailto:hello@lukomorye.example?subject=Стать%20партнёром">
-                    {% if LANGUAGE_CODE == 'en' %}Become a partner{% else %}Стать партнёром{% endif %} <span aria-hidden="true">→</span>
+                <a class="button button-dark partnership-button" href="{% if site_page_content and site_page_content.button_url %}{{ site_page_content.button_url }}{% else %}mailto:hello@lukomorye.example?subject=Стать%20партнёром{% endif %}">
+                    {% if site_page_content and site_page_content.localized_button_text %}{{ site_page_content.localized_button_text }}{% else %}{% if LANGUAGE_CODE == 'en' %}Become a partner{% else %}Стать партнёром{% endif %}{% endif %} <span aria-hidden="true">→</span>
                 </a>
             </div>
         </section>
 
         <div class="partnership-note">
             <span class="partnership-note-icon" aria-hidden="true">✦</span>
-            <p>{% if LANGUAGE_CODE == 'en' %}Enjoy exclusive offers, early access to new collections, and 5% off your first orders when we launch our partnership.{% else %}Персональные предложения, выгодный доступ к новым коллекциям и скидка 5% на первые заказы при подготовке и запуске сотрудничества.{% endif %}</p>
+            <p>{% if site_page_sections.summary.1 %}{{ site_page_sections.summary.1.localized_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}Enjoy exclusive offers, early access to new collections, and 5% off your first orders when we launch our partnership.{% else %}Персональные предложения, выгодный доступ к новым коллекциям и скидка 5% на первые заказы при подготовке и запуске сотрудничества.{% endif %}{% endif %}</p>
         </div>
     </div>
 {% endblock %}
