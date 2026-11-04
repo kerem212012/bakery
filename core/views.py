@@ -12,10 +12,26 @@ from catalog.forms import (
     ProductEditorForm,
     ProductFilterOptionEditorForm,
 )
+from catalog.cart_forms import (
+    COATING_OPTIONS as CART_COATING_OPTIONS,
+    DOUGH_OPTIONS as CART_DOUGH_OPTIONS,
+    PACKAGING_OPTIONS as CART_PACKAGING_OPTIONS,
+)
 from catalog.models import Category, Product, ProductFilterOption
 from user.models import CustomerProfile
 
-from .calculator import calculate_quote, localized_calculator_options
+from .calculator import (
+    COATING_CHOICES,
+    DELIVERY_CHOICES,
+    ENGLISH_CHOICES,
+    FLAVOR_CHOICES,
+    PACKAGING_CHOICES,
+    PAYMENT_CHOICES,
+    SHAPE_CHOICES,
+    SIZE_CHOICES,
+    calculate_quote,
+    localized_calculator_options,
+)
 from .forms import (
     AdminFeedbackStatusForm,
     AdminOrderStatusForm,
@@ -35,6 +51,7 @@ from .forms import (
     DeliveryPickupDetailForm,
     DeliveryPickupHeadingForm,
     DeliverySectionHeadingForm,
+    CatalogPromoCardForm,
     FAQQuestionForm,
     FeedbackForm,
     HomeAboutSectionForm,
@@ -69,6 +86,133 @@ SITE_CONTENT_PERMISSIONS = (
     "core.add_sitepagesection",
     "core.change_sitepagesection",
 )
+
+ORDER_CONFIGURATION_FIELDS = (
+    ("flavor", ("Вкус", "Flavor"), FLAVOR_CHOICES),
+    ("quantity", ("Количество", "Quantity"), ()),
+    ("size", ("Размер", "Size"), SIZE_CHOICES),
+    ("shape", ("Форма", "Shape"), SHAPE_CHOICES),
+    ("coating", ("Покрытие", "Coating"), COATING_CHOICES),
+    ("packaging", ("Упаковка", "Packaging"), PACKAGING_CHOICES),
+    ("delivery", ("Доставка", "Delivery"), DELIVERY_CHOICES),
+    ("payment", ("Способ оплаты", "Payment method"), PAYMENT_CHOICES),
+)
+
+
+def _format_order_configuration(configuration, language_code):
+    if not isinstance(configuration, dict):
+        return {"items": [], "details": []}
+
+    english = language_code == "en"
+    if "items" in configuration:
+        order_items = configuration["items"]
+        if not isinstance(order_items, list):
+            return {"items": [], "details": []}
+        option_fields = (
+            ("quantity", ("Количество", "Quantity"), None),
+            ("size", ("Размер", "Size"), None),
+            ("coating", ("Покрытие", "Coating"), CART_COATING_OPTIONS),
+            ("dough", ("Тесто", "Dough"), CART_DOUGH_OPTIONS),
+            ("packaging", ("Упаковка", "Packaging"), CART_PACKAGING_OPTIONS),
+            ("unit_price", ("Цена за штуку", "Unit price"), None),
+        )
+        cart_option_translations = {
+            "painting": "Hand-painted icing",
+            "printing": "Printed icing",
+            "classic": "Classic",
+            "chocolate": "Chocolate",
+            "vanilla": "Vanilla",
+            "spiced": "Spiced",
+            "gift_box": "Gift box",
+            "kraft_box": "Kraft box",
+            "individual": "Custom packaging",
+            "none": "No packaging",
+        }
+        formatted_items = []
+        for order_item in order_items:
+            if not isinstance(order_item, dict):
+                continue
+            item_details = []
+            for field_name, labels, choices in option_fields:
+                if field_name not in order_item:
+                    continue
+                value = order_item[field_name]
+                if choices:
+                    value = dict(choices).get(value, value)
+                    if english:
+                        value = cart_option_translations.get(
+                            order_item[field_name], value
+                        )
+                elif field_name == "size" and value not in (None, ""):
+                    value = f"{value} {'cm' if english else 'см'}"
+                elif field_name == "unit_price" and value not in (None, ""):
+                    value = f"{value} {'RUB' if english else '₽'}"
+                item_details.append(
+                    {
+                        "label": labels[1 if english else 0],
+                        "value": "—" if value is None or value == "" else str(value),
+                    }
+                )
+            formatted_items.append(
+                {
+                    "name": order_item.get(
+                        "name",
+                        "Product" if english else "Товар",
+                    ),
+                    "details": item_details,
+                }
+            )
+        delivery_labels = ("Доставка", "Delivery")
+        payment_labels = ("Способ оплаты", "Payment method")
+        order_details = []
+        for field_name, labels, choices in (
+            ("delivery", delivery_labels, DELIVERY_CHOICES),
+            ("payment", payment_labels, PAYMENT_CHOICES),
+        ):
+            if field_name not in configuration:
+                continue
+            value = dict(choices).get(configuration[field_name], configuration[field_name])
+            if english:
+                value = ENGLISH_CHOICES.get(field_name, {}).get(value, value)
+            order_details.append(
+                {
+                    "label": labels[1 if english else 0],
+                    "value": str(value),
+                }
+            )
+        return {"items": formatted_items, "details": order_details}
+
+    fields = {
+        field[0]: (field[1], field[2]) for field in ORDER_CONFIGURATION_FIELDS
+    }
+    ordered_keys = [
+        field[0] for field in ORDER_CONFIGURATION_FIELDS if field[0] in configuration
+    ]
+    ordered_keys.extend(
+        field_name for field_name in configuration if field_name not in fields
+    )
+    formatted = []
+    for field_name in ordered_keys:
+        field = fields.get(field_name)
+        if field is None:
+            label = field_name
+            value = configuration[field_name]
+        else:
+            labels, choices = field
+            label = labels[1 if english else 0]
+            value = configuration[field_name]
+            if choices:
+                localized_options = dict(choices)
+                if english:
+                    localized_options.update(ENGLISH_CHOICES.get(field_name, {}))
+                value = localized_options.get(value, value)
+        formatted.append(
+            {
+                "label": label,
+                "value": "—" if value is None or value == "" else str(value),
+            }
+        )
+    return {"items": [], "details": formatted}
 
 
 def _can_manage_site_content(user):
@@ -177,6 +321,7 @@ def site_content_manager(request, block_id=None):
     packaging_options_formset = None
     packaging_extras_heading_form = None
     packaging_extras_formset = None
+    catalog_promo_formset = None
     home_about_sections = (
         list(
             SitePageSection.objects.filter(
@@ -446,6 +591,14 @@ def site_content_manager(request, block_id=None):
             display_order=0,
         )
     )
+    catalog_promos_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.CATALOG,
+            group="promos",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.CATALOG
+        else SitePageSection.objects.none()
+    )
 
     if block:
         if request.method == "POST":
@@ -684,6 +837,39 @@ def site_content_manager(request, block_id=None):
                     else "Вопросы и ответы сохранены.",
                 )
                 return redirect(f"{request.path}?page={SitePageSection.Page.FAQ}")
+        elif (
+            request.method == "POST"
+            and request.POST.get("action") == "save_catalog_promos"
+            and selected_page == SitePageSection.Page.CATALOG
+        ):
+            CatalogPromoFormSet = modelformset_factory(
+                SitePageSection,
+                form=CatalogPromoCardForm,
+                extra=1,
+                can_delete=True,
+            )
+            catalog_promo_formset = CatalogPromoFormSet(
+                request.POST,
+                request.FILES,
+                queryset=catalog_promos_queryset,
+                prefix="catalog-promos",
+            )
+            if catalog_promo_formset.is_valid():
+                with transaction.atomic():
+                    promos = catalog_promo_formset.save(commit=False)
+                    for deleted_promo in catalog_promo_formset.deleted_objects:
+                        deleted_promo.delete()
+                    for promo in promos:
+                        promo.page = SitePageSection.Page.CATALOG
+                        promo.group = "promos"
+                        promo.save()
+                messages.success(
+                    request,
+                    "Catalog promo cards saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Промо-карточки каталога сохранены.",
+                )
+                return redirect(f"{request.path}?page={SitePageSection.Page.CATALOG}")
         elif (
             request.method == "POST"
             and request.POST.get("action")
@@ -1370,6 +1556,20 @@ def site_content_manager(request, block_id=None):
                 queryset=packaging_extras_queryset,
                 prefix="packaging-extras",
             )
+
+    if selected_page == SitePageSection.Page.CATALOG and catalog_promo_formset is None:
+        CatalogPromoFormSet = modelformset_factory(
+            SitePageSection,
+            form=CatalogPromoCardForm,
+            extra=1,
+            can_delete=True,
+        )
+        catalog_promo_formset = CatalogPromoFormSet(
+            queryset=catalog_promos_queryset,
+            initial=[{"display_order": catalog_promos_queryset.count() + 1}],
+            prefix="catalog-promos",
+        )
+
     if selected_page == SitePageSection.Page.PARTNERSHIP:
         if partnership_directions_heading_form is None:
             partnership_directions_heading_form = (
@@ -1504,6 +1704,18 @@ def site_content_manager(request, block_id=None):
     if content_form is None:
         content_form = page_form
 
+    page_selector = SiteContentBlockForm(initial={"page": selected_page})
+    hidden_page_options = {
+        SiteContentBlock.Page.CATEGORIES,
+        SiteContentBlock.Page.CATEGORY,
+        SiteContentBlock.Page.PRODUCT,
+    }
+    page_selector.fields["page"].choices = [
+        (value, label)
+        for value, label in page_selector.fields["page"].choices
+        if value not in hidden_page_options
+    ]
+
     return render(
         request,
         "core/site_content_manager.html",
@@ -1529,6 +1741,7 @@ def site_content_manager(request, block_id=None):
             "packaging_options_formset": packaging_options_formset,
             "packaging_extras_heading_form": packaging_extras_heading_form,
             "packaging_extras_formset": packaging_extras_formset,
+            "catalog_promo_formset": catalog_promo_formset,
             "business_clients_contact_form": business_clients_contact_form,
             "business_clients_steps_heading_form": business_clients_steps_heading_form,
             "business_clients_steps_formset": business_clients_steps_formset,
@@ -1547,7 +1760,7 @@ def site_content_manager(request, block_id=None):
                 SiteContentBlock.Page.CATEGORY,
                 SiteContentBlock.Page.PRODUCT,
             },
-            "page_selector": SiteContentBlockForm(initial={"page": selected_page}),
+            "page_selector": page_selector,
         },
     )
 
@@ -1710,6 +1923,11 @@ def admin_section(request, section, object_id=None, new=False):
         items = items.filter(search)
 
     title_index = 0 if request.LANGUAGE_CODE == "en" else 1
+    order_configuration = (
+        _format_order_configuration(instance.configuration, request.LANGUAGE_CODE)
+        if section == "orders" and instance is not None
+        else ()
+    )
     return render(
         request,
         "core/admin_section.html",
@@ -1727,6 +1945,7 @@ def admin_section(request, section, object_id=None, new=False):
             "search_query": search_query,
             "form": form,
             "status_form": status_form,
+            "order_configuration": order_configuration,
             "object": instance,
             "is_new": new,
             "can_add": can_add,

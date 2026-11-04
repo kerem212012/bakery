@@ -125,6 +125,46 @@
                 </section>
             {% endif %}
 
+            {% if catalog_promo_formset %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_catalog_promos">
+                    {{ catalog_promo_formset.management_form }}
+                    {% if catalog_promo_formset.non_form_errors %}<div class="site-content-form-errors">{{ catalog_promo_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Catalog — promo grid{% else %}Каталог — промо-карточки{% endif %}</h2>
+                        <p>{% if LANGUAGE_CODE == 'en' %}Edit, reorder, publish, or remove promo cards. The final blank form adds a card.{% else %}Редактируйте, сортируйте, публикуйте или удаляйте промо-карточки. Последняя пустая форма добавляет карточку.{% endif %}</p>
+                        {% for promo_form in catalog_promo_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in promo_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if forloop.last and not promo_form.instance.pk %}{% if LANGUAGE_CODE == 'en' %}Add promo card{% else %}Добавить промо-карточку{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Promo card {{ forloop.counter }}{% else %}Промо-карточка {{ forloop.counter }}{% endif %}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in promo_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' or field.name == 'DELETE' %} site-content-published{% endif %}">
+                                            {% if field.name == 'is_active' or field.name == 'DELETE' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if promo_form.instance.image %}
+                                    <img class="site-content-editor-preview" src="{{ promo_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current promo card image{% else %}Текущее изображение промо-карточки{% endif %}">
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save promo cards{% else %}Сохранить промо-карточки{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
             {% if packaging_options_heading_form %}
                 <form class="site-content-editor" method="post" enctype="multipart/form-data">
                     {% csrf_token %}

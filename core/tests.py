@@ -6,11 +6,12 @@ from tempfile import TemporaryDirectory
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth.models import Permission
+from django import forms
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
 
-from catalog.models import Category, Product
+from catalog.models import Category, Product, ProductFilterOption
 from .calculator import calculate_quote
 from .models import (
     FeedbackSubmission,
@@ -436,6 +437,28 @@ class AdminDashboardTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertNotIn("section_formset", response.context)
                 self.assertNotContains(response, 'name="action" value="save_page_sections"')
+
+    def test_site_content_page_picker_hides_category_and_product_pages(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="page_picker_options_admin",
+            email="page-picker-options-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SiteContentBlock.Page.CATALOG},
+        )
+
+        choices = response.context["page_selector"].fields["page"].choices
+        choice_values = {choice[0] for choice in choices}
+        self.assertNotIn(SiteContentBlock.Page.CATEGORIES, choice_values)
+        self.assertNotIn(SiteContentBlock.Page.CATEGORY, choice_values)
+        self.assertNotIn(SiteContentBlock.Page.PRODUCT, choice_values)
+        self.assertNotContains(response, '<option value="categories"')
+        self.assertNotContains(response, '<option value="category"')
+        self.assertNotContains(response, '<option value="product"')
 
     def test_home_about_form_is_only_available_for_home_page(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -1154,6 +1177,89 @@ class AdminDashboardTests(TestCase):
         ):
             with self.subTest(text=rendered_text):
                 self.assertContains(public_response, rendered_text)
+
+    def test_catalog_promo_cards_can_be_edited_from_site_content_manager(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="catalog_promos_admin",
+            email="catalog-promos-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        editor_url = reverse("site_content_manager")
+        page = SitePageSection.Page.CATALOG
+        editor_response = self.client.get(editor_url, {"page": page})
+        formset = editor_response.context["catalog_promo_formset"]
+        self.assertIsNotNone(formset)
+        self.assertEqual(formset.initial_form_count(), 3)
+        self.assertContains(editor_response, "Каталог — промо-карточки")
+        self.assertContains(editor_response, "Добавить промо-карточку")
+
+        post_data = {
+            "page": page,
+            "action": "save_catalog_promos",
+            f"{formset.prefix}-TOTAL_FORMS": str(formset.total_form_count()),
+            f"{formset.prefix}-INITIAL_FORMS": str(formset.initial_form_count()),
+            f"{formset.prefix}-MIN_NUM_FORMS": "0",
+            f"{formset.prefix}-MAX_NUM_FORMS": "1000",
+        }
+        for index, promo_form in enumerate(formset.forms):
+            for field_name in promo_form.fields:
+                field_key = f"{promo_form.prefix}-{field_name}"
+                if field_name == "id":
+                    post_data[field_key] = str(promo_form.instance.pk or "")
+                elif field_name == "DELETE":
+                    if index == 2:
+                        post_data[field_key] = "on"
+                elif field_name == "is_active":
+                    if promo_form[field_name].value():
+                        post_data[field_key] = "on"
+                else:
+                    post_data[field_key] = promo_form[field_name].value() or ""
+
+        new_index = formset.initial_form_count()
+        post_data.update(
+            {
+                f"{formset.prefix}-0-title": "Обновлённое предложение",
+                f"{formset.prefix}-0-title_en": "Updated offer",
+                f"{formset.prefix}-0-description": "Описание предложения.",
+                f"{formset.prefix}-0-description_en": "Offer description.",
+                f"{formset.prefix}-0-url": "/updated-offer/",
+                f"{formset.prefix}-0-display_order": "2",
+                f"{formset.prefix}-1-display_order": "1",
+                f"{formset.prefix}-{new_index}-title": "Новое предложение",
+                f"{formset.prefix}-{new_index}-title_en": "New offer",
+                f"{formset.prefix}-{new_index}-description": "Описание новой акции.",
+                f"{formset.prefix}-{new_index}-description_en": "New offer description.",
+                f"{formset.prefix}-{new_index}-url": "/new-offer/",
+                f"{formset.prefix}-{new_index}-display_order": "3",
+                f"{formset.prefix}-{new_index}-is_active": "on",
+            }
+        )
+
+        response = self.client.post(editor_url, post_data)
+
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+        promos = SitePageSection.objects.filter(
+            page=page,
+            group="promos",
+        ).order_by("display_order", "pk")
+        self.assertEqual(promos.count(), 3)
+        self.assertEqual(
+            list(promos.values_list("title", "display_order", "url")),
+            [
+                ("Мастер-классы", 0, "mailto:info@lukomorye.ru?subject=Мастер-класс"),
+                ("Обновлённое предложение", 1, "/updated-offer/"),
+                ("Новое предложение", 2, "/new-offer/"),
+            ],
+        )
+
+        public_response = self.client.get(reverse("catalog:category_list"))
+        self.assertContains(public_response, "Обновлённое предложение")
+        self.assertContains(public_response, "Описание предложения.")
+        self.assertContains(public_response, 'href="/updated-offer/"')
+        self.assertContains(public_response, "Новое предложение")
+        self.assertContains(public_response, 'href="/new-offer/"')
+        self.assertNotContains(public_response, "Пряники с логотипом")
 
     def test_business_client_contacts_can_be_edited_from_all_pages(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -1880,7 +1986,7 @@ class AdminDashboardTests(TestCase):
                 "description_en": "English description",
                 "price": "120.00",
                 "image_url": "",
-                "display_order": "0",
+                "display_order": "1",
                 "is_active": "on",
                 "is_featured": "on",
             },
@@ -1892,6 +1998,214 @@ class AdminDashboardTests(TestCase):
             reverse("admin_section_edit", args=("products", product.pk)),
         )
         self.assertEqual(product.price, Decimal("120.00"))
+        self.assertEqual(product.display_order, 0)
+
+    def test_product_admin_shows_saved_display_numbers(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="numbered_products_admin",
+            email="numbered-products-admin@example.com",
+            password="test-password",
+        )
+        category = Category.objects.create(name="Numbered products category")
+        for name, display_order in (
+            ("Fourth product", 30),
+            ("Second product", 10),
+            ("Third product", 20),
+            ("First product", 0),
+        ):
+            Product.objects.create(
+                name=name,
+                category=category,
+                display_order=display_order,
+            )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(reverse("admin_section", args=("products",)))
+
+        self.assertEqual(response.status_code, 200)
+        for number in (1, 11, 21, 31):
+            with self.subTest(number=number):
+                self.assertContains(response, f"Номер отображения: {number}")
+        self.assertNotContains(response, "site-content-existing-number")
+        first_product = Product.objects.get(name="First product")
+        edit_response = self.client.get(
+            reverse("admin_section_edit", args=("products", first_product.pk))
+        )
+        self.assertEqual(
+            edit_response.context["form"]["display_order"].value(),
+            1,
+        )
+        self.assertContains(edit_response, "Номер отображения")
+        content = response.content.decode()
+        self.assertLess(content.index("First product"), content.index("Second product"))
+        self.assertLess(content.index("Second product"), content.index("Third product"))
+        self.assertLess(content.index("Third product"), content.index("Fourth product"))
+
+    def test_product_display_number_is_one_based_on_create_and_edit(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="product_display_number_admin",
+            email="product-display-number-admin@example.com",
+            password="test-password",
+        )
+        category = Category.objects.create(name="Display number category")
+        product = Product.objects.create(
+            name="Display number product",
+            category=category,
+            display_order=4,
+        )
+        self.client.force_login(admin_user)
+
+        edit_response = self.client.get(
+            reverse("admin_section_edit", args=("products", product.pk))
+        )
+        self.assertEqual(
+            edit_response.context["form"]["display_order"].value(),
+            5,
+        )
+        response = self.client.post(
+            reverse("admin_section_edit", args=("products", product.pk)),
+            {
+                "name": product.name,
+                "name_en": "",
+                "category": category.pk,
+                "description": "",
+                "description_en": "",
+                "price": "",
+                "image_url": "",
+                "display_order": "2",
+                "is_active": "on",
+                "is_featured": "on",
+            },
+        )
+        self.assertRedirects(
+            response,
+            reverse("admin_section_edit", args=("products", product.pk)),
+        )
+        product.refresh_from_db()
+        self.assertEqual(product.display_order, 1)
+
+    def test_category_display_number_is_one_based_on_create_edit_and_list(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="category_display_number_admin",
+            email="category-display-number-admin@example.com",
+            password="test-password",
+        )
+        Category.objects.create(
+            name="First numbered category",
+            display_order=0,
+        )
+        second_category = Category.objects.create(
+            name="Second numbered category",
+            display_order=1,
+        )
+        self.client.force_login(admin_user)
+
+        list_response = self.client.get(
+            reverse("admin_section", args=("categories",))
+        )
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertContains(list_response, "Номер отображения: 1")
+        self.assertContains(list_response, "Номер отображения: 2")
+        list_content = list_response.content.decode()
+        self.assertLess(
+            list_content.index("First numbered category"),
+            list_content.index("Second numbered category"),
+        )
+
+        edit_url = reverse("admin_section_edit", args=("categories", second_category.pk))
+        edit_response = self.client.get(edit_url)
+        self.assertEqual(edit_response.context["form"]["display_order"].value(), 2)
+        self.assertContains(edit_response, "Номер отображения")
+
+        response = self.client.post(
+            edit_url,
+            {
+                "name": second_category.name,
+                "name_en": "",
+                "description": "",
+                "description_en": "",
+                "image_url": "",
+                "display_order": "1",
+                "is_active": "on",
+            },
+        )
+        self.assertRedirects(
+            response,
+            reverse("admin_section_edit", args=("categories", second_category.pk)),
+        )
+        second_category.refresh_from_db()
+        self.assertEqual(second_category.display_order, 0)
+
+        create_response = self.client.get(
+            reverse("admin_section_new", args=("categories",))
+        )
+        self.assertEqual(create_response.context["form"]["display_order"].value(), 1)
+
+    def test_product_filter_options_are_easy_to_select_by_group(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="product_filter_groups_admin",
+            email="product-filter-groups-admin@example.com",
+            password="test-password",
+        )
+        category = Category.objects.create(name="Filter options category")
+        size_option = ProductFilterOption.objects.create(
+            filter_type=ProductFilterOption.FilterType.SIZE,
+            value="medium",
+            label="Средний",
+            label_en="Medium",
+        )
+        packaging_option = ProductFilterOption.objects.create(
+            filter_type=ProductFilterOption.FilterType.PACKAGING,
+            value="gift-box",
+            label="Подарочная коробка",
+            label_en="Gift box",
+        )
+        self.client.force_login(admin_user)
+
+        editor_response = self.client.get(
+            reverse("admin_section_new", args=("products",))
+        )
+        filter_options_field = editor_response.context["form"].fields[
+            "filter_options"
+        ]
+        self.assertIsInstance(
+            filter_options_field.widget,
+            forms.CheckboxSelectMultiple,
+        )
+        filter_groups = [choice[0] for choice in filter_options_field.choices]
+        self.assertIn("Размер", filter_groups)
+        self.assertIn("Упаковка", filter_groups)
+        self.assertContains(editor_response, "Отметьте все подходящие параметры.")
+        self.assertContains(editor_response, 'type="checkbox"')
+        self.assertContains(editor_response, "Подарочная коробка")
+
+        response = self.client.post(
+            reverse("admin_section_new", args=("products",)),
+            {
+                "name": "Product with grouped filters",
+                "name_en": "Product with grouped filters EN",
+                "category": category.pk,
+                "description": "Description",
+                "description_en": "English description",
+                "price": "120.00",
+                "image_url": "",
+                "display_order": "1",
+                "filter_options": [str(size_option.pk), str(packaging_option.pk)],
+                "is_active": "on",
+                "is_featured": "on",
+            },
+        )
+
+        product = Product.objects.get(name="Product with grouped filters")
+        self.assertRedirects(
+            response,
+            reverse("admin_section_edit", args=("products", product.pk)),
+        )
+        self.assertSetEqual(
+            set(product.filter_options.values_list("pk", flat=True)),
+            {size_option.pk, packaging_option.pk},
+        )
 
     def test_custom_order_and_message_pages_update_statuses(self):
         admin_user = get_user_model().objects.create_user(
@@ -1904,7 +2218,16 @@ class AdminDashboardTests(TestCase):
             name="Section order customer",
             email="section-order@example.com",
             phone="+7 900 000-00-00",
-            configuration={"quantity": 3},
+            configuration={
+                "flavor": "classic",
+                "quantity": 3,
+                "size": "5",
+                "shape": "heart",
+                "coating": "icing",
+                "packaging": "ribbon",
+                "delivery": "moscow",
+                "payment": "organization",
+            },
             unit_price="100.00",
             discount_percent=0,
             delivery_cost="0.00",
@@ -1924,6 +2247,19 @@ class AdminDashboardTests(TestCase):
         order_response = self.client.get(order_url)
         self.assertEqual(order_response.status_code, 200)
         self.assertContains(order_response, "Section order customer")
+        for visible_option in (
+            "Вкус",
+            "Имбирный пряник (классика)",
+            "Количество",
+            "Покрытие",
+            "Пищевая печать на глазури",
+            "Способ оплаты",
+            "От организации, 100% предоплата",
+        ):
+            with self.subTest(option=visible_option):
+                self.assertContains(order_response, visible_option)
+        self.assertNotContains(order_response, "'flavor':")
+        self.assertNotContains(order_response, "'payment':")
         self.assertRedirects(
             self.client.post(order_url, {"status": Preorder.Status.PRODUCTION}),
             order_url,
@@ -1944,6 +2280,74 @@ class AdminDashboardTests(TestCase):
         )
         feedback.refresh_from_db()
         self.assertEqual(feedback.status, FeedbackSubmission.Status.RESOLVED)
+
+    def test_cart_order_items_render_as_labeled_product_details(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="cart_order_details_admin",
+            email="cart-order-details-admin@example.com",
+            password="test-password",
+        )
+        order = Preorder.objects.create(
+            name="Cart order customer",
+            email="cart-order@example.com",
+            phone="+7 900 000-00-00",
+            configuration={
+                "items": [
+                    {
+                        "product_id": 2,
+                        "name": "Подарочные мишки",
+                        "quantity": 2,
+                        "size": "8",
+                        "coating": "painting",
+                        "dough": "chocolate",
+                        "packaging": "gift_box",
+                        "unit_price": "2490",
+                    },
+                    {
+                        "product_id": 1,
+                        "name": "Печенье-сердца",
+                        "quantity": 1,
+                        "size": "8",
+                        "coating": "chocolate",
+                        "dough": "classic",
+                        "packaging": "gift_box",
+                        "unit_price": "1490",
+                    },
+                ],
+                "delivery": "moscow",
+                "payment": "organization",
+            },
+            unit_price="1990.00",
+            discount_percent=0,
+            delivery_cost="700.00",
+            total_price="5470.00",
+            consent_given=True,
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(
+            reverse("admin_section_edit", args=("orders", order.pk))
+        )
+
+        self.assertEqual(response.status_code, 200)
+        for visible_detail in (
+            "Подарочные мишки",
+            "Печенье-сердца",
+            "Количество",
+            "Покрытие",
+            "Роспись на айсинге",
+            "Тесто",
+            "Шоколадное",
+            "Подарочная коробка",
+            "2490 ₽",
+            "1490 ₽",
+            "Доставка по Москве (в пределах МКАД)",
+            "От организации, 100% предоплата",
+        ):
+            with self.subTest(detail=visible_detail):
+                self.assertContains(response, visible_detail)
+        self.assertNotContains(response, "'product_id':")
+        self.assertNotContains(response, "'gift_box'")
 
     def test_active_site_content_only_appears_on_its_selected_page(self):
         SiteContentBlock.objects.create(

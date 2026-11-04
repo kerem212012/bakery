@@ -5,6 +5,13 @@ from .models import Category, Product, ProductFilterOption
 
 
 class ProductEditorForm(forms.ModelForm):
+    display_order = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(
+            attrs={"class": "site-content-form-control", "min": 1}
+        ),
+    )
+
     class Meta:
         model = Product
         fields = (
@@ -40,11 +47,11 @@ class ProductEditorForm(forms.ModelForm):
             "image_url": forms.URLInput(
                 attrs={"class": "site-content-form-control"}
             ),
-            "filter_options": forms.SelectMultiple(
-                attrs={"class": "site-content-form-control"}
+            "filter_options": forms.CheckboxSelectMultiple(
+                attrs={"class": "site-content-filter-options"}
             ),
             "display_order": forms.NumberInput(
-                attrs={"class": "site-content-form-control", "min": 0}
+                attrs={"class": "site-content-form-control", "min": 1}
             ),
             "is_active": forms.CheckboxInput(
                 attrs={"class": "site-content-form-checkbox"}
@@ -67,20 +74,80 @@ class ProductEditorForm(forms.ModelForm):
             "image": "Product photo" if english else "Фото товара",
             "image_url": "Photo URL (optional)" if english else "Ссылка на фото (необязательно)",
             "filter_options": "Filter options" if english else "Параметры фильтров",
-            "display_order": "Display order" if english else "Порядок отображения",
+            "display_order": "Display number" if english else "Номер отображения",
             "is_active": "Published" if english else "Опубликован",
             "is_featured": "Featured" if english else "Популярный товар",
         }
         for field_name, label in labels.items():
             self.fields[field_name].label = label
+        if self.instance.pk:
+            self.initial["display_order"] = self.instance.display_order + 1
+        else:
+            self.initial.setdefault("display_order", 1)
         self.fields["category"].queryset = Category.objects.all()
         self.fields["category"].label_from_instance = lambda category: category.localized_name
         self.fields["filter_options"].queryset = ProductFilterOption.objects.all()
         self.fields["filter_options"].required = False
+        filter_type_labels = {
+            ProductFilterOption.FilterType.SIZE: (
+                "Size" if english else "Размер"
+            ),
+            ProductFilterOption.FilterType.COATING: (
+                "Coating" if english else "Покрытие"
+            ),
+            ProductFilterOption.FilterType.DOUGH: (
+                "Dough type" if english else "Вид теста"
+            ),
+            ProductFilterOption.FilterType.COLOR: (
+                "Color" if english else "Цвет"
+            ),
+            ProductFilterOption.FilterType.OCCASION: (
+                "Occasion" if english else "Повод"
+            ),
+            ProductFilterOption.FilterType.PACKAGING: (
+                "Packaging" if english else "Упаковка"
+            ),
+        }
+        filter_option_groups = []
+        for filter_type in ProductFilterOption.FilterType.values:
+            options = [
+                (option.pk, option.localized_label)
+                for option in self.fields["filter_options"].queryset.filter(
+                    filter_type=filter_type
+                )
+            ]
+            if options:
+                filter_option_groups.append(
+                    (
+                        filter_type_labels[filter_type],
+                        options,
+                    )
+                )
+        self.fields["filter_options"].choices = filter_option_groups
+        self.fields["filter_options"].help_text = (
+            "Select all that apply."
+            if english
+            else "Отметьте все подходящие параметры."
+        )
         self.fields["image"].widget.attrs["accept"] = "image/jpeg,image/png,image/webp"
+
+    def save(self, commit=True):
+        product = super().save(commit=False)
+        product.display_order -= 1
+        if commit:
+            product.save()
+            self.save_m2m()
+        return product
 
 
 class CategoryEditorForm(forms.ModelForm):
+    display_order = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(
+            attrs={"class": "site-content-form-control", "min": 1}
+        ),
+    )
+
     class Meta:
         model = Category
         fields = (
@@ -108,9 +175,6 @@ class CategoryEditorForm(forms.ModelForm):
             "image_url": forms.URLInput(
                 attrs={"class": "site-content-form-control"}
             ),
-            "display_order": forms.NumberInput(
-                attrs={"class": "site-content-form-control", "min": 0}
-            ),
             "is_active": forms.CheckboxInput(
                 attrs={"class": "site-content-form-checkbox"}
             ),
@@ -126,12 +190,23 @@ class CategoryEditorForm(forms.ModelForm):
             "description_en": "Description (English)" if english else "Описание на английском",
             "image": "Category photo" if english else "Фото категории",
             "image_url": "Photo URL (optional)" if english else "Ссылка на фото (необязательно)",
-            "display_order": "Display order" if english else "Порядок отображения",
+            "display_order": "Display number" if english else "Номер отображения",
             "is_active": "Published" if english else "Опубликована",
         }
         for field_name, label in labels.items():
             self.fields[field_name].label = label
+        if self.instance.pk:
+            self.initial["display_order"] = self.instance.display_order + 1
+        else:
+            self.initial.setdefault("display_order", 1)
         self.fields["image"].widget.attrs["accept"] = "image/jpeg,image/png,image/webp"
+
+    def save(self, commit=True):
+        category = super().save(commit=False)
+        category.display_order -= 1
+        if commit:
+            category.save()
+        return category
 
 
 class ProductFilterOptionEditorForm(forms.ModelForm):

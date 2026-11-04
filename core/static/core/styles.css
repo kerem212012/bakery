@@ -9698,6 +9698,47 @@ a.account-order:hover {
     font: inherit;
 }
 
+.site-content-filter-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+}
+
+.site-content-filter-options > div {
+    padding: 14px;
+    border: 1px solid var(--line);
+    background: #fff;
+}
+
+.site-content-filter-options > div > label {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.site-content-filter-options > div > div {
+    display: grid;
+    gap: 8px;
+}
+
+.site-content-filter-options > div > div > div > label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.site-content-filter-options input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--cocoa);
+}
+
 textarea.site-content-form-control {
     min-height: 132px;
     resize: vertical;
@@ -9815,9 +9856,61 @@ input[type="file"].site-content-form-control {
     grid-column: 1 / -1;
 }
 
-.site-content-record-grid code {
-    white-space: pre-wrap;
+.site-content-order-configuration-heading {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--ink);
+    font-size: 11px;
+}
+
+.site-content-order-items {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.site-content-order-item {
+    padding: 14px;
+    border: 1px solid var(--line);
+    background: #fff;
+}
+
+.site-content-order-item h3 {
+    margin: 0 0 10px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.site-content-order-configuration {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px;
+    margin: 0;
+}
+
+.site-content-order-configuration > div {
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    background: #fff;
+}
+
+.site-content-order-configuration dt {
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.site-content-order-configuration dd {
+    margin: 0;
+    color: var(--ink);
+    font-size: 13px;
     overflow-wrap: anywhere;
+}
+
+.site-content-order-configuration-empty {
+    margin: 0;
+    color: var(--muted);
 }
 
 .admin-record-details > h2 {

@@ -37,8 +37,8 @@
                 <div class="site-content-form-section">
                     <div class="site-content-form-grid">
                         {% for field in form %}
-                            {% if field.field.widget.input_type != "checkbox" %}
-                                <div class="site-content-form-field{% if field.field.widget.input_type == 'file' %} site-content-form-field-wide{% endif %}">
+                            {% if field.field.widget.input_type != "checkbox" or field.name == "filter_options" %}
+                                <div class="site-content-form-field{% if field.field.widget.input_type == 'file' or field.name == 'filter_options' %} site-content-form-field-wide{% endif %}">
                                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                                     {{ field }}
                                     {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
@@ -52,7 +52,7 @@
                     </div>
                     <div class="site-content-form-options">
                         {% for field in form %}
-                            {% if field.field.widget.input_type == "checkbox" %}
+                            {% if field.field.widget.input_type == "checkbox" and field.name != "filter_options" %}
                                 <label class="site-content-published">{{ field }}<span>{{ field.label }}</span></label>
                             {% endif %}
                         {% endfor %}
@@ -72,7 +72,34 @@
                         <p><strong>{% if LANGUAGE_CODE == 'en' %}Total{% else %}Итого{% endif %}</strong>{{ object.total_price }} ₽</p>
                         <p><strong>{% if LANGUAGE_CODE == 'en' %}Delivery date{% else %}Дата доставки{% endif %}</strong>{{ object.delivery_date|default:"—" }}</p>
                         <p><strong>{% if LANGUAGE_CODE == 'en' %}Address{% else %}Адрес{% endif %}</strong>{{ object.address|default:"—" }}</p>
-                        <p class="site-content-record-wide"><strong>{% if LANGUAGE_CODE == 'en' %}Configuration{% else %}Параметры заказа{% endif %}</strong><code>{{ object.configuration }}</code></p>
+                        <div class="site-content-record-wide">
+                            <strong class="site-content-order-configuration-heading">{% if LANGUAGE_CODE == 'en' %}Order details{% else %}Параметры заказа{% endif %}</strong>
+                            {% if order_configuration %}
+                                {% if order_configuration.items %}
+                                    <div class="site-content-order-items">
+                                        {% for order_item in order_configuration.items %}
+                                            <section class="site-content-order-item">
+                                                <h3>{{ order_item.name }}</h3>
+                                                <dl class="site-content-order-configuration">
+                                                    {% for item in order_item.details %}
+                                                        <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                                                    {% endfor %}
+                                                </dl>
+                                            </section>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                {% if order_configuration.details %}
+                                    <dl class="site-content-order-configuration">
+                                        {% for item in order_configuration.details %}
+                                            <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                                        {% endfor %}
+                                    </dl>
+                                {% endif %}
+                            {% else %}
+                                <p class="site-content-order-configuration-empty">—</p>
+                            {% endif %}
+                        </div>
                         {% if object.comment %}<p class="site-content-record-wide"><strong>{% if LANGUAGE_CODE == 'en' %}Comment{% else %}Комментарий{% endif %}</strong>{{ object.comment }}</p>{% endif %}
                     </div>
                     {% if object.attachments.all %}
@@ -151,11 +178,11 @@
                                 {% if section_kind == "product" %}
                                     <span class="site-content-existing-page">{{ item.category.localized_name }}</span>
                                     <h3>{{ item.localized_name }}</h3>
-                                    <small>{{ item.price|default:"—" }} ₽ · {% if item.is_active %}{% if LANGUAGE_CODE == 'en' %}Published{% else %}Опубликован{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Hidden{% else %}Скрыт{% endif %}{% endif %}</small>
+                                    <small>{% if LANGUAGE_CODE == 'en' %}Display number{% else %}Номер отображения{% endif %}: {{ item.display_order|add:1 }} · {{ item.price|default:"—" }} ₽ · {% if item.is_active %}{% if LANGUAGE_CODE == 'en' %}Published{% else %}Опубликован{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Hidden{% else %}Скрыт{% endif %}{% endif %}</small>
                                 {% elif section_kind == "category" %}
                                     <span class="site-content-existing-page">{{ item.slug }}</span>
                                     <h3>{{ item.localized_name }}</h3>
-                                    <small>{{ item.products.count }} {% if LANGUAGE_CODE == 'en' %}products{% else %}товаров{% endif %}</small>
+                                    <small>{% if LANGUAGE_CODE == 'en' %}Display number{% else %}Номер отображения{% endif %}: {{ item.display_order|add:1 }} · {{ item.products.count }} {% if LANGUAGE_CODE == 'en' %}products{% else %}товаров{% endif %}</small>
                                 {% elif section_kind == "filter" %}
                                     <span class="site-content-existing-page">{{ item.get_filter_type_display }}</span>
                                     <h3>{{ item.localized_label }}</h3>

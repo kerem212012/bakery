@@ -600,6 +600,7 @@ class AboutStorySectionForm(forms.ModelForm):
             "image",
             "image_alt",
             "image_alt_en",
+            "is_active",
         )
         widgets = {
             "section_eyebrow": forms.TextInput(
@@ -631,6 +632,9 @@ class AboutStorySectionForm(forms.ModelForm):
             ),
             "image_alt_en": forms.TextInput(
                 attrs={"class": "site-content-form-control"}
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
             ),
         }
 
@@ -1919,6 +1923,67 @@ class PackagingCardForm(BusinessClientsSectionFormMixin, forms.ModelForm):
                 attrs={"class": "site-content-form-control"}
             ),
         }
+
+
+class CatalogPromoCardForm(BusinessClientsSectionFormMixin, forms.ModelForm):
+    display_order = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(
+            attrs={"class": "site-content-form-control", "min": 1}
+        ),
+    )
+
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "title",
+            "title_en",
+            "description",
+            "description_en",
+            "url",
+            "image",
+            "display_order",
+            "is_active",
+        )
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "title_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "url": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.initial["display_order"] = self.instance.display_order + 1
+        if (get_language() or "").startswith("en"):
+            self.fields["display_order"].label = "Display order"
+        else:
+            self.fields["display_order"].label = "Порядок отображения"
+
+    def save(self, commit=True):
+        promo = super().save(commit=False)
+        promo.display_order -= 1
+        if commit:
+            promo.save()
+        return promo
+
 
 class AdminFeedbackStatusForm(forms.Form):
     status = forms.ChoiceField(choices=())
