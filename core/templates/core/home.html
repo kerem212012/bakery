@@ -1,7 +1,7 @@
 {% extends "core/base.html" %}
 {% load l10n %}
 
-{% block title %}{% if LANGUAGE_CODE == 'en' %}Lukomorye — ideas, crafted in every detail{% else %}Лукоморье — идеи, воплощённые в деталях{% endif %}{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery products{% else %}Вкусно Да Сладко — кондитерские изделия{% endif %}{% endblock %}
 
 {% block head_extra %}
     <script>
@@ -12,10 +12,10 @@
 {% block entrance %}
     <div class="site-intro" id="site-intro" aria-hidden="true">
         <div class="site-intro-logo">
-            <span class="site-intro-mark">Л</span>
+            <span class="site-intro-mark">В</span>
             <span class="site-intro-copy">
-                <span class="site-intro-name">Лукоморье</span>
-                <span class="site-intro-caption">{% if LANGUAGE_CODE == 'en' %}Ideas, crafted in every detail{% else %}Идеи, воплощённые в деталях{% endif %}</span>
+                <span class="site-intro-name">Вкусно Да Сладко</span>
+                <span class="site-intro-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
             </span>
         </div>
     </div>
@@ -37,44 +37,20 @@
 {% endblock %}
 
 {% block content %}
-            <section class="hero" aria-label="{% if LANGUAGE_CODE == 'en' %}Featured offers{% else %}Главные предложения{% endif %}">
+            <section class="hero" aria-label="{% if LANGUAGE_CODE == 'en' %}Featured product images{% else %}Изображения продукции{% endif %}">
                 <div class="hero-viewport" id="hero-viewport">
                     <div class="hero-track" id="hero-track">
                         {% if site_home_hero_configured %}
                             {% for slide in site_home_hero_slides %}
                                 <article class="hero-slide{% if forloop.counter0 == 0 %} hero-slide-gifts{% elif forloop.counter0 == 1 %} hero-slide-sweets{% else %} hero-slide-team{% endif %}"{% if slide.image %} style="background-image:url('{{ slide.image.url }}')"{% endif %} aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}"{% if not forloop.first %} inert{% endif %}>
-                                    <div class="hero-content">
-                                        <p class="eyebrow">{{ slide.localized_eyebrow }}</p>
-                                        <h1>{{ slide.localized_title }}</h1>
-                                        <p class="hero-description">{{ slide.localized_description }}</p>
-                                        <a class="button button-light" href="{{ slide.button_url }}">{{ slide.localized_button_text }} <span aria-hidden="true">→</span></a>
-                                    </div>
                                 </article>
                             {% endfor %}
                         {% else %}
                         <article class="hero-slide hero-slide-gifts" aria-hidden="false">
-                            <div class="hero-content">
-                                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Made for your business{% else %}Авторские решения для вашего бизнеса{% endif %}</p>
-                                <h1>{% if LANGUAGE_CODE == 'en' %}Gifts, made with heart{% else %}Подарки, созданные с душой{% endif %}</h1>
-                                <p class="hero-description">{% if LANGUAGE_CODE == 'en' %}Thoughtfully curated sets that say what matters and leave a lasting impression.{% else %}Продуманные до мелочей наборы, которые говорят о главном и запоминаются надолго.{% endif %}</p>
-                                <a class="button button-light" href="#calculator">{% if LANGUAGE_CODE == 'en' %}Get a quote{% else %}Рассчитать стоимость{% endif %} <span aria-hidden="true">→</span></a>
-                            </div>
                         </article>
                         <article class="hero-slide hero-slide-sweets" aria-hidden="true" inert>
-                            <div class="hero-content">
-                                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}A little reason to celebrate{% else %}Маленький повод для радости{% endif %}</p>
-                                <h1>{% if LANGUAGE_CODE == 'en' %}Warm moments in every detail{% else %}Тёплые моменты в каждой детали{% endif %}</h1>
-                                <p class="hero-description">{% if LANGUAGE_CODE == 'en' %}Sweet treats and thoughtful gifts for meaningful meetings and kind words.{% else %}Сладкие комплименты и красивые подарки для важных встреч и добрых слов.{% endif %}</p>
-                                <a class="button button-light" href="#popular">{% if LANGUAGE_CODE == 'en' %}Explore the collection{% else %}Смотреть подборку{% endif %} <span aria-hidden="true">→</span></a>
-                            </div>
                         </article>
                         <article class="hero-slide hero-slide-team" aria-hidden="true" inert>
-                            <div class="hero-content">
-                                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}For your team and partners{% else %}Для команды и партнёров{% endif %}</p>
-                                <h1>{% if LANGUAGE_CODE == 'en' %}Gifts that bring people together{% else %}Внимание, которое объединяет{% endif %}</h1>
-                                <p class="hero-description">{% if LANGUAGE_CODE == 'en' %}We create corporate gift sets with care for your brand and every recipient.{% else %}Создаём корпоративные наборы с заботой о вашем бренде и каждом получателе.{% endif %}</p>
-                                <a class="button button-light" href="mailto:hello@lukomorye.example">{% if LANGUAGE_CODE == 'en' %}Discuss a project{% else %}Обсудить проект{% endif %} <span aria-hidden="true">→</span></a>
-                            </div>
                         </article>
                         {% endif %}
                     </div>
@@ -137,7 +113,7 @@
             <section class="about-section" id="about">
                 <div class="about-copy">
                     <p class="eyebrow">{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}About us{% else %}О компании{% endif %}{% endif %}</p>
-                    <h2>{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Lukomorye — ideas, crafted in every detail.{% else %}Лукоморье — идеи, воплощённые в деталях.{% endif %}{% endif %}</h2>
+                    <h2>{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery products.{% else %}Вкусно Да Сладко — кондитерские изделия.{% endif %}{% endif %}</h2>
                     {% if site_page_sections.home_about %}
                         {% for item in site_page_sections.home_about %}<p>{{ item.localized_description }}</p>{% endfor %}
                     {% else %}
@@ -187,7 +163,7 @@
                     </div>
                 {% endif %}
 
-                <form class="preorder-form" action="{% url 'preorder' %}" method="post" enctype="multipart/form-data">
+                <form class="preorder-form" action="{% url 'preorder' %}" method="post" enctype="multipart/form-data" data-base-price="{{ calculator_pricing.base_unit_price|unlocalize }}">
                     {% csrf_token %}
                     {% if preorder_form.non_field_errors %}
                         <div class="form-errors">{{ preorder_form.non_field_errors }}</div>
@@ -297,14 +273,14 @@
 
                     <div class="quote-summary">
                         <div class="quote-metrics">
-                            <div><span>{% if LANGUAGE_CODE == 'en' %}Price per item{% else %}Стоимость 1 шт.{% endif %}</span><strong><output id="quote-unit-price">98 ₽</output></strong></div>
-                            <div><span>{% if LANGUAGE_CODE == 'en' %}Discount{% else %}Скидка{% endif %}</span><strong><output id="quote-discount">20 %</output></strong></div>
-                            <div><span>{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Стоимость доставки{% endif %}</span><strong><output id="quote-delivery">700 ₽</output></strong></div>
-                            <div><span>{% if LANGUAGE_CODE == 'en' %}Estimated lead time{% else %}Срок (примерно){% endif %}</span><strong><output id="quote-lead-time">3 дн.</output></strong></div>
+                            <div><span>{% if LANGUAGE_CODE == 'en' %}Price per item{% else %}Стоимость 1 шт.{% endif %}</span><strong><output id="quote-unit-price">{{ calculator_initial_quote.unit_price|floatformat:0 }} ₽</output></strong></div>
+                            <div><span>{% if LANGUAGE_CODE == 'en' %}Discount{% else %}Скидка{% endif %}</span><strong><output id="quote-discount">{{ calculator_initial_quote.discount_percent }} %</output></strong></div>
+                            <div><span>{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Стоимость доставки{% endif %}</span><strong><output id="quote-delivery">{{ calculator_initial_quote.delivery_cost|floatformat:0 }} ₽</output></strong></div>
+                            <div><span>{% if LANGUAGE_CODE == 'en' %}Estimated lead time{% else %}Срок (примерно){% endif %}</span><strong><output id="quote-lead-time">{% if LANGUAGE_CODE == 'en' %}{{ calculator_pricing.lead_time_days }} days{% else %}{{ calculator_pricing.lead_time_days }} дн.{% endif %}</output></strong></div>
                         </div>
                         <div class="quote-total">
                             <span>{% if LANGUAGE_CODE == 'en' %}Total{% else %}Итого{% endif %}</span>
-                            <strong id="quote-total">8 540 ₽</strong>
+                            <strong id="quote-total">{{ calculator_initial_quote.total_price|floatformat:0 }} ₽</strong>
                             <button type="submit" class="quote-submit">{% if LANGUAGE_CODE == 'en' %}Send pre-order{% else %}Отправить предзаказ{% endif %} <span aria-hidden="true">→</span></button>
                         </div>
                     </div>
@@ -402,6 +378,7 @@
 {% endblock %}
 
 {% block scripts %}
+    {{ calculator_pricing.discount_tiers|json_script:"calculator-discount-tiers" }}
     <script>
         const popularTrack = document.querySelector("#popular-track");
         const popularArrows = document.querySelectorAll(".popular-arrow");
@@ -438,6 +415,9 @@
         updatePartnersArrows();
 
         const preorderForm = document.querySelector(".preorder-form");
+        const calculatorDiscountTiers = JSON.parse(
+            document.querySelector("#calculator-discount-tiers").textContent
+        );
         const quantityInput = preorderForm.querySelector('[name="quantity"]');
         const deliverySelect = preorderForm.querySelector('[name="delivery"]');
         const addressInput = preorderForm.querySelector('[name="address"]');
@@ -523,12 +503,14 @@
 
             const quantity = Math.min(10000, Math.max(1, Number(quantityInput.value) || 1));
             const unitPrice = Math.round(
-                98 * Number(size.dataset.multiplier)
+                Number(preorderForm.dataset.basePrice) * Number(size.dataset.multiplier)
                 + Number(flavor.dataset.extra)
                 + Number(coating.dataset.extra)
                 + Number(packaging.dataset.extra)
             );
-            const discount = quantity >= 100 ? 20 : quantity >= 50 ? 15 : quantity >= 20 ? 10 : 0;
+            const discount = calculatorDiscountTiers.find(
+                ([threshold]) => quantity >= Number(threshold)
+            )?.[1] || 0;
             const deliveryCost = Number(deliverySelect.selectedOptions[0].dataset.cost);
             const total = unitPrice * quantity * (1 - discount / 100) + deliveryCost;
 

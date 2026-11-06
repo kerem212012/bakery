@@ -3,6 +3,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import get_language
 
+from .calculator import default_calculator_pricing
+
 
 def preorder_attachment_path(instance, filename):
     return f"preorders/{instance.preorder_id}/{filename}"
@@ -100,6 +102,7 @@ class FeedbackSubmission(models.Model):
         choices=Status.choices,
         default=Status.NEW,
     )
+    is_hidden = models.BooleanField("Скрыто", default=False)
     created_at = models.DateTimeField("Создано", auto_now_add=True)
 
     class Meta:
@@ -366,3 +369,15 @@ class HomeHeroSlide(models.Model):
     @property
     def localized_button_text(self):
         return localized_content(self, "button_text")
+
+
+class CalculatorSettings(models.Model):
+    pricing = models.JSONField("Правила расчёта", default=default_calculator_pricing)
+    updated_at = models.DateTimeField("Обновлено", auto_now=True)
+
+    class Meta:
+        verbose_name = "настройка калькулятора"
+        verbose_name_plural = "настройки калькулятора"
+
+    def __str__(self):
+        return "Настройки калькулятора"

@@ -114,6 +114,8 @@ class ProductFilterOption(models.Model):
     value = models.SlugField(max_length=80)
     label = models.CharField(max_length=100)
     label_en = models.CharField(max_length=100, blank=True)
+    description = models.TextField(blank=True)
+    description_en = models.TextField(blank=True)
     display_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     class Meta:
@@ -136,3 +138,9 @@ class ProductFilterOption(models.Model):
         if get_language() == "en" and self.label_en:
             return self.label_en
         return self.label
+
+    @property
+    def localized_description(self):
+        if get_language() == "en" and self.description_en:
+            return self.description_en
+        return self.description or self.description_en

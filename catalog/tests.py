@@ -70,6 +70,30 @@ class CatalogAdminTests(TestCase):
         self.assertEqual(product.category, self.category)
         self.assertTrue(product.is_featured)
 
+    def test_admin_only_edits_descriptions_for_dough_and_icing_options(self):
+        dough, _ = ProductFilterOption.objects.update_or_create(
+            filter_type=ProductFilterOption.FilterType.DOUGH,
+            value="classic",
+            defaults={"label": "Классическое"},
+        )
+        color, _ = ProductFilterOption.objects.update_or_create(
+            filter_type=ProductFilterOption.FilterType.COLOR,
+            value="pink",
+            defaults={"label": "Розовый"},
+        )
+
+        dough_response = self.client.get(
+            reverse("admin:catalog_productfilteroption_change", args=[dough.pk])
+        )
+        color_response = self.client.get(
+            reverse("admin:catalog_productfilteroption_change", args=[color.pk])
+        )
+
+        self.assertContains(dough_response, 'name="description"')
+        self.assertContains(dough_response, 'name="description_en"')
+        self.assertNotContains(color_response, 'name="description"')
+        self.assertNotContains(color_response, 'name="description_en"')
+
     def test_admin_can_upload_and_preview_a_product_photo(self):
         image_buffer = BytesIO()
         Image.new("RGB", (4, 4), color="red").save(image_buffer, format="PNG")
@@ -123,7 +147,7 @@ class CatalogAdminTests(TestCase):
         response = self.client.get(reverse("admin:index"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Лукоморье — управление сайтом")
+        self.assertContains(response, "Вкусно Да Сладко — управление сайтом")
         self.assertContains(response, reverse("admin:catalog_product_changelist"))
         self.assertContains(response, reverse("admin:catalog_category_changelist"))
         self.assertContains(response, reverse("admin:core_preorder_changelist"))
@@ -157,10 +181,24 @@ class CatalogPageTests(TestCase):
         self.assertContains(response, "Мастер-классы")
         self.assertContains(response, "Пряники с логотипом")
         self.assertContains(response, reverse("business_clients"))
+
+    def test_catalog_category_filters_keep_product_counts_on_the_same_row(self):
+        response = self.client.get(reverse("catalog:category_list"))
+
+        self.assertContains(
+            response,
+            'class="catalog-filter-item catalog-category-filter-item"',
+        )
         self.assertContains(
             response,
             reverse("catalog:category_detail", args=["branded-gifts"]),
         )
+
+    def test_catalog_displays_one_breadcrumb(self):
+        response = self.client.get(reverse("catalog:category_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="catalog-breadcrumb', count=1)
 
     def test_catalog_sidebar_shows_quick_categories_and_price_range(self):
         response = self.client.get(reverse("catalog:category_list"))
@@ -376,6 +414,51 @@ class CatalogPageTests(TestCase):
         )
         self.assertContains(response, 'aria-label="Выберите покрытие"')
         self.assertContains(response, 'aria-label="Выберите упаковку"')
+
+    def test_catalog_shows_admin_descriptions_next_to_filter_options(self):
+        ProductFilterOption.objects.update_or_create(
+            filter_type=ProductFilterOption.FilterType.DOUGH,
+            value="classic",
+            defaults={
+                "label": "Классическое",
+                "label_en": "Classic",
+                "description": "Описание классического теста.",
+                "description_en": "Classic dough description.",
+            },
+        )
+        ProductFilterOption.objects.update_or_create(
+            filter_type=ProductFilterOption.FilterType.COATING,
+            value="painting",
+            defaults={
+                "label": "Роспись на айсинге",
+                "label_en": "Hand-painted icing",
+                "description": "Описание росписи.",
+                "description_en": "Painting description.",
+            },
+        )
+
+        response = self.client.get(reverse("catalog:category_list"))
+
+        self.assertContains(response, "О параметре «Классическое»")
+        self.assertContains(response, "Описание классического теста.")
+        self.assertContains(response, "О параметре «Роспись на айсинге»")
+        self.assertContains(response, "Описание росписи.")
+        self.assertContains(response, 'class="catalog-filter-option-row"')
+
+    def test_catalog_does_not_show_descriptions_for_other_filter_types(self):
+        ProductFilterOption.objects.update_or_create(
+            filter_type=ProductFilterOption.FilterType.COLOR,
+            value="pink",
+            defaults={
+                "label": "Розовый",
+                "description": "Описание цвета, которое не показывается.",
+            },
+        )
+
+        response = self.client.get(reverse("catalog:category_list"))
+
+        self.assertNotContains(response, "Описание цвета, которое не показывается.")
+        self.assertNotContains(response, 'aria-label="О параметре «Розовый»"')
 
     def test_catalog_rejects_invalid_price_range_and_shows_error(self):
         response = self.client.get(

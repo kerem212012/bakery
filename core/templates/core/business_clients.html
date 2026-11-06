@@ -1,6 +1,6 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}{% if LANGUAGE_CODE == 'en' %}Business clients — Lukomorye{% else %}Корпоративным клиентам — Лукоморье{% endif %}{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Business clients — Vkusno Da Sladko{% else %}Корпоративным клиентам — Вкусно Да Сладко{% endif %}{% endblock %}
 
 {% block content %}
     <div class="business-clients-page">
@@ -12,7 +12,6 @@
 
         <section class="business-clients-hero" aria-labelledby="business-clients-heading">
             <div class="business-clients-hero-copy">
-                <p class="business-clients-kicker">{% if site_page_content %}{{ site_page_content.localized_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}Home / Business clients{% else %}Главная / Корпоративным клиентам{% endif %}{% endif %}</p>
                 <h1 id="business-clients-heading">{% if site_page_content %}{{ site_page_content.localized_title|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Corporate clients{% else %}Корпоративным<br>клиентам{% endif %}{% endif %}</h1>
                 <p class="business-clients-subtitle">{% if site_page_content %}{{ site_page_content.localized_subtitle|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Individual solutions for your business{% else %}Индивидуальные решения<br>для вашего бизнеса{% endif %}{% endif %}</p>
                 <p class="business-clients-description">{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}We create confectionery items that highlight the value of your company and leave pleasant impressions on your colleagues, partners, and clients.{% else %}Создаём кондитерские изделия, которые подчёркивают ценность вашей компании и оставляют приятные впечатления у сотрудников, партнёров и клиентов.{% endif %}{% endif %}</p>

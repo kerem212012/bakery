@@ -14,6 +14,7 @@ from PIL import Image
 from catalog.models import Category, Product, ProductFilterOption
 from .calculator import calculate_quote
 from .models import (
+    CalculatorSettings,
     FeedbackSubmission,
     HomeHeroSlide,
     Preorder,
@@ -135,6 +136,8 @@ class AdminDashboardTests(TestCase):
         self.assertContains(response, "Панель управления")
         self.assertContains(response, reverse("admin_section_new", args=("products",)))
         self.assertContains(response, reverse("site_content_manager"))
+        self.assertContains(response, reverse("calculator_settings"))
+        self.assertContains(response, "Настроить калькулятор")
         self.assertContains(response, "Редактировать контент страниц")
         self.assertContains(response, reverse("admin_section", args=("categories",)))
         self.assertContains(response, reverse("admin_section", args=("orders",)))
@@ -152,6 +155,28 @@ class AdminDashboardTests(TestCase):
             response.context["active_product_count"],
             existing_active_product_count + 1,
         )
+
+    def test_calculator_floating_button_is_hidden_on_admin_and_manager_pages(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="floating_calculator_admin",
+            email="floating-calculator-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        for url in (
+            reverse("admin_dashboard"),
+            reverse("admin_section", args=("products",)),
+            reverse("site_content_manager"),
+            reverse("manager_dashboard"),
+        ):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(response, "calculator-float-toggle")
+
+        public_response = self.client.get(reverse("home"))
+        self.assertContains(public_response, "calculator-float-toggle")
 
     def test_site_content_editor_requires_site_content_permissions(self):
         manager = get_user_model().objects.create_user(
@@ -352,11 +377,18 @@ class AdminDashboardTests(TestCase):
         self.assertIn("image", about_response.context["page_form"].fields)
         self.assertNotIn("button_text", faq_response.context["page_form"].fields)
         self.assertNotIn("button_url", faq_response.context["page_form"].fields)
-        self.assertEqual(home_response.context["slide_formset"].total_form_count(), 3)
+        self.assertEqual(home_response.context["slide_formset"].total_form_count(), 4)
+        home_slide_form = home_response.context["slide_formset"].forms[1]
         self.assertEqual(
-            home_response.context["slide_formset"].forms[1]["title"].value(),
-            "Тёплые моменты в каждой детали",
+            set(home_slide_form.fields),
+            {"image", "display_order", "is_active", "id"},
         )
+        self.assertEqual(home_slide_form["display_order"].value(), 1)
+        self.assertTrue(home_slide_form["is_active"].value())
+        self.assertFalse(
+            home_response.context["slide_formset"].forms[3]["is_active"].value()
+        )
+        self.assertContains(home_response, 'id="add-home-slide"')
 
     def test_page_content_button_fields_are_hidden_on_every_page(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -1793,50 +1825,69 @@ class AdminDashboardTests(TestCase):
             password="test-password",
         )
         self.client.force_login(admin_user)
+        editor_response = self.client.get(
+            f"{reverse('site_content_manager')}?page={SiteContentBlock.Page.HOME}"
+        )
+        self.assertEqual(editor_response.status_code, 200)
+        slide_form = editor_response.context["slide_formset"].forms[0]
+        self.assertEqual(
+            set(slide_form.fields),
+            {"image", "display_order", "is_active", "id"},
+        )
+        self.assertContains(editor_response, 'name="slides-0-image"')
+        self.assertContains(editor_response, 'name="slides-0-is_active"')
+
         post_data = {
             "action": "save_home_slides",
             "page": SiteContentBlock.Page.HOME,
-            "slides-TOTAL_FORMS": "3",
+            "slides-TOTAL_FORMS": "4",
             "slides-INITIAL_FORMS": "0",
             "slides-MIN_NUM_FORMS": "0",
             "slides-MAX_NUM_FORMS": "1000",
         }
-        for index, slide in enumerate(
-            (
-                {
-                    "eyebrow": "Первая подпись",
-                    "title": "Первый баннер",
-                    "description": "Первое описание",
-                    "button_text": "Первая кнопка",
-                    "button_url": "#popular",
-                },
-                {
-                    "eyebrow": "Вторая подпись",
-                    "title": "Тёплые моменты теперь другие",
-                    "description": "Описание второго баннера",
-                    "button_text": "Открыть каталог",
-                    "button_url": "/catalog/",
-                },
-                {
-                    "eyebrow": "Третья подпись",
-                    "title": "Третий баннер",
-                    "description": "Третье описание",
-                    "button_text": "Подробнее",
-                    "button_url": "/about/",
-                },
-            )
-        ):
+        for index in range(4):
             post_data.update(
                 {
-                    f"slides-{index}-eyebrow": slide["eyebrow"],
-                    f"slides-{index}-eyebrow_en": f"Banner {index + 1}",
-                    f"slides-{index}-title": slide["title"],
-                    f"slides-{index}-title_en": f"Banner heading {index + 1}",
-                    f"slides-{index}-description": slide["description"],
-                    f"slides-{index}-description_en": f"Banner description {index + 1}",
-                    f"slides-{index}-button_text": slide["button_text"],
-                    f"slides-{index}-button_text_en": f"Button {index + 1}",
-                    f"slides-{index}-button_url": slide["button_url"],
+                    f"slides-{index}-display_order": str(index),
+                    f"slides-{index}-is_active": "on",
+                }
+            )
+
+        response = self.client.post(reverse("site_content_manager"), post_data)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=home",
+        )
+        self.assertEqual(HomeHeroSlide.objects.count(), 4)
+        home_response = self.client.get(reverse("home"))
+        self.assertContains(home_response, 'class="hero-slide hero-slide-gifts"')
+        self.assertContains(home_response, 'class="hero-slide hero-slide-sweets"')
+        self.assertContains(home_response, 'class="hero-slide hero-slide-team"')
+        self.assertNotContains(home_response, "Тёплые моменты теперь другие")
+        self.assertNotContains(home_response, "Описание второго баннера")
+        self.assertNotContains(home_response, "Открыть каталог")
+
+    def test_blank_home_banner_form_does_not_create_an_active_slide(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="home_banner_blank_form",
+            email="home-banner-blank-form@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        post_data = {
+            "action": "save_home_slides",
+            "page": SiteContentBlock.Page.HOME,
+            "slides-TOTAL_FORMS": "4",
+            "slides-INITIAL_FORMS": "0",
+            "slides-MIN_NUM_FORMS": "0",
+            "slides-MAX_NUM_FORMS": "1000",
+            "slides-3-display_order": "3",
+        }
+        for index in range(3):
+            post_data.update(
+                {
                     f"slides-{index}-display_order": str(index),
                     f"slides-{index}-is_active": "on",
                 }
@@ -1849,10 +1900,6 @@ class AdminDashboardTests(TestCase):
             f"{reverse('site_content_manager')}?page=home",
         )
         self.assertEqual(HomeHeroSlide.objects.count(), 3)
-        home_response = self.client.get(reverse("home"))
-        self.assertContains(home_response, "Тёплые моменты теперь другие")
-        self.assertContains(home_response, "Описание второго баннера")
-        self.assertContains(home_response, 'href="/catalog/"')
 
     def test_site_content_manager_does_not_create_new_page_blocks(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -2142,6 +2189,117 @@ class AdminDashboardTests(TestCase):
         )
         self.assertEqual(create_response.context["form"]["display_order"].value(), 1)
 
+    def test_product_filter_display_number_is_one_based_on_create_edit_and_list(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="filter_display_number_admin",
+            email="filter-display-number-admin@example.com",
+            password="test-password",
+        )
+        ProductFilterOption.objects.create(
+            filter_type=ProductFilterOption.FilterType.SIZE,
+            value="small",
+            label="Small filter option",
+            display_order=0,
+        )
+        second_option = ProductFilterOption.objects.create(
+            filter_type=ProductFilterOption.FilterType.SIZE,
+            value="large",
+            label="Large filter option",
+            display_order=1,
+        )
+        self.client.force_login(admin_user)
+
+        list_response = self.client.get(reverse("admin_section", args=("filters",)))
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertContains(list_response, "Номер отображения: 1")
+        self.assertContains(list_response, "Номер отображения: 2")
+        list_content = list_response.content.decode()
+        self.assertLess(
+            list_content.index("Small filter option"),
+            list_content.index("Large filter option"),
+        )
+
+        edit_url = reverse("admin_section_edit", args=("filters", second_option.pk))
+        edit_response = self.client.get(edit_url)
+        self.assertEqual(edit_response.context["form"]["display_order"].value(), 2)
+        self.assertContains(edit_response, "Номер отображения")
+
+        response = self.client.post(
+            edit_url,
+            {
+                "filter_type": ProductFilterOption.FilterType.SIZE,
+                "value": second_option.value,
+                "label": second_option.label,
+                "label_en": "",
+                "display_order": "1",
+                "is_active": "on",
+            },
+        )
+        self.assertRedirects(
+            response,
+            reverse("admin_section_edit", args=("filters", second_option.pk)),
+        )
+        second_option.refresh_from_db()
+        self.assertEqual(second_option.display_order, 0)
+
+        create_response = self.client.get(reverse("admin_section_new", args=("filters",)))
+        self.assertEqual(create_response.context["form"]["display_order"].value(), 1)
+
+    def test_dough_and_icing_filter_descriptions_can_be_edited(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="filter_descriptions_admin",
+            email="filter-descriptions-admin@example.com",
+            password="test-password",
+        )
+        options = (
+            ProductFilterOption.objects.create(
+                filter_type=ProductFilterOption.FilterType.DOUGH,
+                value="test-classic-dough",
+                label="Классическое тесто",
+                label_en="Classic dough",
+            ),
+            ProductFilterOption.objects.create(
+                filter_type=ProductFilterOption.FilterType.COATING,
+                value="test-icing",
+                label="Айсинг",
+                label_en="Icing",
+            ),
+        )
+        self.client.force_login(admin_user)
+
+        for option, description, description_en in (
+            (options[0], "Мягкое классическое тесто.", "Soft classic dough."),
+            (options[1], "Покрытие из айсинга.", "Icing coating."),
+        ):
+            with self.subTest(filter_type=option.filter_type):
+                edit_url = reverse("admin_section_edit", args=("filters", option.pk))
+                response = self.client.post(
+                    edit_url,
+                    {
+                        "filter_type": option.filter_type,
+                        "value": option.value,
+                        "label": option.label,
+                        "label_en": option.label_en,
+                        "description": description,
+                        "description_en": description_en,
+                        "display_order": "1",
+                        "is_active": "on",
+                    },
+                )
+                self.assertRedirects(response, edit_url)
+                option.refresh_from_db()
+                self.assertEqual(option.description, description)
+                self.assertEqual(option.description_en, description_en)
+
+        catalog_response = self.client.get(reverse("catalog:category_list"))
+        self.assertContains(
+            catalog_response,
+            'class="catalog-filter-help-button" type="button"',
+        )
+        self.assertContains(catalog_response, "Мягкое классическое тесто.")
+        self.assertContains(catalog_response, "Покрытие из айсинга.")
+
     def test_product_filter_options_are_easy_to_select_by_group(self):
         admin_user = get_user_model().objects.create_superuser(
             username="product_filter_groups_admin",
@@ -2280,6 +2438,148 @@ class AdminDashboardTests(TestCase):
         )
         feedback.refresh_from_db()
         self.assertEqual(feedback.status, FeedbackSubmission.Status.RESOLVED)
+
+    def test_feedback_can_be_deleted_from_admin_with_delete_permission(self):
+        admin_user = get_user_model().objects.create_user(
+            username="feedback_delete_admin",
+            email="feedback-delete-admin@example.com",
+            is_staff=True,
+            is_superuser=True,
+        )
+        feedback = FeedbackSubmission.objects.create(
+            name="Feedback to delete",
+            email="feedback-delete@example.com",
+            subject="Delete this feedback",
+            message="This feedback should be removable.",
+            consent_given=True,
+        )
+        delete_url = reverse(
+            "admin_section_delete",
+            args=("messages", feedback.pk),
+        )
+        self.client.force_login(admin_user)
+
+        list_response = self.client.get(reverse("admin_section", args=("messages",)))
+        self.assertContains(list_response, "Удалить")
+        self.assertEqual(self.client.get(delete_url).status_code, 405)
+        self.assertTrue(FeedbackSubmission.objects.filter(pk=feedback.pk).exists())
+
+        response = self.client.post(delete_url)
+
+        self.assertRedirects(response, reverse("admin_section", args=("messages",)))
+        self.assertFalse(FeedbackSubmission.objects.filter(pk=feedback.pk).exists())
+
+    def test_feedback_delete_requires_delete_permission(self):
+        manager = get_user_model().objects.create_user(
+            username="feedback_delete_manager",
+            is_staff=True,
+        )
+        view_permission = Permission.objects.get(
+            content_type__app_label="core",
+            codename="view_feedbacksubmission",
+        )
+        manager.user_permissions.add(view_permission)
+        feedback = FeedbackSubmission.objects.create(
+            name="Protected feedback",
+            email="protected-feedback@example.com",
+            subject="Protected",
+            message="This feedback must remain.",
+            consent_given=True,
+        )
+        delete_url = reverse(
+            "admin_section_delete",
+            args=("messages", feedback.pk),
+        )
+        self.client.force_login(manager)
+
+        response = self.client.post(delete_url)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(FeedbackSubmission.objects.filter(pk=feedback.pk).exists())
+
+    def test_feedback_can_be_hidden_and_restored_from_admin(self):
+        admin_user = get_user_model().objects.create_user(
+            username="feedback_visibility_admin",
+            email="feedback-visibility-admin@example.com",
+            is_staff=True,
+            is_superuser=True,
+        )
+        feedback = FeedbackSubmission.objects.create(
+            name="Feedback visibility",
+            email="feedback-visibility@example.com",
+            subject="Visibility toggle feedback",
+            message="This feedback can be hidden and restored.",
+            consent_given=True,
+        )
+        list_url = reverse("admin_section", args=("messages",))
+        hide_url = reverse(
+            "admin_section_visibility",
+            args=("messages", feedback.pk, "hide"),
+        )
+        show_url = reverse(
+            "admin_section_visibility",
+            args=("messages", feedback.pk, "show"),
+        )
+        self.client.force_login(admin_user)
+
+        visible_response = self.client.get(list_url)
+        self.assertContains(visible_response, "Скрыть")
+        self.assertContains(visible_response, "Visibility toggle feedback")
+        self.assertEqual(self.client.get(hide_url).status_code, 405)
+
+        self.assertRedirects(self.client.post(hide_url), list_url)
+        feedback.refresh_from_db()
+        self.assertTrue(feedback.is_hidden)
+        visible_response = self.client.get(list_url)
+        self.assertNotContains(visible_response, "Visibility toggle feedback")
+        self.assertEqual(
+            self.client.get(reverse("admin_dashboard")).context[
+                "new_feedback_count"
+            ],
+            0,
+        )
+
+        hidden_url = f"{list_url}?hidden=1"
+        hidden_response = self.client.get(hidden_url)
+        self.assertContains(hidden_response, "Visibility toggle feedback")
+        self.assertContains(hidden_response, "Показать")
+        manager_response = self.client.get(reverse("manager_dashboard"))
+        self.assertNotIn(feedback, manager_response.context["feedback_items"])
+
+        self.assertRedirects(self.client.post(show_url), list_url)
+        feedback.refresh_from_db()
+        self.assertFalse(feedback.is_hidden)
+        self.assertContains(self.client.get(list_url), "Visibility toggle feedback")
+
+    def test_feedback_visibility_requires_change_permission(self):
+        manager = get_user_model().objects.create_user(
+            username="feedback_visibility_manager",
+            is_staff=True,
+        )
+        manager.user_permissions.add(
+            Permission.objects.get(
+                content_type__app_label="core",
+                codename="view_feedbacksubmission",
+            )
+        )
+        feedback = FeedbackSubmission.objects.create(
+            name="Protected feedback visibility",
+            email="protected-visibility@example.com",
+            subject="Protected visibility",
+            message="Only users with change permission may hide this.",
+            consent_given=True,
+        )
+        hide_url = reverse(
+            "admin_section_visibility",
+            args=("messages", feedback.pk, "hide"),
+        )
+        self.client.force_login(manager)
+
+        response = self.client.post(hide_url)
+
+        self.assertEqual(response.status_code, 403)
+        feedback.refresh_from_db()
+        self.assertFalse(feedback.is_hidden)
 
     def test_cart_order_items_render_as_labeled_product_details(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -2456,6 +2756,53 @@ class AdminDashboardTests(TestCase):
         self.assertNotContains(response, reverse("manager_dashboard"))
 
 
+    def test_calculator_settings_require_permission_and_can_be_saved(self):
+        manager = get_user_model().objects.create_user(
+            username="calculator_manager",
+            password="test-password",
+            is_staff=True,
+        )
+        self.client.force_login(manager)
+        calculator_url = reverse("calculator_settings")
+
+        dashboard = self.client.get(self.url)
+        self.assertNotContains(dashboard, calculator_url)
+        self.assertEqual(self.client.get(calculator_url).status_code, 403)
+
+        admin_user = get_user_model().objects.create_superuser(
+            username="calculator_admin",
+            email="calculator-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        response = self.client.get(calculator_url)
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        data = {
+            name: form[name].value() if form[name].value() is not None else ""
+            for name in form.fields
+        }
+        data.update(
+            {
+                "base_unit_price": "110",
+                "delivery_cost_moscow": "750",
+                "discount_quantity_1": "100",
+                "discount_percent_1": "25",
+                "lead_time_days": "5",
+            }
+        )
+        response = self.client.post(calculator_url, data)
+
+        self.assertRedirects(response, calculator_url)
+        settings = CalculatorSettings.objects.get(pk=1)
+        self.assertEqual(settings.pricing["base_unit_price"], "110")
+        self.assertEqual(settings.pricing["delivery_costs"]["moscow"], "750")
+        self.assertEqual(settings.pricing["discount_tiers"][0], [100, 25])
+        self.assertEqual(settings.pricing["lead_time_days"], 5)
+        self.assertContains(self.client.get(reverse("home")), 'data-base-price="110"')
+
+
 class ManagerDashboardTests(TestCase):
     def setUp(self):
         self.manager_url = reverse("manager_dashboard")
@@ -2606,6 +2953,53 @@ class CalculatorTests(TestCase):
         self.assertEqual(quote["discount_percent"], 10)
         self.assertEqual(quote["total_price"], Decimal("4048.00"))
 
+    def test_custom_pricing_is_used_by_server_calculations_and_homepage(self):
+        settings = CalculatorSettings.objects.create(
+            pricing={
+                "base_unit_price": "110",
+                "size_multipliers": {"3": "0.55", "5": "1", "7": "1.4", "10": "1.9", "12": "2.4", "15": "3"},
+                "flavor_additions": {"classic": "0", "chocolate": "15", "honey": "10", "cinnamon": "8"},
+                "coating_additions": {"icing": "0", "painting": "15", "partial": "8", "none": "-15"},
+                "packaging_additions": {"ribbon": "0", "box": "35", "premium": "80", "none": "-15"},
+                "delivery_costs": {"moscow": "750", "outside": "1200", "pickup": "0"},
+                "discount_tiers": [[100, 25], [50, 15], [20, 10]],
+                "lead_time_days": 5,
+            }
+        )
+
+        quote = calculate_quote(self.configuration, settings.pricing)
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(quote["unit_price"], Decimal("110"))
+        self.assertEqual(quote["discount_percent"], 25)
+        self.assertEqual(quote["delivery_cost"], Decimal("750"))
+        self.assertEqual(quote["lead_time_days"], 5)
+        self.assertEqual(quote["total_price"], Decimal("9000.00"))
+        self.assertContains(response, 'data-base-price="110"')
+        self.assertContains(response, 'data-cost="750"')
+        self.assertContains(response, "5 дн.")
+        self.assertEqual(
+            response.context["calculator_pricing"]["discount_tiers"],
+            ((100, 25), (50, 15), (20, 10)),
+        )
+        preorder_response = self.client.post(
+            reverse("preorder"),
+            {
+                **self.configuration,
+                "name": "Иван",
+                "email": "ivan@example.com",
+                "phone": "+74951234567",
+                "address": "Москва",
+                "consent_given": "on",
+            },
+        )
+        self.assertRedirects(preorder_response, "/#calculator")
+        preorder = Preorder.objects.get()
+        self.assertEqual(preorder.unit_price, Decimal("110"))
+        self.assertEqual(preorder.discount_percent, 25)
+        self.assertEqual(preorder.delivery_cost, Decimal("750"))
+        self.assertEqual(preorder.total_price, Decimal("9000.00"))
+
     def test_homepage_renders_calculator_and_preorder_form(self):
         response = self.client.get("/")
 
@@ -2667,7 +3061,7 @@ class CalculatorTests(TestCase):
         response = self.client.get(reverse("feedback"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "<title>Обратная связь — Лукоморье</title>")
+        self.assertContains(response, "<title>Обратная связь — Вкусно Да Сладко</title>")
         self.assertContains(response, 'name="name"')
         self.assertContains(response, 'name="email"')
         self.assertContains(response, 'name="subject"')
@@ -2713,6 +3107,10 @@ class CalculatorTests(TestCase):
         self.assertContains(response, 'class="contact-float"')
         self.assertContains(response, 'class="contact-float-menu"')
         self.assertContains(response, 'class="contact-float-toggle"')
+        self.assertContains(
+            response,
+            'querySelector(".contact-float-toggle[type=\\"button\\"]")',
+        )
         self.assertContains(response, 'aria-controls="contact-float-menu"')
         self.assertContains(response, 'aria-label="Открыть способы связи"')
         self.assertContains(response, '>Связаться</span>')
@@ -2720,6 +3118,14 @@ class CalculatorTests(TestCase):
         self.assertContains(response, 'href="https://max.ru/"')
         self.assertContains(response, 'aria-label="Написать в MAX"')
         self.assertContains(response, 'Позвонить')
+        self.assertContains(response, 'class="wordmark-name">Вкусно Да Сладко</span>')
+        self.assertContains(response, 'class="wordmark-caption">Кондитерские изделия</span>')
+        self.assertContains(response, 'class="site-intro-name">Вкусно Да Сладко</span>')
+        self.assertContains(response, 'class="footer-brand-name">Вкусно Да Сладко</span>')
+        self.assertContains(response, "Вкусно Да Сладко. Все права защищены.")
+        self.assertContains(response, 'href="/#calculator"')
+        self.assertContains(response, "Перейти к калькулятору")
+        self.assertContains(response, ">Рассчитать</span>")
 
     def test_valid_preorder_is_saved_with_server_calculated_quote(self):
         response = self.client.post(
@@ -2845,9 +3251,11 @@ class HomePageCatalogTests(TestCase):
         response = self.client.get(reverse("about"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "<title>О нас — Лукоморье</title>")
+        self.assertContains(response, "<title>О нас — Вкусно Да Сладко</title>")
         self.assertContains(response, 'aria-current="page">О нас</span>')
         self.assertContains(response, "Наша история")
+        self.assertContains(response, "«Вкусно Да Сладко» родилось")
+        self.assertNotContains(response, "Лукоморье родилось")
         self.assertContains(response, "Наши ценности")
         self.assertContains(response, "5000+")
         self.assertContains(response, 'href="mailto:hello@lukomorye.example"')
@@ -2857,7 +3265,7 @@ class HomePageCatalogTests(TestCase):
         response = self.client.get(reverse("corporate"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "<title>Партнёрство с Лукоморье — Лукоморье</title>")
+        self.assertContains(response, "<title>Партнёрство с «Вкусно Да Сладко» — Вкусно Да Сладко</title>")
         self.assertContains(response, "Направления сотрудничества")
         self.assertContains(response, "Франшиза")
         self.assertContains(response, "Производителям и поставщикам")
@@ -2868,10 +3276,33 @@ class HomePageCatalogTests(TestCase):
         response = self.client.get(reverse("business_clients"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "<title>Корпоративным клиентам — Лукоморье</title>")
+        self.assertContains(response, "<title>Корпоративным клиентам — Вкусно Да Сладко</title>")
         self.assertContains(response, "Индивидуальные решения")
         self.assertContains(response, "Взаимодействие")
         self.assertContains(response, "Калькулятор заказа")
+
+    def test_business_clients_breadcrumb_is_not_repeated_as_the_eyebrow(self):
+        SitePageContent.objects.create(
+            page=SitePageContent.Page.BUSINESS_CLIENTS,
+            eyebrow="Главная / Корпоративным клиентам ",
+            eyebrow_en="Home / Business clients ",
+        )
+
+        response = self.client.get(reverse("business_clients"))
+
+        self.assertContains(response, 'class="about-breadcrumbs"', count=1)
+        self.assertNotContains(response, 'class="business-clients-kicker"')
+
+        page_content = SitePageContent.objects.get(
+            page=SitePageContent.Page.BUSINESS_CLIENTS
+        )
+        page_content.eyebrow = "Подарки для бизнеса"
+        page_content.save(update_fields=("eyebrow",))
+        custom_eyebrow_response = self.client.get(reverse("business_clients"))
+        self.assertNotContains(
+            custom_eyebrow_response,
+            'class="business-clients-kicker"',
+        )
 
     def test_business_clients_page_does_not_repeat_configured_address(self):
         SitePageSection.objects.filter(
@@ -2965,7 +3396,7 @@ class HomePageCatalogTests(TestCase):
         response = self.client.get(reverse("delivery"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "<title>Доставка и самовывоз — Лукоморье</title>")
+        self.assertContains(response, "<title>Доставка и самовывоз — Вкусно Да Сладко</title>")
         self.assertContains(response, "По Москве")
         self.assertContains(response, "По России")
         self.assertContains(response, "Упаковка")
@@ -2978,7 +3409,7 @@ class HomePageCatalogTests(TestCase):
         response = self.client.get(reverse("packaging"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "<title>Варианты упаковки — Лукоморье</title>")
+        self.assertContains(response, "<title>Варианты упаковки — Вкусно Да Сладко</title>")
         self.assertContains(response, "Варианты упаковки")
         self.assertContains(response, "Основные варианты упаковки")
         self.assertContains(response, "Коробка с окном")
@@ -3017,8 +3448,12 @@ class HomePageCatalogTests(TestCase):
         self.assertContains(response, 'data-hero-direction="1"')
         self.assertContains(response, 'data-hero-direction="-1"')
         self.assertContains(response, 'data-hero-slide="2"')
-        self.assertContains(response, "Подарки, созданные с душой")
-        self.assertContains(response, "Внимание, которое объединяет")
+        self.assertNotContains(response, "Подарки, созданные с душой")
+        self.assertNotContains(response, "Внимание, которое объединяет")
+        self.assertNotContains(response, 'class="hero-content"')
+        self.assertNotContains(response, 'class="button button-light"')
+        self.assertContains(response, 'class="hero-arrow hero-arrow-next"')
+        self.assertContains(response, 'class="hero-dot is-active"')
 
     def test_homepage_renders_active_catalog_products(self):
         category = Category.objects.create(name="Подарки компании")

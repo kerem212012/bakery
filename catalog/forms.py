@@ -80,6 +80,12 @@ class ProductEditorForm(forms.ModelForm):
         }
         for field_name, label in labels.items():
             self.fields[field_name].label = label
+        if self.instance.pk and self.instance.filter_type not in {
+            ProductFilterOption.FilterType.COATING,
+            ProductFilterOption.FilterType.DOUGH,
+        }:
+            self.fields.pop("description")
+            self.fields.pop("description_en")
         if self.instance.pk:
             self.initial["display_order"] = self.instance.display_order + 1
         else:
@@ -210,6 +216,13 @@ class CategoryEditorForm(forms.ModelForm):
 
 
 class ProductFilterOptionEditorForm(forms.ModelForm):
+    display_order = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(
+            attrs={"class": "site-content-form-control", "min": 1}
+        ),
+    )
+
     class Meta:
         model = ProductFilterOption
         fields = (
@@ -217,6 +230,8 @@ class ProductFilterOptionEditorForm(forms.ModelForm):
             "value",
             "label",
             "label_en",
+            "description",
+            "description_en",
             "display_order",
             "is_active",
         )
@@ -227,8 +242,11 @@ class ProductFilterOptionEditorForm(forms.ModelForm):
             "value": forms.TextInput(attrs={"class": "site-content-form-control"}),
             "label": forms.TextInput(attrs={"class": "site-content-form-control"}),
             "label_en": forms.TextInput(attrs={"class": "site-content-form-control"}),
-            "display_order": forms.NumberInput(
-                attrs={"class": "site-content-form-control", "min": 0}
+            "description": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
+            ),
+            "description_en": forms.Textarea(
+                attrs={"class": "site-content-form-control", "rows": 3}
             ),
             "is_active": forms.CheckboxInput(
                 attrs={"class": "site-content-form-checkbox"}
@@ -243,11 +261,24 @@ class ProductFilterOptionEditorForm(forms.ModelForm):
             "value": "Code" if english else "Код",
             "label": "Name (Russian)" if english else "Название",
             "label_en": "Name (English)" if english else "Название на английском",
-            "display_order": "Display order" if english else "Порядок отображения",
+            "description": "Description (Russian)" if english else "Описание",
+            "description_en": "Description (English)" if english else "Описание на английском",
+            "display_order": "Display number" if english else "Номер отображения",
             "is_active": "Published" if english else "Опубликовано",
         }
         for field_name, label in labels.items():
             self.fields[field_name].label = label
+        if self.instance.pk:
+            self.initial["display_order"] = self.instance.display_order + 1
+        else:
+            self.initial.setdefault("display_order", 1)
+
+    def save(self, commit=True):
+        option = super().save(commit=False)
+        option.display_order -= 1
+        if commit:
+            option.save()
+        return option
 
 
 class CatalogFilterForm(forms.Form):

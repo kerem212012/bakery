@@ -4,7 +4,7 @@ from django.utils.html import format_html
 from .models import Category, Product, ProductFilterOption
 
 
-admin.site.site_header = "Лукоморье — управление сайтом"
+admin.site.site_header = "Вкусно Да Сладко — управление сайтом"
 admin.site.site_title = "Управление сайтом"
 admin.site.index_title = "Управление каталогом и заказами"
 
@@ -159,15 +159,35 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(ProductFilterOption)
 class ProductFilterOptionAdmin(admin.ModelAdmin):
-    list_display = ("label", "label_en", "filter_type", "value", "display_order", "is_active")
+    list_display = (
+        "label",
+        "label_en",
+        "filter_type",
+        "value",
+        "display_order",
+        "is_active",
+    )
     list_editable = ("display_order", "is_active")
     list_filter = ("filter_type", "is_active")
-    search_fields = ("label", "label_en", "value")
-    list_per_page = 50
-    fieldsets = (
-        (
-            "Параметр каталога",
-            {"fields": (("filter_type", "value"), ("label", "label_en"))},
-        ),
-        ("Отображение", {"fields": (("is_active", "display_order"),)}),
+    search_fields = (
+        "label",
+        "label_en",
+        "description",
+        "description_en",
+        "value",
     )
+    list_per_page = 50
+    def get_fieldsets(self, request, obj=None):
+        fields = [
+            ("filter_type", "value"),
+            ("label", "label_en"),
+        ]
+        if obj is None or obj.filter_type in {
+            ProductFilterOption.FilterType.COATING,
+            ProductFilterOption.FilterType.DOUGH,
+        }:
+            fields.append(("description", "description_en"))
+        return (
+            ("Параметр каталога", {"fields": tuple(fields)}),
+            ("Отображение", {"fields": (("is_active", "display_order"),)}),
+        )

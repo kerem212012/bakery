@@ -1,6 +1,6 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}{% if site_page_content and site_page_content.localized_title %}{{ site_page_content.localized_title }} — {% if LANGUAGE_CODE == 'en' %}Lukomorye{% else %}Лукоморье{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}About us — Lukomorye{% else %}О нас — Лукоморье{% endif %}{% endif %}{% endblock %}
+{% block title %}{% if site_page_content and site_page_content.localized_title %}{{ site_page_content.localized_title }} — Vkusno Da Sladko{% else %}{% if LANGUAGE_CODE == 'en' %}About us — Vkusno Da Sladko{% else %}О нас — Вкусно Да Сладко{% endif %}{% endif %}{% endblock %}
 
 {% block content %}
     <div class="about-page">
@@ -12,9 +12,9 @@
 
         <section class="about-hero" aria-labelledby="about-heading">
             <div class="about-hero-copy">
-                <p class="eyebrow">{% if site_page_content %}{{ site_page_content.localized_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}The story of Lukomorye{% else %}История Лукоморья{% endif %}{% endif %}</p>
+                <p class="eyebrow">{% if site_page_content %}{{ site_page_content.localized_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}The story of Vkusno Da Sladko{% else %}История «Вкусно Да Сладко»{% endif %}{% endif %}</p>
                 <h1 id="about-heading">{% if site_page_content %}{{ site_page_content.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}About us{% else %}О нас{% endif %}{% endif %}</h1>
-                <p class="about-hero-lead">{% if site_page_content %}{{ site_page_content.localized_subtitle|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Lukomorye — ideas, crafted in every detail.{% else %}Лукоморье — идеи, воплощённые в деталях.{% endif %}{% endif %}</p>
+                <p class="about-hero-lead">{% if site_page_content %}{{ site_page_content.localized_subtitle|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery made with care in every detail.{% else %}Вкусно Да Сладко — кондитерские изделия, созданные с вниманием к деталям.{% endif %}{% endif %}</p>
                 <p>{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}We create confectionery that turns ideas into sweet stories. For us, it is about more than baking gingerbread: every piece carries meaning, beauty, and care in every detail.{% else %}Мы создаём кондитерские изделия, которые превращают идеи в сладкие истории. Для нас важно не просто испечь пряник, а вложить в него смысл, эстетику и внимание к каждой детали.{% endif %}{% endif %}</p>
                 <a class="button button-dark" href="{% if site_page_content and site_page_content.button_url %}{{ site_page_content.button_url }}{% else %}mailto:hello@lukomorye.example{% endif %}">
                     {% if site_page_content %}{{ site_page_content.localized_button_text }}{% else %}{% if LANGUAGE_CODE == 'en' %}Discuss an order{% else %}Обсудить заказ{% endif %}{% endif %} <span aria-hidden="true">→</span>
@@ -43,10 +43,10 @@
                 <p class="eyebrow">{% if site_page_sections.story %}{{ site_page_sections.story.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}Made with warmth and care{% else %}С теплом и заботой{% endif %}{% endif %}</p>
                 <h2 id="about-story-heading">{% if site_page_sections.story %}{{ site_page_sections.story.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Our story{% else %}Наша история{% endif %}{% endif %}</h2>
                 {% if site_page_sections.story %}<p>{{ site_page_sections.story.0.localized_description|linebreaksbr }}</p>{% else %}
-                    <p>{% if LANGUAGE_CODE == 'en' %}Lukomorye grew from a love of tradition, craftsmanship, and beautiful details. Inspired by culture, nature, and people, we make modern confectionery with heart.{% else %}Лукоморье родилось из любви к традициям, ремеслу и красивым деталям. Мы вдохновляемся культурой, природой и людьми, создавая современные кондитерские изделия с душой.{% endif %}</p>
+                    <p>{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko grew from a love of tradition, craftsmanship, and beautiful details. Inspired by culture, nature, and people, we make modern confectionery with heart.{% else %}«Вкусно Да Сладко» родилось из любви к традициям, ремеслу и красивым деталям. Мы вдохновляемся культурой, природой и людьми, создавая современные кондитерские изделия с душой.{% endif %}</p>
                     <p>{% if LANGUAGE_CODE == 'en' %}From the beginning, our goal has been to create joy and make important moments even more special.{% else %}С самого начала наша цель — дарить эмоции и делать важные моменты ещё особеннее.{% endif %}</p>
                 {% endif %}
-                <div class="about-stats" aria-label="{% if LANGUAGE_CODE == 'en' %}Lukomorye in numbers{% else %}Лукоморье в цифрах{% endif %}">
+                <div class="about-stats" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko in numbers{% else %}«Вкусно Да Сладко» в цифрах{% endif %}">
                     {% for item in site_page_sections.stats %}
                         <div><strong>{{ item.localized_value }}</strong><span>{{ item.localized_description }}</span></div>
                     {% empty %}
@@ -74,7 +74,7 @@
                     <article class="about-value-card"><div class="about-value-image about-value-quality" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Natural baking ingredients{% else %}Натуральные ингредиенты для выпечки{% endif %}"></div><div><h3>{% if LANGUAGE_CODE == 'en' %}Quality{% else %}Качество{% endif %}</h3><p>{% if LANGUAGE_CODE == 'en' %}Carefully selected ingredients and quality checks at every stage{% else %}Только проверенные ингредиенты и контроль на каждом этапе{% endif %}</p></div></article>
                     <article class="about-value-card"><div class="about-value-image about-value-creativity" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Finished gingerbread with floral icing{% else %}Готовые пряники с цветочной росписью{% endif %}"></div><div><h3>{% if LANGUAGE_CODE == 'en' %}Creativity{% else %}Творчество{% endif %}</h3><p>{% if LANGUAGE_CODE == 'en' %}We create unique designs and bring your ideas to life{% else %}Создаём уникальные дизайны и воплощаем любые идеи{% endif %}</p></div></article>
                     <article class="about-value-card"><div class="about-value-image about-value-craft" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}A baker decorates gingerbread by hand{% else %}Мастер расписывает пряник вручную{% endif %}"></div><div><h3>{% if LANGUAGE_CODE == 'en' %}Handcrafted{% else %}Ручная работа{% endif %}</h3><p>{% if LANGUAGE_CODE == 'en' %}We put our heart into every product{% else %}Вкладываем душу в каждое изделие{% endif %}</p></div></article>
-                    <article class="about-value-card"><div class="about-value-image about-value-service" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}A packaged Lukomorye gift{% else %}Упакованный подарок Лукоморье{% endif %}"></div><div><h3>{% if LANGUAGE_CODE == 'en' %}Service{% else %}Сервис{% endif %}</h3><p>{% if LANGUAGE_CODE == 'en' %}We support you at every step, from idea to delivery{% else %}Сопровождаем вас на всех этапах — от идеи до доставки{% endif %}</p></div></article>
+                    <article class="about-value-card"><div class="about-value-image about-value-service" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}A packaged Vkusno Da Sladko gift{% else %}Упакованный подарок «Вкусно Да Сладко»{% endif %}"></div><div><h3>{% if LANGUAGE_CODE == 'en' %}Service{% else %}Сервис{% endif %}</h3><p>{% if LANGUAGE_CODE == 'en' %}We support you at every step, from idea to delivery{% else %}Сопровождаем вас на всех этапах — от идеи до доставки{% endif %}</p></div></article>
                 {% endfor %}
             </div>
         </section>

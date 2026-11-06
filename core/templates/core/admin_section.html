@@ -1,13 +1,13 @@
 {% extends "core/base.html" %}
 
-{% block title %}{{ page_title }} — Lukomorye{% endblock %}
+{% block title %}{{ page_title }} — Vkusno Da Sladko{% endblock %}
 {% block shell_class %} admin-dashboard-shell{% endblock %}
 
 {% block content %}
     <section class="site-content-manager">
         <header class="admin-dashboard-heading">
-            <div>
-                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Lukomorye management{% else %}Управление Лукоморьем{% endif %}</p>
+            <div{% if section_kind == "message" %} class="admin-record-copy admin-record-copy-message"{% endif %}>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko management{% else %}Управление «Вкусно Да Сладко»{% endif %}</p>
                 <h1>{{ page_title }}</h1>
                 {% if is_new or form %}
                     <p>{% if LANGUAGE_CODE == 'en' %}Manage this section using the website dashboard.{% else %}Управляйте этим разделом через панель сайта.{% endif %}</p>
@@ -158,8 +158,16 @@
             <form class="site-content-search" method="get">
                 <label for="admin-section-search">{% if LANGUAGE_CODE == 'en' %}Search{% else %}Поиск{% endif %}</label>
                 <input id="admin-section-search" class="site-content-form-control" type="search" name="q" value="{{ search_query }}" placeholder="{% if LANGUAGE_CODE == 'en' %}Search this section{% else %}Поиск в разделе{% endif %}">
+                {% if section_kind == "message" and hidden_feedback %}<input type="hidden" name="hidden" value="1">{% endif %}
                 <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Find{% else %}Найти{% endif %}</button>
             </form>
+
+            {% if section_kind == "message" %}
+                <nav class="site-content-section-add" aria-label="{% if LANGUAGE_CODE == 'en' %}Feedback visibility{% else %}Отображение обращений{% endif %}">
+                    <a class="admin-dashboard-site-link{% if not hidden_feedback %} admin-dashboard-primary-link{% endif %}" href="{% url 'admin_section' section %}">{% if LANGUAGE_CODE == 'en' %}Visible{% else %}Видимые{% endif %}</a>
+                    <a class="admin-dashboard-site-link{% if hidden_feedback %} admin-dashboard-primary-link{% endif %}" href="{% url 'admin_section' section %}?hidden=1">{% if LANGUAGE_CODE == 'en' %}Hidden{% else %}Скрытые{% endif %}</a>
+                </nav>
+            {% endif %}
 
             {% if can_add and section_kind != "order" and section_kind != "message" and section_kind != "customer" %}
                 <div class="site-content-section-add">
@@ -186,7 +194,7 @@
                                 {% elif section_kind == "filter" %}
                                     <span class="site-content-existing-page">{{ item.get_filter_type_display }}</span>
                                     <h3>{{ item.localized_label }}</h3>
-                                    <small>{{ item.value }}</small>
+                                    <small>{% if LANGUAGE_CODE == 'en' %}Display number{% else %}Номер отображения{% endif %}: {{ item.display_order|add:1 }} · {{ item.value }}</small>
                                 {% elif section_kind == "order" %}
                                     <span class="site-content-existing-page">#{{ item.pk }} · {{ item.created_at|date:"d.m.Y H:i" }}</span>
                                     <h3>{{ item.name }}</h3>
@@ -196,13 +204,30 @@
                                     <h3>{{ item }}</h3>
                                     <small>{{ item.user.email }}{% if item.phone %} · {{ item.phone }}{% endif %}</small>
                                 {% elif section_kind == "message" %}
-                                    <span class="site-content-existing-page">{{ item.name }} · {{ item.created_at|date:"d.m.Y H:i" }}</span>
+                                    <span class="site-content-existing-page">{{ item.created_at|date:"d.m.Y H:i" }}</span>
                                     <h3>{{ item.subject }}</h3>
-                                    <small>{{ item.email }} · {{ item.get_status_display }}</small>
+                                    <small>{{ item.name }} · {{ item.email }}</small>
+                                    <span class="admin-record-status">{{ item.get_status_display }}</span>
                                 {% endif %}
                             </div>
                             {% if section_kind == "customer" %}
                                 <a class="admin-dashboard-site-link" href="{% url 'admin_section_edit' section item.pk %}">{% if LANGUAGE_CODE == 'en' %}View{% else %}Просмотр{% endif %}</a>
+                            {% elif section_kind == "message" %}
+                                <div class="admin-record-actions">
+                                    {% if can_change %}
+                                        <a class="admin-dashboard-site-link" href="{% url 'admin_section_edit' section item.pk %}">{% if LANGUAGE_CODE == 'en' %}Open{% else %}Открыть{% endif %}</a>
+                                        <form method="post" action="{% url 'admin_section_visibility' section item.pk item.is_hidden|yesno:'show,hide' %}">
+                                            {% csrf_token %}
+                                            <button class="admin-dashboard-site-link" type="submit">{% if item.is_hidden %}{% if LANGUAGE_CODE == 'en' %}Show{% else %}Показать{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Hide{% else %}Скрыть{% endif %}{% endif %}</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if can_delete %}
+                                        <form method="post" action="{% url 'admin_section_delete' section item.pk %}" onsubmit="return confirm('{% if LANGUAGE_CODE == 'en' %}Delete this feedback?{% else %}Удалить это обращение?{% endif %}')">
+                                            {% csrf_token %}
+                                            <button class="admin-dashboard-site-link admin-record-action-delete" type="submit">{% if LANGUAGE_CODE == 'en' %}Delete{% else %}Удалить{% endif %}</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
                             {% elif can_change %}
                                 <a class="admin-dashboard-site-link" href="{% url 'admin_section_edit' section item.pk %}">{% if LANGUAGE_CODE == 'en' %}Open{% else %}Открыть{% endif %}</a>
                             {% endif %}

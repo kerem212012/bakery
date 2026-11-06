@@ -1,0 +1,48 @@
+{% extends "core/base.html" %}
+
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Calculator pricing — Vkusno Da Sladko{% else %}Настройки калькулятора — Вкусно Да Сладко{% endif %}{% endblock %}
+{% block shell_class %} admin-dashboard-shell{% endblock %}
+
+{% block content %}
+    <section class="site-content-manager">
+        <header class="admin-dashboard-heading">
+            <div>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko management{% else %}Управление «Вкусно Да Сладко»{% endif %}</p>
+                <h1>{% if LANGUAGE_CODE == 'en' %}Calculator pricing{% else %}Настройки калькулятора{% endif %}</h1>
+                <p>{% if LANGUAGE_CODE == 'en' %}Changes apply to new quotes and pre-orders. Existing orders keep their saved prices. A size multiplier scales the base price; add-ons can be negative.{% else %}Настройки применяются к новым расчётам и предзаказам. В существующих заказах цены сохраняются. Множитель размера применяется к базовой цене; доплаты могут быть отрицательными.{% endif %}</p>
+            </div>
+            <div class="admin-dashboard-heading-actions">
+                <a class="admin-dashboard-site-link" href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Dashboard{% else %}Панель управления{% endif %}</a>
+            </div>
+        </header>
+
+        {% if messages %}
+            <div class="site-content-notices">
+                {% for message in messages %}<p class="site-content-notice">{{ message }}</p>{% endfor %}
+            </div>
+        {% endif %}
+
+        <form class="site-content-editor" method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="site-content-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+            {% for title, fields in field_groups %}
+                <section class="site-content-form-section">
+                    <h2>{{ title }}</h2>
+                    <div class="site-content-form-grid">
+                        {% for field in fields %}
+                            <div class="site-content-form-field">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                {{ field.errors }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endfor %}
+            <div class="site-content-form-actions">
+                <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save calculator settings{% else %}Сохранить настройки{% endif %}</button>
+            </div>
+        </form>
+    </section>
+{% endblock %}

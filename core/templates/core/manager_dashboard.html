@@ -1,13 +1,13 @@
 {% extends "core/base.html" %}
 
-{% block title %}{% if LANGUAGE_CODE == 'en' %}Manager workspace — Lukomorye{% else %}Кабинет менеджера — Лукоморье{% endif %}{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Manager workspace — Vkusno Da Sladko{% else %}Кабинет менеджера — Вкусно Да Сладко{% endif %}{% endblock %}
 {% block shell_class %} manager-dashboard-shell{% endblock %}
 
 {% block content %}
     <section class="manager-dashboard">
         <header class="manager-dashboard-heading">
             <div>
-                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Lukomorye team{% else %}Команда Лукоморья{% endif %}</p>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko team{% else %}Команда «Вкусно Да Сладко»{% endif %}</p>
                 <h1>{% if LANGUAGE_CODE == 'en' %}Manager workspace{% else %}Кабинет менеджера{% endif %}</h1>
                 <p>{% if LANGUAGE_CODE == 'en' %}Review new orders, keep customers informed, and follow up on messages.{% else %}Обрабатывайте заказы, информируйте клиентов и отвечайте на обращения.{% endif %}</p>
             </div>

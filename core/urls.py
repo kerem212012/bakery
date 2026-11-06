@@ -6,6 +6,11 @@ urlpatterns = [
     path('', views.home, name='home'),
     path("admin-panel/", views.admin_dashboard, name="admin_dashboard"),
     path(
+        "admin-panel/calculator/",
+        views.calculator_settings,
+        name="calculator_settings",
+    ),
+    path(
         "admin-panel/site-content/",
         views.site_content_manager,
         name="site_content_manager",
@@ -30,6 +35,16 @@ urlpatterns = [
         "admin-panel/section/<slug:section>/<int:object_id>/",
         views.admin_section,
         name="admin_section_edit",
+    ),
+    path(
+        "admin-panel/section/<slug:section>/<int:object_id>/delete/",
+        views.admin_section_delete,
+        name="admin_section_delete",
+    ),
+    path(
+        "admin-panel/section/<slug:section>/<int:object_id>/<slug:action>/",
+        views.admin_section_visibility,
+        name="admin_section_visibility",
     ),
     path("manager/", views.manager_dashboard, name="manager_dashboard"),
     path(

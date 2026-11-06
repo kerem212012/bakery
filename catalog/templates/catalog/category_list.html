@@ -1,16 +1,10 @@
 {% extends "catalog/base.html" %}
 
-{% block title %}{% if LANGUAGE_CODE == 'en' %}Gift catalog — Lukomorye{% else %}Каталог подарков — Лукоморье{% endif %}{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Gift catalog — Vkusno Da Sladko{% else %}Каталог подарков — Вкусно Да Сладко{% endif %}{% endblock %}
 
 {% block content %}
     <section class="catalog-list-layout" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift catalog{% else %}Каталог подарков{% endif %}">
         <aside class="catalog-sidebar" aria-label="{% if LANGUAGE_CODE == 'en' %}Catalog filters{% else %}Фильтры каталога{% endif %}">
-            <div class="catalog-breadcrumb">
-                <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
-                <span aria-hidden="true">›</span>
-                <span>{% if LANGUAGE_CODE == 'en' %}Catalog{% else %}Каталог{% endif %}</span>
-            </div>
-
             <form class="catalog-filter-form" method="get" action="{% url 'catalog:category_list' %}">
                 <input type="hidden" name="query" value="{{ filter_form.query.value|default:'' }}">
                 <input type="hidden" name="search_mode" value="{{ filter_form.search_mode.value|default:'all' }}">
@@ -36,7 +30,7 @@
                     </button>
                     <div class="catalog-sidebar-content" id="catalog-category-filters">
                         {% for category in categories %}
-                            <label class="catalog-filter-item">
+                            <label class="catalog-filter-item catalog-category-filter-item">
                                 <input class="catalog-check" type="checkbox" name="categories" value="{{ category.pk }}"{% if category.pk|stringformat:"s" in selected_category_ids %} checked{% endif %}>
                                 <span>{{ category.localized_name }}</span>
                                 <span class="catalog-pill">{{ category.active_product_count }}</span>
@@ -86,11 +80,21 @@
                         </button>
                         <div class="catalog-sidebar-content" id="catalog-filter-{{ filter_group.type }}" hidden>
                             {% for option in filter_group.options %}
-                                <label class="catalog-filter-item">
-                                    <input class="catalog-check" type="checkbox" name="{{ filter_group.name }}" value="{{ option.value }}"{% if option.value in filter_group.selected_values %} checked{% endif %}>
-                                    <span>{{ option.localized_label }}</span>
+                                <div class="catalog-filter-option-row">
+                                    <label class="catalog-filter-item">
+                                        <input class="catalog-check" type="checkbox" name="{{ filter_group.name }}" value="{{ option.value }}"{% if option.value in filter_group.selected_values %} checked{% endif %}>
+                                        <span>{{ option.localized_label }}</span>
+                                    </label>
+                                    {% if filter_group.type == "coating" or filter_group.type == "dough" %}
+                                        {% if option.localized_description %}
+                                        <span class="catalog-filter-help">
+                                            <button class="catalog-filter-help-button" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}About {{ option.localized_label }}{% else %}О параметре «{{ option.localized_label }}»{% endif %}" aria-describedby="filter-help-{{ option.pk }}">?</button>
+                                            <span class="catalog-filter-help-text" id="filter-help-{{ option.pk }}" role="tooltip">{{ option.localized_description }}</span>
+                                        </span>
+                                        {% endif %}
+                                    {% endif %}
                                     <span class="catalog-pill">{{ option.product_count }}</span>
-                                </label>
+                                </div>
                             {% empty %}
                                 <p class="catalog-filter-empty">{% if LANGUAGE_CODE == 'en' %}No options have been added yet.{% else %}Варианты пока не добавлены.{% endif %}</p>
                             {% endfor %}

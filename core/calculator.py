@@ -1,4 +1,6 @@
+from copy import deepcopy
 from decimal import Decimal, ROUND_HALF_UP
+
 from django.utils.translation import get_language
 
 
@@ -36,6 +38,49 @@ DELIVERY_COSTS = {
 }
 DISCOUNT_TIERS = ((100, 20), (50, 15), (20, 10))
 LEAD_TIME_DAYS = 3
+
+DEFAULT_CALCULATOR_PRICING = {
+    "base_unit_price": "98",
+    "size_multipliers": {key: str(value) for key, value in SIZE_MULTIPLIERS.items()},
+    "flavor_additions": {key: str(value) for key, value in FLAVOR_ADDITIONS.items()},
+    "coating_additions": {key: str(value) for key, value in COATING_ADDITIONS.items()},
+    "packaging_additions": {key: str(value) for key, value in PACKAGING_ADDITIONS.items()},
+    "delivery_costs": {key: str(value) for key, value in DELIVERY_COSTS.items()},
+    "discount_tiers": [list(tier) for tier in DISCOUNT_TIERS],
+    "lead_time_days": LEAD_TIME_DAYS,
+}
+
+
+def default_calculator_pricing():
+    return deepcopy(DEFAULT_CALCULATOR_PRICING)
+
+
+def normalize_calculator_pricing(pricing=None):
+    source = pricing or DEFAULT_CALCULATOR_PRICING
+    result = {
+        "base_unit_price": Decimal(str(source.get("base_unit_price", BASE_UNIT_PRICE))),
+        "lead_time_days": int(source.get("lead_time_days", LEAD_TIME_DAYS)),
+    }
+    for key, defaults in (
+        ("size_multipliers", SIZE_MULTIPLIERS),
+        ("flavor_additions", FLAVOR_ADDITIONS),
+        ("coating_additions", COATING_ADDITIONS),
+        ("packaging_additions", PACKAGING_ADDITIONS),
+        ("delivery_costs", DELIVERY_COSTS),
+    ):
+        values = source.get(key, {})
+        result[key] = {
+            option: Decimal(str(values.get(option, default)))
+            for option, default in defaults.items()
+        }
+    tiers = source.get("discount_tiers", DISCOUNT_TIERS)
+    result["discount_tiers"] = tuple(
+        sorted(
+            ((int(threshold), int(discount)) for threshold, discount in tiers),
+            reverse=True,
+        )
+    )
+    return result
 
 FLAVOR_CHOICES = (
     ("classic", "Имбирный пряник (классика)"),
@@ -146,9 +191,34 @@ ENGLISH_CHOICES = {
 }
 
 
-def localized_calculator_options():
+def localized_calculator_options(pricing=None):
+    pricing = normalize_calculator_pricing(pricing)
+    options = {
+        "flavors": tuple(
+            {"value": value, "label": label, "extra": pricing["flavor_additions"][value]}
+            for value, label in FLAVOR_CHOICES
+        ),
+        "sizes": tuple(
+            {"value": value, "label": label, "multiplier": pricing["size_multipliers"][value]}
+            for value, label in SIZE_CHOICES
+        ),
+        "shapes": tuple({"value": value, "label": label} for value, label in SHAPE_CHOICES),
+        "coatings": tuple(
+            {"value": value, "label": label, "extra": pricing["coating_additions"][value]}
+            for value, label in COATING_CHOICES
+        ),
+        "packaging": tuple(
+            {"value": value, "label": label, "extra": pricing["packaging_additions"][value]}
+            for value, label in PACKAGING_CHOICES
+        ),
+        "deliveries": tuple(
+            {"value": value, "label": label, "cost": pricing["delivery_costs"][value]}
+            for value, label in DELIVERY_CHOICES
+        ),
+        "payments": tuple({"value": value, "label": label} for value, label in PAYMENT_CHOICES),
+    }
     if get_language() != "en":
-        return CALCULATOR_OPTIONS
+        return options
 
     choice_groups = {
         "flavors": "flavor",
@@ -166,9 +236,9 @@ def localized_calculator_options():
             }
             if group in choice_groups
             else option
-            for option in options
+            for option in options[group]
         )
-        for group, options in CALCULATOR_OPTIONS.items()
+        for group in options
     }
 
 
@@ -179,19 +249,24 @@ def localized_choices(choices, group):
     return tuple((value, translations.get(value, label)) for value, label in choices)
 
 
-def calculate_quote(configuration):
+def calculate_quote(configuration, pricing=None):
+    pricing = normalize_calculator_pricing(pricing)
     quantity = int(configuration["quantity"])
     unit_price = (
-        BASE_UNIT_PRICE * SIZE_MULTIPLIERS[configuration["size"]]
-        + FLAVOR_ADDITIONS[configuration["flavor"]]
-        + COATING_ADDITIONS[configuration["coating"]]
-        + PACKAGING_ADDITIONS[configuration["packaging"]]
+        pricing["base_unit_price"] * pricing["size_multipliers"][configuration["size"]]
+        + pricing["flavor_additions"][configuration["flavor"]]
+        + pricing["coating_additions"][configuration["coating"]]
+        + pricing["packaging_additions"][configuration["packaging"]]
     ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
     discount_percent = next(
-        (discount for threshold, discount in DISCOUNT_TIERS if quantity >= threshold),
+        (
+            discount
+            for threshold, discount in pricing["discount_tiers"]
+            if quantity >= threshold
+        ),
         0,
     )
-    delivery_cost = DELIVERY_COSTS[configuration["delivery"]]
+    delivery_cost = pricing["delivery_costs"][configuration["delivery"]]
     total_price = (
         unit_price * quantity * (Decimal("100") - discount_percent) / Decimal("100")
         + delivery_cost
@@ -200,6 +275,6 @@ def calculate_quote(configuration):
         "unit_price": unit_price,
         "discount_percent": discount_percent,
         "delivery_cost": delivery_cost,
-        "lead_time_days": LEAD_TIME_DAYS,
+        "lead_time_days": pricing["lead_time_days"],
         "total_price": total_price,
     }

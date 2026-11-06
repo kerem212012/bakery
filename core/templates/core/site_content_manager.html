@@ -1,6 +1,6 @@
 {% extends "core/base.html" %}
 
-{% block title %}{% if LANGUAGE_CODE == 'en' %}Site content — Lukomorye{% else %}Контент сайта — Лукоморье{% endif %}{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Site content — Vkusno Da Sladko{% else %}Контент сайта — Вкусно Да Сладко{% endif %}{% endblock %}
 {% block shell_class %} admin-dashboard-shell{% endblock %}
 
 {% block content %}
@@ -83,10 +83,54 @@
                             {% endif %}
                         </section>
                     {% endfor %}
-                    <div class="site-content-form-actions">
+                    <template id="home-slide-empty-form">
+                        <section class="site-content-form-section site-content-slide-editor">
+                            <h2>{% if LANGUAGE_CODE == 'en' %}Banner <span data-banner-number></span>{% else %}Баннер <span data-banner-number></span>{% endif %}</h2>
+                            {% for hidden in slide_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                            <div class="site-content-form-grid">
+                                {% for field in slide_formset.empty_form.visible_fields %}
+                                    <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                        {% if field.name == 'is_active' %}
+                                            <label>{{ field }}<span>{{ field.label }}</span></label>
+                                        {% else %}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        {% endif %}
+                                        {{ field.errors }}
+                                        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </section>
+                    </template>
+                    <div class="site-content-form-actions home-slide-form-actions">
+                        <button class="admin-dashboard-site-link" id="add-home-slide" type="button">{% if LANGUAGE_CODE == 'en' %}Add banner{% else %}Добавить баннер{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save and publish banners{% else %}Сохранить баннеры{% endif %}</button>
                     </div>
                 </form>
+                <script>
+                    (() => {
+                        const addButton = document.getElementById("add-home-slide");
+                        const form = addButton?.closest("form");
+                        const template = document.getElementById("home-slide-empty-form");
+                        const totalForms = form?.querySelector("#id_slides-TOTAL_FORMS");
+                        if (!addButton || !form || !template || !totalForms) return;
+
+                        addButton.addEventListener("click", () => {
+                            const index = Number(totalForms.value);
+                            const fragment = template.content.cloneNode(true);
+                            const html = document.createElement("div");
+                            html.appendChild(fragment);
+                            html.innerHTML = html.innerHTML.replaceAll("__prefix__", index);
+                            const newForm = html.firstElementChild;
+                            newForm.querySelector("[data-banner-number]").textContent = index + 1;
+                            const orderField = newForm.querySelector(`[name="slides-${index}-display_order"]`);
+                            if (orderField) orderField.value = index;
+                            form.querySelector(".home-slide-form-actions").before(newForm);
+                            totalForms.value = index + 1;
+                        });
+                    })();
+                </script>
             {% elif page_form %}
                 <form class="site-content-editor" method="post" enctype="multipart/form-data">
                     {% csrf_token %}

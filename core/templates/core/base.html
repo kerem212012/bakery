@@ -5,11 +5,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f8f3ed" />
-    <title>{% block title %}Лукоморье — идеи, воплощённые в деталях{% endblock %}</title>
+    <title>{% block title %}{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery products{% else %}Вкусно Да Сладко — кондитерские изделия{% endif %}{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Prata&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=88">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=98">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -18,9 +18,9 @@
             <button class="icon-link menu-toggle" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Open menu{% else %}Открыть меню{% endif %}" aria-controls="navigation" aria-expanded="false">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
             </button>
-            <a class="wordmark" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Lukomorye — home{% else %}Лукоморье — главная{% endif %}">
-                <span class="wordmark-name">Лукоморье</span>
-                <span class="wordmark-caption">{% if LANGUAGE_CODE == 'en' %}Ideas, crafted in every detail{% else %}Идеи, воплощённые в деталях{% endif %}</span>
+            <a class="wordmark" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — home{% else %}Вкусно Да Сладко — главная{% endif %}">
+                <span class="wordmark-name">Вкусно Да Сладко</span>
+                <span class="wordmark-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
             </a>
             <nav class="header-actions" aria-label="{% if LANGUAGE_CODE == 'en' %}Quick links{% else %}Быстрые ссылки{% endif %}">
                 <form class="language-switch" method="post" action="{% url 'set_language' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Choose language{% else %}Выбрать язык{% endif %}">
@@ -132,12 +132,12 @@
                 </a>
             </div>
             <div class="footer-bottom">
-                <a class="footer-brand" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Lukomorye — home{% else %}Лукоморье — главная{% endif %}">
+                <a class="footer-brand" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — home{% else %}Вкусно Да Сладко — главная{% endif %}">
                     <span class="footer-brand-mark" aria-hidden="true">❧</span>
-                    <span class="footer-brand-name">Лукоморье</span>
-                    <span class="footer-brand-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery{% else %}Кондитерские изделия{% endif %}</span>
+                    <span class="footer-brand-name">Вкусно Да Сладко</span>
+                    <span class="footer-brand-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
                 </a>
-                <p class="footer-tagline">{% if LANGUAGE_CODE == 'en' %}Lukomorye — ideas, crafted in every detail.{% else %}Лукоморье — идеи, воплощённые в деталях.{% endif %}</p>
+                <p class="footer-tagline">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery products.{% else %}Вкусно Да Сладко — кондитерские изделия.{% endif %}</p>
                 <div class="social-links" aria-label="{% if LANGUAGE_CODE == 'en' %}Social media{% else %}Социальные сети{% endif %}">
                     <span role="img" aria-label="Telegram">тг</span>
                     <span role="img" aria-label="WhatsApp">wa</span>
@@ -146,7 +146,7 @@
                     <span role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Social network{% else %}Социальная сеть{% endif %}">◎</span>
                 </div>
                 <div class="footer-legal">
-                    <span>© 2026 {% if LANGUAGE_CODE == 'en' %}Lukomorye. All rights reserved.{% else %}Лукоморье. Все права защищены.{% endif %}</span>
+                    <span>© 2026 {% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko. All rights reserved.{% else %}Вкусно Да Сладко. Все права защищены.{% endif %}</span>
                     <span>{% if LANGUAGE_CODE == 'en' %}Privacy policy&nbsp; | &nbsp;Terms of service{% else %}Политика конфиденциальности&nbsp; | &nbsp;Пользовательское соглашение{% endif %}</span>
                 </div>
             </div>
@@ -169,9 +169,9 @@
             <a href="{% url 'contacts' %}">{% if LANGUAGE_CODE == 'en' %}Contact{% else %}Контакты{% endif %}</a>
         </div>
         <div class="mobile-menu-header">
-            <a class="mobile-menu-brand" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Lukomorye — home{% else %}Лукоморье — главная{% endif %}">
-                <span class="mobile-menu-brand-name">Лукоморье</span>
-                <span class="mobile-menu-brand-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery{% else %}Кондитерские изделия{% endif %}</span>
+            <a class="mobile-menu-brand" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — home{% else %}Вкусно Да Сладко — главная{% endif %}">
+                <span class="mobile-menu-brand-name">Вкусно Да Сладко</span>
+                <span class="mobile-menu-brand-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
             </a>
             <button class="mobile-menu-close" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Close menu{% else %}Закрыть меню{% endif %}">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
@@ -207,6 +207,15 @@
     </nav>
     <button class="menu-backdrop" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Close menu{% else %}Закрыть меню{% endif %}"></button>
     <div class="contact-float" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact options{% else %}Способы связи{% endif %}">
+        {% if request.path|slice:":13" != "/admin-panel/" and request.path|slice:":9" != "/manager/" %}
+            <a class="contact-float-toggle calculator-float-toggle" href="{% url 'home' %}#calculator" aria-label="{% if LANGUAGE_CODE == 'en' %}Go to the price calculator{% else %}Перейти к калькулятору{% endif %}">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="5" y="3" width="14" height="18" rx="2"/>
+                    <path d="M8 7h8M8 11h2m4 0h2m-8 4h2m4 0h2m-8 3h2m4 0h2"/>
+                </svg>
+                <span>{% if LANGUAGE_CODE == 'en' %}Calculator{% else %}Рассчитать{% endif %}</span>
+            </a>
+        {% endif %}
         <div class="contact-float-menu" id="contact-float-menu" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact us via Telegram, WhatsApp, MAX, or phone{% else %}Связаться через Telegram, WhatsApp, MAX или звонок{% endif %}">
             <a class="contact-float-option contact-float-telegram" href="https://t.me/" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Message us on Telegram{% else %}Написать в Telegram{% endif %}">
                 <span>Telegram</span>
@@ -248,7 +257,7 @@
         const searchToggle = document.querySelector(".search-link");
         const siteSearchPanel = document.querySelector("#home-search-panel");
         const contactFloat = document.querySelector(".contact-float");
-        const contactToggle = document.querySelector(".contact-float-toggle");
+        const contactToggle = document.querySelector(".contact-float-toggle[type=\"button\"]");
         const contactMenu = document.querySelector(".contact-float-menu");
 
         function setNavigationOpen(isOpen) {

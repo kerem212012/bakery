@@ -1,17 +1,20 @@
 {% extends "core/base.html" %}
 
-{% block title %}{% if LANGUAGE_CODE == 'en' %}Admin dashboard — Lukomorye{% else %}Панель управления — Лукоморье{% endif %}{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Admin dashboard — Vkusno Da Sladko{% else %}Панель управления — Вкусно Да Сладко{% endif %}{% endblock %}
 {% block shell_class %} admin-dashboard-shell{% endblock %}
 
 {% block content %}
     <section class="admin-dashboard">
         <header class="admin-dashboard-heading">
             <div>
-                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Lukomorye management{% else %}Управление Лукоморьем{% endif %}</p>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko management{% else %}Управление «Вкусно Да Сладко»{% endif %}</p>
                 <h1>{% if LANGUAGE_CODE == 'en' %}Admin dashboard{% else %}Панель управления{% endif %}</h1>
                 <p>{% if LANGUAGE_CODE == 'en' %}Manage your catalog, orders, and customer messages from one place.{% else %}Управляйте каталогом, заказами и обращениями клиентов в одном месте.{% endif %}</p>
             </div>
             <div class="admin-dashboard-heading-actions">
+                {% if can_manage_calculator %}
+                    <a class="admin-dashboard-site-link admin-dashboard-primary-link" href="{% url 'calculator_settings' %}">{% if LANGUAGE_CODE == 'en' %}Customize calculator{% else %}Настроить калькулятор{% endif %}</a>
+                {% endif %}
                 {% if can_manage_site_content %}
                     <a class="admin-dashboard-site-link admin-dashboard-primary-link" href="{% url 'site_content_manager' %}">{% if LANGUAGE_CODE == 'en' %}Edit page content{% else %}Редактировать контент страниц{% endif %}</a>
                 {% endif %}

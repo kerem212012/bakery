@@ -13,7 +13,9 @@ from .calculator import (
     PAYMENT_CHOICES,
     SHAPE_CHOICES,
     SIZE_CHOICES,
+    normalize_calculator_pricing,
     localized_choices,
+    localized_calculator_options,
 )
 from .models import (
     FeedbackSubmission,
@@ -29,12 +31,12 @@ MAX_ATTACHMENT_COUNT = 5
 
 SITE_PAGE_CONTENT_DEFAULTS = {
     SitePageContent.Page.ABOUT: {
-        "eyebrow": "История Лукоморья",
-        "eyebrow_en": "The story of Lukomorye",
+        "eyebrow": "История «Вкусно Да Сладко»",
+        "eyebrow_en": "The story of Vkusno Da Sladko",
         "title": "О нас",
         "title_en": "About us",
-        "subtitle": "Лукоморье — идеи, воплощённые в деталях.",
-        "subtitle_en": "Lukomorye — ideas, crafted in every detail.",
+        "subtitle": "Вкусно Да Сладко — кондитерские изделия, созданные с вниманием к деталям.",
+        "subtitle_en": "Vkusno Da Sladko — confectionery made with care in every detail.",
         "description": "Мы создаём кондитерские изделия, которые превращают идеи в сладкие истории. Для нас важно не просто испечь пряник, а вложить в него смысл, эстетику и внимание к каждой детали.",
         "description_en": "We create confectionery that turns ideas into sweet stories. For us, it is about more than baking gingerbread: every piece carries meaning, beauty, and care in every detail.",
     },
@@ -51,8 +53,8 @@ SITE_PAGE_CONTENT_DEFAULTS = {
     SitePageContent.Page.PARTNERSHIP: {
         "eyebrow": "Главная / Партнёрство",
         "eyebrow_en": "Home / Partnership",
-        "title": "Партнёрство с Лукоморье",
-        "title_en": "Partner with Lukomorye",
+        "title": "Партнёрство с «Вкусно Да Сладко»",
+        "title_en": "Partner with Vkusno Da Sladko",
         "subtitle": "Открыты к сотрудничеству и новым возможностям",
         "subtitle_en": "Open to collaboration and new opportunities",
         "description": "Мы ценим интерес к нашему бренду и всегда открыты к сотрудничеству. Заполните форму, и наш менеджер свяжется с вами для обсуждения перспектив партнёрства.",
@@ -1799,27 +1801,11 @@ class HomeHeroSlideForm(forms.ModelForm):
     class Meta:
         model = HomeHeroSlide
         fields = (
-            "eyebrow",
-            "eyebrow_en",
-            "title",
-            "title_en",
-            "description",
-            "description_en",
             "image",
             "display_order",
             "is_active",
         )
         widgets = {
-            "eyebrow": forms.TextInput(attrs={"class": "site-content-form-control"}),
-            "eyebrow_en": forms.TextInput(attrs={"class": "site-content-form-control"}),
-            "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
-            "title_en": forms.TextInput(attrs={"class": "site-content-form-control"}),
-            "description": forms.Textarea(
-                attrs={"class": "site-content-form-control", "rows": 4}
-            ),
-            "description_en": forms.Textarea(
-                attrs={"class": "site-content-form-control", "rows": 4}
-            ),
             "image": forms.ClearableFileInput(
                 attrs={"class": "site-content-form-control"}
             ),
@@ -1833,12 +1819,6 @@ class HomeHeroSlideForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if (get_language() or "").startswith("en"):
             labels = {
-                "eyebrow": "Small heading (Russian)",
-                "eyebrow_en": "Small heading (English)",
-                "title": "Heading (Russian)",
-                "title_en": "Heading (English)",
-                "description": "Description (Russian)",
-                "description_en": "Description (English)",
                 "image": "Banner photo",
                 "is_active": "Show this slide",
             }
@@ -1849,6 +1829,15 @@ class HomeHeroSlideForm(forms.ModelForm):
                 "Leave empty to keep the current banner photo."
             )
         self.fields["image"].widget.attrs["accept"] = "image/jpeg,image/png,image/webp"
+
+    def has_changed(self):
+        if (
+            self.instance._state.adding
+            and self.initial.get("is_active")
+            and self.data.get(self.add_prefix("is_active"))
+        ):
+            return True
+        return super().has_changed()
 
 
 class HomeHeroSlideBaseFormSet(BaseModelFormSet):
@@ -2000,3 +1989,212 @@ class AdminFeedbackStatusForm(forms.Form):
             (value, labels[value]) for value, _ in FeedbackSubmission.Status.choices
         )
         self.fields["status"].widget.attrs["class"] = "site-content-form-control"
+
+
+class CalculatorPricingForm(forms.Form):
+    def __init__(self, *args, pricing=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        pricing = normalize_calculator_pricing(pricing)
+        options = localized_calculator_options(pricing)
+        english = (get_language() or "").startswith("en")
+        currency = "RUB" if english else "₽"
+        self.field_groups = []
+
+        self._add_price_field(
+            "base_unit_price",
+            (
+                f"Base price per item ({currency})"
+                if english
+                else f"Базовая цена за штуку ({currency})"
+            ),
+            pricing["base_unit_price"],
+            minimum=0,
+            decimal_places=2,
+        )
+        self.field_groups.append(
+            (
+                "General" if english else "Общие настройки",
+                ("base_unit_price",),
+            )
+        )
+        for group_key, pricing_key in (
+            ("sizes", "size_multipliers"),
+            ("flavors", "flavor_additions"),
+            ("coatings", "coating_additions"),
+            ("packaging", "packaging_additions"),
+            ("deliveries", "delivery_costs"),
+        ):
+            field_names = []
+            for option in options[group_key]:
+                value = option["value"]
+                if group_key == "sizes":
+                    label = (
+                        f'{option["label"]} cm — multiplier'
+                        if english
+                        else f'{option["label"]} см — множитель'
+                    )
+                    minimum = 0
+                    decimal_places = 3
+                    name = f"size_multiplier_{value}"
+                else:
+                    suffix = "cost" if group_key == "deliveries" else "addition"
+                    if group_key == "flavors":
+                        name = f"flavor_addition_{value}"
+                    elif group_key == "coatings":
+                        name = f"coating_addition_{value}"
+                    elif group_key == "packaging":
+                        name = f"packaging_addition_{value}"
+                    else:
+                        name = f"delivery_cost_{value}"
+                    label = f'{option["label"]} — {suffix} ({currency})'
+                    minimum = 0 if group_key == "deliveries" else None
+                    decimal_places = 2
+                self._add_price_field(
+                    name,
+                    label,
+                    pricing[pricing_key][value],
+                    minimum=minimum,
+                    decimal_places=decimal_places,
+                )
+                field_names.append(name)
+            group_labels = {
+                "sizes": ("Size multipliers", "Множители размера"),
+                "flavors": ("Flavor additions", "Доплата за вкус"),
+                "coatings": ("Coating additions", "Доплата за покрытие"),
+                "packaging": ("Packaging additions", "Доплата за упаковку"),
+                "deliveries": ("Delivery costs", "Стоимость доставки"),
+            }
+            self.field_groups.append(
+                (group_labels[group_key][0 if english else 1], tuple(field_names))
+            )
+
+        tier_names = []
+        for index in range(3):
+            slot = index + 1
+            threshold_name = f"discount_quantity_{slot}"
+            percent_name = f"discount_percent_{slot}"
+            tier = (
+                pricing["discount_tiers"][index]
+                if index < len(pricing["discount_tiers"])
+                else None
+            )
+            self.fields[threshold_name] = forms.IntegerField(
+                label=(
+                    f"Tier {slot}: minimum quantity"
+                    if english
+                    else f"Скидка {slot}: от количества"
+                ),
+                required=False,
+                min_value=1,
+                initial=tier[0] if tier else None,
+                widget=forms.NumberInput(
+                    attrs={"class": "site-content-form-control", "min": 1}
+                ),
+            )
+            self.fields[percent_name] = forms.IntegerField(
+                label=(
+                    f"Tier {slot}: discount (%)"
+                    if english
+                    else f"Скидка {slot}: размер (%)"
+                ),
+                required=False,
+                min_value=0,
+                max_value=100,
+                initial=tier[1] if tier else None,
+                widget=forms.NumberInput(
+                    attrs={"class": "site-content-form-control", "min": 0, "max": 100}
+                ),
+            )
+            tier_names.extend((threshold_name, percent_name))
+        self.field_groups.append(
+            ("Bulk discounts" if english else "Скидки за объём", tuple(tier_names))
+        )
+
+        self.fields["lead_time_days"] = forms.IntegerField(
+            label=(
+                "Estimated lead time (days)"
+                if english
+                else "Срок изготовления (дней)"
+            ),
+            min_value=1,
+            max_value=365,
+            initial=pricing["lead_time_days"],
+            widget=forms.NumberInput(
+                attrs={"class": "site-content-form-control", "min": 1, "max": 365}
+            ),
+        )
+        self.field_groups.append(
+            (
+                "Lead time" if english else "Срок изготовления",
+                ("lead_time_days",),
+            )
+        )
+
+    def _add_price_field(self, name, label, initial, *, minimum, decimal_places):
+        self.fields[name] = forms.DecimalField(
+            label=label,
+            max_digits=10,
+            decimal_places=decimal_places,
+            min_value=minimum,
+            initial=initial,
+            widget=forms.NumberInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "step": "0.01" if decimal_places == 2 else "0.001",
+                }
+            ),
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        tiers = []
+        for slot in range(1, 4):
+            threshold_name = f"discount_quantity_{slot}"
+            percent_name = f"discount_percent_{slot}"
+            threshold = cleaned_data.get(threshold_name)
+            percent = cleaned_data.get(percent_name)
+            if (threshold is None) != (percent is None):
+                message = (
+                    "Enter both a quantity and a discount."
+                    if (get_language() or "").startswith("en")
+                    else "Укажите и количество, и размер скидки."
+                )
+                self.add_error(threshold_name, message)
+                self.add_error(percent_name, message)
+            elif threshold is not None and percent is not None:
+                tiers.append((threshold, percent))
+        if len({threshold for threshold, _ in tiers}) != len(tiers):
+            message = (
+                "Discount quantities must be unique."
+                if (get_language() or "").startswith("en")
+                else "Пороговые количества скидок не должны повторяться."
+            )
+            self.add_error(None, message)
+        cleaned_data["pricing"] = {
+            "base_unit_price": str(cleaned_data.get("base_unit_price", 0)),
+            "size_multipliers": {
+                value: str(cleaned_data.get(f"size_multiplier_{value}", 0))
+                for value, _ in SIZE_CHOICES
+            },
+            "flavor_additions": {
+                value: str(cleaned_data.get(f"flavor_addition_{value}", 0))
+                for value, _ in FLAVOR_CHOICES
+            },
+            "coating_additions": {
+                value: str(cleaned_data.get(f"coating_addition_{value}", 0))
+                for value, _ in COATING_CHOICES
+            },
+            "packaging_additions": {
+                value: str(cleaned_data.get(f"packaging_addition_{value}", 0))
+                for value, _ in PACKAGING_CHOICES
+            },
+            "delivery_costs": {
+                value: str(cleaned_data.get(f"delivery_cost_{value}", 0))
+                for value, _ in DELIVERY_CHOICES
+            },
+            "discount_tiers": [
+                list(tier) for tier in sorted(tiers, reverse=True)
+            ],
+            "lead_time_days": cleaned_data.get("lead_time_days", 1),
+        }
+        return cleaned_data

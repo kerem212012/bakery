@@ -31,6 +31,7 @@ from .calculator import (
     SIZE_CHOICES,
     calculate_quote,
     localized_calculator_options,
+    normalize_calculator_pricing,
 )
 from .forms import (
     AdminFeedbackStatusForm,
@@ -44,6 +45,7 @@ from .forms import (
     BusinessClientsPaymentHeadingForm,
     BusinessClientsSectionHeadingForm,
     BusinessClientsSectionTitleForm,
+    CalculatorPricingForm,
     ContactRequisitesForm,
     ContactDetailsForm,
     DeliveryHelpCardForm,
@@ -66,6 +68,7 @@ from .forms import (
     SitePageContentForm,
 )
 from .models import (
+    CalculatorSettings,
     FeedbackSubmission,
     HomeHeroSlide,
     Preorder,
@@ -236,6 +239,7 @@ def admin_dashboard(request):
             "can_view_products": can_view_products,
             "can_add_products": user.has_perm("catalog.add_product"),
             "can_manage_site_content": _can_manage_site_content(user),
+            "can_manage_calculator": user.has_perm("core.change_calculatorsettings"),
             "can_view_categories": can_view_categories,
             "can_add_categories": user.has_perm("catalog.add_category"),
             "can_view_filter_options": can_view_filter_options,
@@ -259,7 +263,8 @@ def admin_dashboard(request):
             ),
             "new_feedback_count": (
                 FeedbackSubmission.objects.filter(
-                    status=FeedbackSubmission.Status.NEW
+                    status=FeedbackSubmission.Status.NEW,
+                    is_hidden=False,
                 ).count()
                 if can_view_feedback
                 else None
@@ -269,6 +274,40 @@ def admin_dashboard(request):
                 if can_view_orders
                 else ()
             ),
+        },
+    )
+
+
+@staff_member_required(login_url="accounts:login")
+def calculator_settings(request):
+    if not request.user.has_perm("core.change_calculatorsettings"):
+        raise PermissionDenied
+
+    settings_record, _ = CalculatorSettings.objects.get_or_create(pk=1)
+    if request.method == "POST":
+        form = CalculatorPricingForm(request.POST, pricing=settings_record.pricing)
+        if form.is_valid():
+            settings_record.pricing = form.cleaned_data["pricing"]
+            settings_record.save(update_fields=("pricing", "updated_at"))
+            messages.success(
+                request,
+                "Calculator pricing saved."
+                if request.LANGUAGE_CODE == "en"
+                else "Настройки калькулятора сохранены.",
+            )
+            return redirect("calculator_settings")
+    else:
+        form = CalculatorPricingForm(pricing=settings_record.pricing)
+
+    return render(
+        request,
+        "core/calculator_settings.html",
+        {
+            "form": form,
+            "field_groups": [
+                (title, [form[name] for name in field_names])
+                for title, field_names in form.field_groups
+            ],
         },
     )
 
@@ -621,12 +660,19 @@ def site_content_manager(request, block_id=None):
     else:
         if request.method == "POST" and request.POST.get("action") == "save_home_slides":
             slide_queryset = HomeHeroSlide.objects.all()
-            slide_initial = HOME_HERO_SLIDE_DEFAULTS[slide_queryset.count() :]
+            slide_count = slide_queryset.count()
+            slide_initial = list(HOME_HERO_SLIDE_DEFAULTS[slide_count:])
+            slide_initial.append(
+                {
+                    "display_order": slide_count + len(slide_initial),
+                    "is_active": False,
+                }
+            )
             SlideFormSet = modelformset_factory(
                 HomeHeroSlide,
                 form=HomeHeroSlideForm,
                 formset=HomeHeroSlideBaseFormSet,
-                extra=max(0, len(HOME_HERO_SLIDE_DEFAULTS) - slide_queryset.count()),
+                extra=max(0, len(HOME_HERO_SLIDE_DEFAULTS) - slide_count) + 1,
             )
             slide_formset = SlideFormSet(
                 request.POST,
@@ -1439,12 +1485,19 @@ def site_content_manager(request, block_id=None):
         else:
             if selected_page == SiteContentBlock.Page.HOME:
                 slide_queryset = HomeHeroSlide.objects.all()
-                slide_initial = HOME_HERO_SLIDE_DEFAULTS[slide_queryset.count() :]
+                slide_count = slide_queryset.count()
+                slide_initial = list(HOME_HERO_SLIDE_DEFAULTS[slide_count:])
+                slide_initial.append(
+                    {
+                        "display_order": slide_count + len(slide_initial),
+                        "is_active": False,
+                    }
+                )
                 SlideFormSet = modelformset_factory(
                     HomeHeroSlide,
                     form=HomeHeroSlideForm,
                     formset=HomeHeroSlideBaseFormSet,
-                    extra=max(0, len(HOME_HERO_SLIDE_DEFAULTS) - slide_queryset.count()),
+                    extra=max(0, len(HOME_HERO_SLIDE_DEFAULTS) - slide_count) + 1,
                 )
                 slide_formset = SlideFormSet(
                     queryset=slide_queryset,
@@ -1794,7 +1847,13 @@ ADMIN_SECTION_CONFIG = {
         "view_perm": "catalog.view_productfilteroption",
         "add_perm": "catalog.add_productfilteroption",
         "change_perm": "catalog.change_productfilteroption",
-        "search_fields": ("label", "label_en", "value"),
+        "search_fields": (
+            "label",
+            "label_en",
+            "description",
+            "description_en",
+            "value",
+        ),
         "title": ("Product filters", "Фильтры товаров"),
         "add_title": ("Add a filter option", "Добавить фильтр"),
         "kind": "filter",
@@ -1824,6 +1883,7 @@ ADMIN_SECTION_CONFIG = {
         "model": FeedbackSubmission,
         "view_perm": "core.view_feedbacksubmission",
         "change_perm": "core.change_feedbacksubmission",
+        "delete_perm": "core.delete_feedbacksubmission",
         "search_fields": ("name", "email", "subject", "message"),
         "title": ("Customer messages", "Обращения клиентов"),
         "kind": "message",
@@ -1913,6 +1973,11 @@ def admin_section(request, section, object_id=None, new=False):
         items = items.select_related("category")
     elif section == "customers":
         items = items.select_related("user")
+    hidden_feedback = (
+        section == "messages" and request.GET.get("hidden") == "1"
+    )
+    if section == "messages":
+        items = items.filter(is_hidden=hidden_feedback)
     search_query = request.GET.get("q", "").strip()
     if search_query:
         from django.db.models import Q
@@ -1943,6 +2008,7 @@ def admin_section(request, section, object_id=None, new=False):
             ),
             "items": items,
             "search_query": search_query,
+            "hidden_feedback": hidden_feedback,
             "form": form,
             "status_form": status_form,
             "order_configuration": order_configuration,
@@ -1950,9 +2016,55 @@ def admin_section(request, section, object_id=None, new=False):
             "is_new": new,
             "can_add": can_add,
             "can_change": can_change,
+            "can_delete": bool(
+                config.get("delete_perm")
+                and user.has_perm(config["delete_perm"])
+            ),
             "messages": messages.get_messages(request),
         },
     )
+
+
+@staff_member_required(login_url="accounts:login")
+@require_POST
+def admin_section_delete(request, section, object_id):
+    config = ADMIN_SECTION_CONFIG.get(section)
+    if config is None or not config.get("delete_perm"):
+        raise PermissionDenied
+    if not request.user.has_perm(config["delete_perm"]):
+        raise PermissionDenied
+
+    instance = get_object_or_404(config["model"], pk=object_id)
+    instance.delete()
+    messages.success(
+        request,
+        "Feedback deleted." if request.LANGUAGE_CODE == "en" else "Обращение удалено.",
+    )
+    return redirect("admin_section", section=section)
+
+
+@staff_member_required(login_url="accounts:login")
+@require_POST
+def admin_section_visibility(request, section, object_id, action):
+    config = ADMIN_SECTION_CONFIG.get(section)
+    if (
+        config is None
+        or section != "messages"
+        or action not in ("hide", "show")
+    ):
+        raise PermissionDenied
+    if not request.user.has_perm(config["change_perm"]):
+        raise PermissionDenied
+
+    instance = get_object_or_404(config["model"], pk=object_id)
+    instance.is_hidden = action == "hide"
+    instance.save(update_fields=("is_hidden",))
+    if action == "hide":
+        message = "Feedback hidden." if request.LANGUAGE_CODE == "en" else "Обращение скрыто."
+    else:
+        message = "Feedback restored." if request.LANGUAGE_CODE == "en" else "Обращение возвращено."
+    messages.success(request, message)
+    return redirect("admin_section", section=section)
 
 
 @staff_member_required(login_url="accounts:login")
@@ -1989,7 +2101,11 @@ def manager_dashboard(request):
         else {}
     )
     feedback_items = (
-        list(FeedbackSubmission.objects.order_by("-created_at")[:6])
+        list(
+            FeedbackSubmission.objects.filter(is_hidden=False).order_by(
+                "-created_at"
+            )[:6]
+        )
         if can_view_feedback
         else []
     )
@@ -2016,7 +2132,8 @@ def manager_dashboard(request):
             "feedback_items": feedback_items,
             "new_feedback_count": (
                 FeedbackSubmission.objects.filter(
-                    status=FeedbackSubmission.Status.NEW
+                    status=FeedbackSubmission.Status.NEW,
+                    is_hidden=False,
                 ).count()
                 if can_view_feedback
                 else 0
@@ -2052,6 +2169,21 @@ def manager_update_order_status(request, order_id):
 
 
 def home(request):
+    calculator_settings = CalculatorSettings.objects.filter(pk=1).first()
+    calculator_pricing = normalize_calculator_pricing(
+        calculator_settings.pricing if calculator_settings else None
+    )
+    initial_quote = calculate_quote(
+        {
+            "flavor": "classic",
+            "quantity": 100,
+            "size": "5",
+            "coating": "icing",
+            "packaging": "ribbon",
+            "delivery": "moscow",
+        },
+        calculator_pricing,
+    )
     preorder_form = PreorderForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and preorder_form.is_valid():
         configuration = {
@@ -2067,7 +2199,7 @@ def home(request):
                 "payment",
             )
         }
-        quote = calculate_quote(configuration)
+        quote = calculate_quote(configuration, calculator_pricing)
         with transaction.atomic():
             preorder = Preorder.objects.create(
                 user=request.user if request.user.is_authenticated else None,
@@ -2108,7 +2240,9 @@ def home(request):
         .select_related("category")
         .order_by("-is_featured", "display_order", "name")[:9],
         "preorder_form": preorder_form,
-        "calculator_options": localized_calculator_options(),
+        "calculator_options": localized_calculator_options(calculator_pricing),
+        "calculator_pricing": calculator_pricing,
+        "calculator_initial_quote": initial_quote,
     }
     return render(request, "core/home.html", context)
 
