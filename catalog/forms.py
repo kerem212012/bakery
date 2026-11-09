@@ -253,6 +253,9 @@ class ProductFilterOptionEditorForm(forms.ModelForm):
             ),
         }
 
+    class Media:
+        js = ("catalog/filter-option-editor.js",)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         english = get_language() == "en"
@@ -272,6 +275,17 @@ class ProductFilterOptionEditorForm(forms.ModelForm):
             self.initial["display_order"] = self.instance.display_order + 1
         else:
             self.initial.setdefault("display_order", 1)
+        filter_type = (
+            self.data.get("filter_type")
+            if self.is_bound
+            else self.instance.filter_type
+            if self.instance.pk
+            else self.initial.get("filter_type", ProductFilterOption.FilterType.SIZE)
+        )
+        self.show_filter_descriptions = filter_type in {
+            ProductFilterOption.FilterType.COATING,
+            ProductFilterOption.FilterType.DOUGH,
+        }
 
     def save(self, commit=True):
         option = super().save(commit=False)

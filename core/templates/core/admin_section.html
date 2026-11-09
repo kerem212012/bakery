@@ -38,7 +38,7 @@
                     <div class="site-content-form-grid">
                         {% for field in form %}
                             {% if field.field.widget.input_type != "checkbox" or field.name == "filter_options" %}
-                                <div class="site-content-form-field{% if field.field.widget.input_type == 'file' or field.name == 'filter_options' %} site-content-form-field-wide{% endif %}">
+                                <div class="site-content-form-field{% if field.field.widget.input_type == 'file' or field.name == 'filter_options' %} site-content-form-field-wide{% endif %}"{% if section == "filters" and field.name == "description" or section == "filters" and field.name == "description_en" %} data-filter-description-field{% if not form.show_filter_descriptions %} hidden style="display:none"{% endif %}{% endif %}>
                                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                                     {{ field }}
                                     {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
@@ -61,6 +61,7 @@
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save{% else %}Сохранить{% endif %}</button>
                     </div>
                 </div>
+                {{ form.media }}
             </form>
         {% elif object %}
             {% if section_kind == "order" %}
@@ -123,6 +124,7 @@
                     <div class="site-content-record-grid">
                         <p><strong>{% if LANGUAGE_CODE == 'en' %}From{% else %}От кого{% endif %}</strong>{{ object.name }}</p>
                         <p><strong>Email</strong><a href="mailto:{{ object.email }}">{{ object.email }}</a></p>
+                        {% if object.phone %}<p><strong>{% if LANGUAGE_CODE == 'en' %}Phone{% else %}Телефон{% endif %}</strong><a href="tel:{{ object.phone }}">{{ object.phone }}</a></p>{% endif %}
                         <p><strong>{% if LANGUAGE_CODE == 'en' %}Received{% else %}Получено{% endif %}</strong>{{ object.created_at|date:"d.m.Y H:i" }}</p>
                         <p class="site-content-record-wide"><strong>{% if LANGUAGE_CODE == 'en' %}Message{% else %}Сообщение{% endif %}</strong>{{ object.message|linebreaksbr }}</p>
                     </div>

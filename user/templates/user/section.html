@@ -29,6 +29,7 @@
                                             <div>
                                                 <h3>{% if LANGUAGE_CODE == 'en' %}Order{% else %}Заказ{% endif %} #{{ row.order.pk }}</h3>
                                                 <p>{{ row.order.created_at|date:"d.m.Y, H:i" }}</p>
+                                                <p>{% if LANGUAGE_CODE == 'en' %}Approximate delivery date{% else %}Приблизительный срок доставки{% endif %}: {% if row.order.delivery_date %}{{ row.order.delivery_date|date:"d.m.Y" }}{% else %}{% if LANGUAGE_CODE == 'en' %}To be confirmed{% else %}Уточняется{% endif %}{% endif %}</p>
                                             </div>
                                             <span class="account-order-status">{{ row.status_label }}</span>
                                         </div>

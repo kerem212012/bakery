@@ -15,11 +15,17 @@
                 <h1 id="business-clients-heading">{% if site_page_content %}{{ site_page_content.localized_title|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Corporate clients{% else %}Корпоративным<br>клиентам{% endif %}{% endif %}</h1>
                 <p class="business-clients-subtitle">{% if site_page_content %}{{ site_page_content.localized_subtitle|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Individual solutions for your business{% else %}Индивидуальные решения<br>для вашего бизнеса{% endif %}{% endif %}</p>
                 <p class="business-clients-description">{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}We create confectionery items that highlight the value of your company and leave pleasant impressions on your colleagues, partners, and clients.{% else %}Создаём кондитерские изделия, которые подчёркивают ценность вашей компании и оставляют приятные впечатления у сотрудников, партнёров и клиентов.{% endif %}{% endif %}</p>
-                <a class="button button-dark" href="{% if site_page_content and site_page_content.button_url %}{{ site_page_content.button_url }}{% else %}mailto:hello@lukomorye.example?subject=Корпоративный%20заказ{% endif %}">
-                    {% if site_page_content %}{{ site_page_content.localized_button_text }}{% else %}{% if LANGUAGE_CODE == 'en' %}Discuss the order{% else %}Обсудить заказ{% endif %}{% endif %} <span aria-hidden="true">→</span>
-                </a>
+                {% if site_page_content and site_page_content.button_url %}
+                    <a class="button button-dark" href="{{ site_page_content.button_url }}">
+                        {{ site_page_content.localized_button_text }} <span aria-hidden="true">→</span>
+                    </a>
+                {% else %}
+                    <button class="button button-dark" type="button" data-open-quick-feedback data-feedback-source="business_clients" data-feedback-subject="{% if LANGUAGE_CODE == 'en' %}Corporate order{% else %}Корпоративный заказ{% endif %}">
+                        {% if site_page_content and site_page_content.localized_button_text %}{{ site_page_content.localized_button_text }}{% else %}{% if LANGUAGE_CODE == 'en' %}Discuss the order{% else %}Обсудить заказ{% endif %}{% endif %} <span aria-hidden="true">→</span>
+                    </button>
+                {% endif %}
             </div>
-            <div class="business-clients-hero-media" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift box with decorated gingerbread cookies{% else %}Подарочная коробка с фигурными пряниками{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
+            <div class="business-clients-hero-media" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift box with decorated gingerbread cookies{% else %}Подарочная коробка с фигурными пряниками{% endif %}" data-brand="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
         </section>
 
         <section class="business-clients-section" aria-labelledby="business-client-process-heading">

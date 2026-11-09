@@ -59,6 +59,31 @@ urlpatterns = [
     path("delivery/", views.delivery, name="delivery"),
     path("faq/", views.faq, name="faq"),
     path("feedback/", views.feedback, name="feedback"),
+    path("feedback/quick/", views.quick_feedback, name="quick_feedback"),
+    path(
+        "privacy-policy/",
+        views.legal_document,
+        {"document": "privacy_policy"},
+        name="privacy_policy",
+    ),
+    path(
+        "personal-data-consent/",
+        views.legal_document,
+        {"document": "personal_data_consent"},
+        name="personal_data_consent",
+    ),
+    path(
+        "terms/",
+        views.legal_document,
+        {"document": "terms"},
+        name="terms",
+    ),
+    path(
+        "public-offer/",
+        views.legal_document,
+        {"document": "public_offer"},
+        name="public_offer",
+    ),
     path("packaging/", views.packaging, name="packaging"),
     path("preorder/", views.home, name="preorder"),
 ]

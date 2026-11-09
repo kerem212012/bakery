@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.utils import timezone
 from django.utils.translation import get_language
 
 from .models import CustomerProfile
@@ -31,6 +32,18 @@ class LoginForm(AuthenticationForm):
 
 
 class RegistrationForm(UserCreationForm):
+    agreement_accepted = forms.BooleanField(
+        required=True,
+        error_messages={
+            "required": "Необходимо принять пользовательское соглашение."
+        },
+    )
+    personal_data_consent = forms.BooleanField(
+        required=True,
+        error_messages={
+            "required": "Необходимо дать согласие на обработку персональных данных."
+        },
+    )
     customer_type = forms.ChoiceField(
         label="Тип клиента",
         choices=CustomerProfile.CustomerType.choices,
@@ -111,6 +124,8 @@ class RegistrationForm(UserCreationForm):
                 "legal_address",
                 "contact_name",
                 "phone",
+                "agreement_accepted",
+                "personal_data_consent",
             )
         )
         if get_language() == "en":
@@ -128,6 +143,8 @@ class RegistrationForm(UserCreationForm):
                 "legal_address": "Registered address",
                 "contact_name": "Contact person",
                 "phone": "Phone",
+                "agreement_accepted": "I accept the User Agreement",
+                "personal_data_consent": "I consent to the processing of my personal data",
             }
             self.fields["customer_type"].choices = (
                 ("individual", "Individual"),
@@ -137,6 +154,12 @@ class RegistrationForm(UserCreationForm):
                 self.fields[field_name].label = label
             self.fields["inn"].error_messages["invalid"] = "Enter 10 or 12 digits."
             self.fields["kpp"].error_messages["invalid"] = "Enter 9 digits."
+            self.fields["agreement_accepted"].error_messages["required"] = (
+                "You must accept the User Agreement."
+            )
+            self.fields["personal_data_consent"].error_messages["required"] = (
+                "You must consent to the processing of your personal data."
+            )
             self.fields["username"].help_text = (
                 "Up to 150 characters: letters, digits, and @ . + - _."
             )
@@ -181,6 +204,7 @@ class RegistrationForm(UserCreationForm):
         if commit:
             user.save()
             self.save_m2m()
+            accepted_at = timezone.now()
             CustomerProfile.objects.create(
                 user=user,
                 customer_type=self.cleaned_data["customer_type"],
@@ -190,6 +214,8 @@ class RegistrationForm(UserCreationForm):
                 legal_address=self.cleaned_data.get("legal_address", "").strip(),
                 contact_name=self.cleaned_data.get("contact_name", "").strip(),
                 phone=self.cleaned_data.get("phone", "").strip(),
+                terms_accepted_at=accepted_at,
+                personal_data_consent_at=accepted_at,
             )
         return user
 

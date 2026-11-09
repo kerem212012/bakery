@@ -69,6 +69,7 @@
                             <span>{{ form.consent_given.label }}</span>
                         </label>
                         {{ form.consent_given.errors }}
+                        <small class="consent-document-links"><a href="{% url 'privacy_policy' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Privacy Policy{% else %}Политика обработки персональных данных{% endif %}</a><a href="{% url 'personal_data_consent' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Consent text{% else %}Текст согласия{% endif %}</a></small>
                     </div>
                     <button class="button button-dark feedback-submit" type="submit">
                         {% if LANGUAGE_CODE == 'en' %}Send message{% else %}Отправить сообщение{% endif %} <span aria-hidden="true">→</span>

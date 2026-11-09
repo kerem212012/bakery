@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load static %}
 
 {% block title %}{% if LANGUAGE_CODE == 'en' %}Calculator pricing — Vkusno Da Sladko{% else %}Настройки калькулятора — Вкусно Да Сладко{% endif %}{% endblock %}
 {% block shell_class %} admin-dashboard-shell{% endblock %}
@@ -25,6 +26,27 @@
         <form class="site-content-editor" method="post">
             {% csrf_token %}
             {% if form.non_field_errors %}<div class="site-content-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+            <section class="site-content-form-section">
+                <h2>{% if LANGUAGE_CODE == 'en' %}Products{% else %}Товары{% endif %}</h2>
+                <p>{% if LANGUAGE_CODE == 'en' %}Add products such as gingerbread or cookies. All products use the same size, flavor, icing, and packaging options.{% else %}Добавляйте товары, например пряники или печенье. Для всех товаров используются общие параметры размера, вкуса, глазури и упаковки.{% endif %}</p>
+                {{ form.product_count }}
+                {{ form.product_count.errors }}
+                <div class="calculator-product-editor" data-product-editor>
+                    {% for group in product_groups %}
+                        <div class="calculator-product-row" data-product-row data-product-index="{{ group.index }}">
+                            {% for field in group.fields %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                            <button class="admin-dashboard-site-link" type="button" data-remove-product{% if group.index == 0 %} hidden{% endif %}>{% if LANGUAGE_CODE == 'en' %}Remove{% else %}Удалить{% endif %}</button>
+                        </div>
+                    {% endfor %}
+                </div>
+                <button class="admin-dashboard-site-link" type="button" data-add-product>{% if LANGUAGE_CODE == 'en' %}Add product{% else %}Добавить товар{% endif %}</button>
+            </section>
             {% for title, fields in field_groups %}
                 <section class="site-content-form-section">
                     <h2>{{ title }}</h2>
@@ -44,5 +66,23 @@
                 <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save calculator settings{% else %}Сохранить настройки{% endif %}</button>
             </div>
         </form>
+        <template id="calculator-product-row-template">
+            <div class="calculator-product-row" data-product-row data-product-index="__prefix__">
+                <div class="site-content-form-field">
+                    <label for="id_product___prefix___name">{% if LANGUAGE_CODE == 'en' %}Product name{% else %}Название товара{% endif %}</label>
+                    <input class="site-content-form-control" id="id_product___prefix___name" name="product___prefix___name" type="text" maxlength="80" required data-product-name>
+                </div>
+                <div class="site-content-form-field">
+                    <label for="id_product___prefix___name_en">{% if LANGUAGE_CODE == 'en' %}Product name (English){% else %}Название товара (английский){% endif %}</label>
+                    <input class="site-content-form-control" id="id_product___prefix___name_en" name="product___prefix___name_en" type="text" maxlength="80" data-product-name-en>
+                </div>
+                <div class="site-content-form-field">
+                    <label for="id_product___prefix___base_price">{% if LANGUAGE_CODE == 'en' %}Base price per item{% else %}Базовая цена за штуку{% endif %}</label>
+                    <input class="site-content-form-control" id="id_product___prefix___base_price" name="product___prefix___base_price" type="number" min="0" step="0.01" required data-product-price>
+                </div>
+                <button class="admin-dashboard-site-link" type="button" data-remove-product>{% if LANGUAGE_CODE == 'en' %}Remove{% else %}Удалить{% endif %}</button>
+            </div>
+        </template>
+        <script src="{% static 'core/calculator-product-editor.js' %}" defer></script>
     </section>
 {% endblock %}

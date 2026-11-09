@@ -12,15 +12,14 @@
 
         <section class="partnership-hero" aria-labelledby="partnership-heading">
             <div class="partnership-hero-copy">
-                <p class="partnership-kicker">{% if site_page_content %}{{ site_page_content.localized_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}Home / Partnership{% else %}Главная / Партнёрство{% endif %}{% endif %}</p>
                 <h1 id="partnership-heading">{% if site_page_content %}{{ site_page_content.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Partner with Vkusno Da Sladko{% else %}Партнёрство с «Вкусно Да Сладко»{% endif %}{% endif %}</h1>
                 <p class="partnership-subtitle">{% if site_page_content %}{{ site_page_content.localized_subtitle|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Open to collaboration<br>and new opportunities{% else %}Открыты к сотрудничеству<br>и новым возможностям{% endif %}{% endif %}</p>
                 <p class="partnership-description">{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}We value your interest in our brand and welcome new partnerships. Get in touch, and our manager will discuss the opportunities with you.{% else %}Мы ценим интерес к нашему бренду и всегда открыты к сотрудничеству. Заполните форму, и наш менеджер свяжется с вами для обсуждения перспектив партнёрства.{% endif %}{% endif %}</p>
-                <a class="button button-dark" href="{% if site_page_content and site_page_content.button_url %}{{ site_page_content.button_url }}{% else %}mailto:hello@lukomorye.example?subject=Стать%20партнёром{% endif %}">
+                <button class="button button-dark" type="button" data-open-partnership-inquiry>
                     {% if site_page_content %}{{ site_page_content.localized_button_text }}{% else %}{% if LANGUAGE_CODE == 'en' %}Become a partner{% else %}Стать партнёром{% endif %}{% endif %} <span aria-hidden="true">→</span>
-                </a>
+                </button>
             </div>
-            <div class="partnership-hero-media" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift boxes with gingerbread{% else %}Подарочные наборы с пряниками в коробке{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
+            <div class="partnership-hero-media" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift boxes with gingerbread{% else %}Подарочные наборы с пряниками в коробке{% endif %}" data-brand="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
         </section>
 
         <section class="partnership-directions" aria-labelledby="partnership-directions-heading">
@@ -40,7 +39,6 @@
                                 <h3>{{ item.localized_title }}</h3>
                                 <p>{{ item.localized_description }}</p>
                             </div>
-                            <span class="partnership-card-arrow" aria-hidden="true">→</span>
                         </article>
                     {% endfor %}
                 {% else %}
@@ -50,7 +48,6 @@
                         <h3>{% if LANGUAGE_CODE == 'en' %}Franchise{% else %}Франшиза{% endif %}</h3>
                         <p>{% if LANGUAGE_CODE == 'en' %}A proven business model and support at every stage of launch.{% else %}Готовая бизнес-модель и поддержка на всех этапах запуска.{% endif %}</p>
                     </div>
-                    <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
 
                 <article class="partnership-card">
@@ -59,7 +56,6 @@
                         <h3>{% if LANGUAGE_CODE == 'en' %}Advertising and collaboration{% else %}Реклама и сотрудничество{% endif %}</h3>
                         <p>{% if LANGUAGE_CODE == 'en' %}Joint projects, advertising placements, and event partnerships.{% else %}Совместные проекты, размещение рекламы и интеграции в события.{% endif %}</p>
                     </div>
-                    <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
 
                 <article class="partnership-card">
@@ -68,7 +64,6 @@
                         <h3>{% if LANGUAGE_CODE == 'en' %}Commercial spaces{% else %}Предложение коммерческих площадей{% endif %}</h3>
                         <p>{% if LANGUAGE_CODE == 'en' %}We consider locations in shopping centers, stores, and other retail spaces.{% else %}Рассматриваем размещение в ТЦ, магазинах и других торговых точках.{% endif %}</p>
                     </div>
-                    <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
 
                 <article class="partnership-card">
@@ -77,7 +72,6 @@
                         <h3>{% if LANGUAGE_CODE == 'en' %}Creators and stylists{% else %}Блогерам и стилистам{% endif %}</h3>
                         <p>{% if LANGUAGE_CODE == 'en' %}We create joint collections, products, and special offers.{% else %}Проводим совместные коллекции, продукты и специальные предложения.{% endif %}</p>
                     </div>
-                    <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
 
                 <article class="partnership-card">
@@ -86,7 +80,6 @@
                         <h3>{% if LANGUAGE_CODE == 'en' %}Manufacturers and suppliers{% else %}Производителям и поставщикам{% endif %}</h3>
                         <p>{% if LANGUAGE_CODE == 'en' %}We welcome partners in ingredients, packaging, and equipment.{% else %}Рассматриваем сотрудничество с сырьём, упаковкой и оборудованием.{% endif %}</p>
                     </div>
-                    <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
 
                 <article class="partnership-card">
@@ -95,7 +88,6 @@
                         <h3>{% if LANGUAGE_CODE == 'en' %}Courier and logistics services{% else %}Курьерским и логистическим службам{% endif %}</h3>
                         <p>{% if LANGUAGE_CODE == 'en' %}We welcome delivery partnerships in Moscow, across Russia, and internationally.{% else %}Открыты к партнёрству в сфере доставки по Москве, России и за рубеж.{% endif %}</p>
                     </div>
-                    <span class="partnership-card-arrow" aria-hidden="true">→</span>
                 </article>
                 {% endif %}
             </div>
@@ -140,9 +132,9 @@
             <p class="partnership-summary">{% if site_page_sections.summary %}{{ site_page_sections.summary.0.localized_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}Our experience working with brands, high quality standards, and openness to new ideas make a partnership with Vkusno Da Sladko promising and rewarding.{% else %}Многолетний опыт работы с брендами, высокое качество и открытость новым идеям делают сотрудничество с «Вкусно Да Сладко» перспективным и выгодным.{% endif %}{% endif %}</p>
 
             <div class="partnership-cta-wrap">
-                <a class="button button-dark partnership-button" href="{% if site_page_content and site_page_content.button_url %}{{ site_page_content.button_url }}{% else %}mailto:hello@lukomorye.example?subject=Стать%20партнёром{% endif %}">
+                <button class="button button-dark partnership-button" type="button" data-open-partnership-inquiry>
                     {% if site_page_content and site_page_content.localized_button_text %}{{ site_page_content.localized_button_text }}{% else %}{% if LANGUAGE_CODE == 'en' %}Become a partner{% else %}Стать партнёром{% endif %}{% endif %} <span aria-hidden="true">→</span>
-                </a>
+                </button>
             </div>
         </section>
 
@@ -151,4 +143,126 @@
             <p>{% if site_page_sections.summary.1 %}{{ site_page_sections.summary.1.localized_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}Enjoy exclusive offers, early access to new collections, and 5% off your first orders when we launch our partnership.{% else %}Персональные предложения, выгодный доступ к новым коллекциям и скидка 5% на первые заказы при подготовке и запуске сотрудничества.{% endif %}{% endif %}</p>
         </div>
     </div>
+
+    <section class="partnership-inquiry-modal" id="partnership-inquiry-modal" hidden>
+        <div class="partnership-inquiry-card" role="dialog" aria-modal="true" aria-labelledby="partnership-inquiry-title">
+            <header class="partnership-inquiry-heading">
+                <div>
+                    <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Let’s work together{% else %}Давайте сотрудничать{% endif %}</p>
+                    <h2 id="partnership-inquiry-title">{% if LANGUAGE_CODE == 'en' %}Partnership inquiry{% else %}Заявка на партнёрство{% endif %}</h2>
+                </div>
+                <button class="partnership-inquiry-close" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Close{% else %}Закрыть{% endif %}">×</button>
+            </header>
+            <p class="partnership-inquiry-intro">{% if LANGUAGE_CODE == 'en' %}Tell us a little about your idea. Our team will get back to you to discuss the next steps.{% else %}Расскажите немного о вашей идее — мы свяжемся с вами и обсудим дальнейшие шаги.{% endif %}</p>
+            <form class="partnership-inquiry-form" action="{% url 'quick_feedback' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="source" value="partnership">
+                <label for="partnership-inquiry-subject">{% if LANGUAGE_CODE == 'en' %}Partnership area{% else %}Направление сотрудничества{% endif %}</label>
+                <select id="partnership-inquiry-subject" name="subject" required>
+                    <option value="" selected disabled>{% if LANGUAGE_CODE == 'en' %}Choose an area{% else %}Выберите направление{% endif %}</option>
+                    {% if site_page_sections.directions %}
+                        {% for item in site_page_sections.directions %}
+                            <option value="{{ item.localized_title }}">{{ item.localized_title }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="{% if LANGUAGE_CODE == 'en' %}Franchise{% else %}Франшиза{% endif %}">{% if LANGUAGE_CODE == 'en' %}Franchise{% else %}Франшиза{% endif %}</option>
+                        <option value="{% if LANGUAGE_CODE == 'en' %}Advertising and collaboration{% else %}Реклама и сотрудничество{% endif %}">{% if LANGUAGE_CODE == 'en' %}Advertising and collaboration{% else %}Реклама и сотрудничество{% endif %}</option>
+                        <option value="{% if LANGUAGE_CODE == 'en' %}Commercial spaces{% else %}Предложение коммерческих площадей{% endif %}">{% if LANGUAGE_CODE == 'en' %}Commercial spaces{% else %}Предложение коммерческих площадей{% endif %}</option>
+                        <option value="{% if LANGUAGE_CODE == 'en' %}Creators and stylists{% else %}Блогерам и стилистам{% endif %}">{% if LANGUAGE_CODE == 'en' %}Creators and stylists{% else %}Блогерам и стилистам{% endif %}</option>
+                        <option value="{% if LANGUAGE_CODE == 'en' %}Manufacturers and suppliers{% else %}Производителям и поставщикам{% endif %}">{% if LANGUAGE_CODE == 'en' %}Manufacturers and suppliers{% else %}Производителям и поставщикам{% endif %}</option>
+                        <option value="{% if LANGUAGE_CODE == 'en' %}Courier and logistics services{% else %}Курьерским и логистическим службам{% endif %}">{% if LANGUAGE_CODE == 'en' %}Courier and logistics services{% else %}Курьерским и логистическим службам{% endif %}</option>
+                    {% endif %}
+                    <option value="{% if LANGUAGE_CODE == 'en' %}Other{% else %}Другое{% endif %}">{% if LANGUAGE_CODE == 'en' %}Other{% else %}Другое{% endif %}</option>
+                </select>
+                <span class="partnership-inquiry-error" data-error-for="subject"></span>
+                <label for="partnership-inquiry-name">{% if LANGUAGE_CODE == 'en' %}Your name{% else %}Ваше имя{% endif %}</label>
+                <input id="partnership-inquiry-name" name="name" type="text" maxlength="120" autocomplete="name" required>
+                <span class="partnership-inquiry-error" data-error-for="name"></span>
+                <label for="partnership-inquiry-email">{% if LANGUAGE_CODE == 'en' %}Email{% else %}Электронная почта{% endif %}</label>
+                <input id="partnership-inquiry-email" name="email" type="email" maxlength="254" autocomplete="email" required>
+                <span class="partnership-inquiry-error" data-error-for="email"></span>
+                <label for="partnership-inquiry-phone">{% if LANGUAGE_CODE == 'en' %}Phone number{% else %}Номер телефона{% endif %}</label>
+                <input id="partnership-inquiry-phone" name="phone" type="tel" maxlength="32" autocomplete="tel" placeholder="{% if LANGUAGE_CODE == 'en' %}+1 555 123 4567{% else %}+7 900 000-00-00{% endif %}">
+                <span class="partnership-inquiry-error" data-error-for="phone"></span>
+                <label for="partnership-inquiry-message">{% if LANGUAGE_CODE == 'en' %}Tell us about your proposal{% else %}Расскажите о вашем предложении{% endif %}</label>
+                <textarea id="partnership-inquiry-message" name="message" rows="4" maxlength="5000" required></textarea>
+                <span class="partnership-inquiry-error" data-error-for="message"></span>
+                <label class="partnership-inquiry-consent" for="partnership-inquiry-consent">
+                    <input id="partnership-inquiry-consent" name="consent_given" type="checkbox" required>
+                    <span>{% if LANGUAGE_CODE == 'en' %}I agree to the processing of my personal data{% else %}Согласен(на) на обработку персональных данных{% endif %}</span>
+                </label>
+                <small class="consent-document-links"><a href="{% url 'privacy_policy' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Privacy Policy{% else %}Политика обработки персональных данных{% endif %}</a><a href="{% url 'personal_data_consent' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Consent text{% else %}Текст согласия{% endif %}</a></small>
+                <span class="partnership-inquiry-error" data-error-for="consent_given"></span>
+                <p class="partnership-inquiry-status" role="status" aria-live="polite"></p>
+                <button class="partnership-inquiry-submit" type="submit">{% if LANGUAGE_CODE == 'en' %}Send inquiry{% else %}Отправить заявку{% endif %} <span aria-hidden="true">→</span></button>
+            </form>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script>
+        const partnershipModal = document.querySelector("#partnership-inquiry-modal");
+        const partnershipForm = document.querySelector(".partnership-inquiry-form");
+        const partnershipOpenButtons = document.querySelectorAll("[data-open-partnership-inquiry]");
+        const partnershipCloseButton = document.querySelector(".partnership-inquiry-close");
+
+        function setPartnershipModalOpen(isOpen) {
+            partnershipModal.hidden = !isOpen;
+            document.body.classList.toggle("partnership-inquiry-open", isOpen);
+            if (isOpen) {
+                partnershipForm.querySelector('[name="name"]').focus();
+            } else {
+                partnershipOpenButtons[0]?.focus();
+            }
+        }
+
+        partnershipOpenButtons.forEach((button) => {
+            button.addEventListener("click", () => setPartnershipModalOpen(true));
+        });
+        partnershipCloseButton.addEventListener("click", () => setPartnershipModalOpen(false));
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !partnershipModal.hidden) {
+                setPartnershipModalOpen(false);
+            }
+        });
+        partnershipForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const submitButton = partnershipForm.querySelector('[type="submit"]');
+            const status = partnershipForm.querySelector(".partnership-inquiry-status");
+            partnershipForm.querySelectorAll(".partnership-inquiry-error").forEach((element) => {
+                element.textContent = "";
+            });
+            partnershipForm.querySelectorAll("[aria-invalid='true']").forEach((element) => {
+                element.removeAttribute("aria-invalid");
+            });
+            submitButton.disabled = true;
+            status.textContent = "";
+            try {
+                const response = await fetch(partnershipForm.action, {
+                    method: "POST",
+                    body: new FormData(partnershipForm),
+                    headers: { "Accept": "application/json" },
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    Object.entries(result.errors || {}).forEach(([name, errors]) => {
+                        const input = partnershipForm.querySelector(`[name="${name}"]`);
+                        const error = partnershipForm.querySelector(`[data-error-for="${name}"]`);
+                        if (input) input.setAttribute("aria-invalid", "true");
+                        if (error) error.textContent = errors.join(" ");
+                    });
+                    status.textContent = result.message;
+                    return;
+                }
+                partnershipForm.reset();
+                status.textContent = result.message;
+            } catch {
+                status.textContent = "{% if LANGUAGE_CODE == 'en' %}We could not send your inquiry. Please try again.{% else %}Не удалось отправить заявку. Попробуйте ещё раз.{% endif %}";
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    </script>
 {% endblock %}

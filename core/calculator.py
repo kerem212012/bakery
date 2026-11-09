@@ -1,6 +1,7 @@
 from copy import deepcopy
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.utils.text import slugify
 from django.utils.translation import get_language
 
 
@@ -41,6 +42,14 @@ LEAD_TIME_DAYS = 3
 
 DEFAULT_CALCULATOR_PRICING = {
     "base_unit_price": "98",
+    "products": [
+        {
+            "value": "gingerbread",
+            "label": "Пряник",
+            "label_en": "Gingerbread",
+            "base_unit_price": "98",
+        }
+    ],
     "size_multipliers": {key: str(value) for key, value in SIZE_MULTIPLIERS.items()},
     "flavor_additions": {key: str(value) for key, value in FLAVOR_ADDITIONS.items()},
     "coating_additions": {key: str(value) for key, value in COATING_ADDITIONS.items()},
@@ -57,8 +66,49 @@ def default_calculator_pricing():
 
 def normalize_calculator_pricing(pricing=None):
     source = pricing or DEFAULT_CALCULATOR_PRICING
+    base_unit_price = Decimal(str(source.get("base_unit_price", BASE_UNIT_PRICE)))
+    raw_products = source.get("products") or [
+        {
+            **DEFAULT_CALCULATOR_PRICING["products"][0],
+            "base_unit_price": str(base_unit_price),
+        }
+    ]
+    products = []
+    seen_values = set()
+    for index, product in enumerate(raw_products):
+        if not isinstance(product, dict):
+            continue
+        label = str(product.get("label", "")).strip()
+        if not label:
+            continue
+        value = str(product.get("value") or slugify(label, allow_unicode=True))
+        if not value:
+            value = f"product-{index + 1}"
+        if value in seen_values:
+            continue
+        seen_values.add(value)
+        products.append(
+            {
+                "value": value,
+                "label": label,
+                "label_en": str(product.get("label_en", "")).strip(),
+                "base_unit_price": Decimal(
+                    str(product.get("base_unit_price", base_unit_price))
+                ),
+            }
+        )
+    if not products:
+        products = [
+            {
+                "value": "gingerbread",
+                "label": "Пряник",
+                "label_en": "Gingerbread",
+                "base_unit_price": base_unit_price,
+            }
+        ]
     result = {
-        "base_unit_price": Decimal(str(source.get("base_unit_price", BASE_UNIT_PRICE))),
+        "base_unit_price": base_unit_price,
+        "products": products,
         "lead_time_days": int(source.get("lead_time_days", LEAD_TIME_DAYS)),
     }
     for key, defaults in (
@@ -194,6 +244,17 @@ ENGLISH_CHOICES = {
 def localized_calculator_options(pricing=None):
     pricing = normalize_calculator_pricing(pricing)
     options = {
+        "products": tuple(
+            {
+                **product,
+                "label": (
+                    product["label_en"] or product["label"]
+                    if get_language() == "en"
+                    else product["label"]
+                ),
+            }
+            for product in pricing["products"]
+        ),
         "flavors": tuple(
             {"value": value, "label": label, "extra": pricing["flavor_additions"][value]}
             for value, label in FLAVOR_CHOICES
@@ -252,8 +313,15 @@ def localized_choices(choices, group):
 def calculate_quote(configuration, pricing=None):
     pricing = normalize_calculator_pricing(pricing)
     quantity = int(configuration["quantity"])
+    product_value = configuration.get("product", pricing["products"][0]["value"])
+    product = next(
+        (item for item in pricing["products"] if item["value"] == product_value),
+        None,
+    )
+    if product is None:
+        raise ValueError(f"Unknown calculator product: {product_value}")
     unit_price = (
-        pricing["base_unit_price"] * pricing["size_multipliers"][configuration["size"]]
+        product["base_unit_price"] * pricing["size_multipliers"][configuration["size"]]
         + pricing["flavor_additions"][configuration["flavor"]]
         + pricing["coating_additions"][configuration["coating"]]
         + pricing["packaging_additions"][configuration["packaging"]]

@@ -1,9 +1,10 @@
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.forms import DateField
 from django.forms import modelformset_factory
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -91,6 +92,7 @@ SITE_CONTENT_PERMISSIONS = (
 )
 
 ORDER_CONFIGURATION_FIELDS = (
+    ("product_name", ("Товар", "Product"), ()),
     ("flavor", ("Вкус", "Flavor"), FLAVOR_CHOICES),
     ("quantity", ("Количество", "Quantity"), ()),
     ("size", ("Размер", "Size"), SIZE_CHOICES),
@@ -225,6 +227,9 @@ def _can_manage_site_content(user):
 @staff_member_required(login_url="accounts:login")
 def admin_dashboard(request):
     user = request.user
+    if not user.is_superuser and not user.get_all_permissions():
+        return redirect("manager_dashboard")
+
     can_view_products = user.has_perm("catalog.view_product")
     can_view_categories = user.has_perm("catalog.view_category")
     can_view_filter_options = user.has_perm("catalog.view_productfilteroption")
@@ -307,6 +312,13 @@ def calculator_settings(request):
             "field_groups": [
                 (title, [form[name] for name in field_names])
                 for title, field_names in form.field_groups
+            ],
+            "product_groups": [
+                {
+                    "index": group["index"],
+                    "fields": [form[name] for name in group["fields"]],
+                }
+                for group in form.product_groups
             ],
         },
     )
@@ -1884,7 +1896,7 @@ ADMIN_SECTION_CONFIG = {
         "view_perm": "core.view_feedbacksubmission",
         "change_perm": "core.change_feedbacksubmission",
         "delete_perm": "core.delete_feedbacksubmission",
-        "search_fields": ("name", "email", "subject", "message"),
+        "search_fields": ("name", "email", "phone", "subject", "message"),
         "title": ("Customer messages", "Обращения клиентов"),
         "kind": "message",
     },
@@ -2040,6 +2052,8 @@ def admin_section_delete(request, section, object_id):
         request,
         "Feedback deleted." if request.LANGUAGE_CODE == "en" else "Обращение удалено.",
     )
+    if request.POST.get("return_to_manager") == "1" and section == "messages":
+        return redirect("manager_dashboard")
     return redirect("admin_section", section=section)
 
 
@@ -2064,6 +2078,8 @@ def admin_section_visibility(request, section, object_id, action):
     else:
         message = "Feedback restored." if request.LANGUAGE_CODE == "en" else "Обращение возвращено."
     messages.success(request, message)
+    if request.POST.get("return_to_manager") == "1":
+        return redirect("manager_dashboard")
     return redirect("admin_section", section=section)
 
 
@@ -2073,8 +2089,8 @@ def manager_dashboard(request):
     can_view_orders = user.has_perm("core.view_preorder")
     can_change_orders = user.has_perm("core.change_preorder")
     can_view_feedback = user.has_perm("core.view_feedbacksubmission")
-    if not can_view_orders and not can_view_feedback:
-        raise PermissionDenied
+    can_change_feedback = user.has_perm("core.change_feedbacksubmission")
+    can_delete_feedback = user.has_perm("core.delete_feedbacksubmission")
 
     order_status_labels = {
         Preorder.Status.NEW: ("New", "Новый"),
@@ -2100,12 +2116,24 @@ def manager_dashboard(request):
         if can_view_orders
         else {}
     )
+    feedback_source_labels = {
+        FeedbackSubmission.Source.CONTACT: ("Contact button", "Кнопка «Связаться»"),
+        FeedbackSubmission.Source.FEEDBACK: ("Feedback page", "Страница обратной связи"),
+        FeedbackSubmission.Source.PARTNERSHIP: ("Partnership", "Партнёрство"),
+        FeedbackSubmission.Source.BUSINESS_CLIENTS: (
+            "Business clients",
+            "Корпоративные клиенты",
+        ),
+        FeedbackSubmission.Source.OTHER: ("Other / older messages", "Другое / старые обращения"),
+    }
+    selected_feedback_source = request.GET.get("feedback_source", "")
+    if selected_feedback_source not in feedback_source_labels:
+        selected_feedback_source = ""
+    feedback_queryset = FeedbackSubmission.objects.filter(is_hidden=False)
+    if selected_feedback_source:
+        feedback_queryset = feedback_queryset.filter(source=selected_feedback_source)
     feedback_items = (
-        list(
-            FeedbackSubmission.objects.filter(is_hidden=False).order_by(
-                "-created_at"
-            )[:6]
-        )
+        list(feedback_queryset.order_by("-created_at")[:6])
         if can_view_feedback
         else []
     )
@@ -2116,6 +2144,7 @@ def manager_dashboard(request):
     }
     for item in feedback_items:
         item.manager_status_label = feedback_status_labels[item.status][status_label_index]
+        item.manager_source_label = feedback_source_labels[item.source][status_label_index]
     return render(
         request,
         "core/manager_dashboard.html",
@@ -2123,6 +2152,8 @@ def manager_dashboard(request):
             "can_view_orders": can_view_orders,
             "can_change_orders": can_change_orders,
             "can_view_feedback": can_view_feedback,
+            "can_change_feedback": can_change_feedback,
+            "can_delete_feedback": can_delete_feedback,
             "orders": orders,
             "order_counts": order_counts,
             "order_status_choices": [
@@ -2130,6 +2161,11 @@ def manager_dashboard(request):
                 for value, _ in Preorder.Status.choices
             ],
             "feedback_items": feedback_items,
+            "feedback_source_choices": [
+                (value, labels[status_label_index])
+                for value, labels in feedback_source_labels.items()
+            ],
+            "selected_feedback_source": selected_feedback_source,
             "new_feedback_count": (
                 FeedbackSubmission.objects.filter(
                     status=FeedbackSubmission.Status.NEW,
@@ -2149,6 +2185,23 @@ def manager_update_order_status(request, order_id):
         raise PermissionDenied
     order = get_object_or_404(Preorder, pk=order_id)
     status = request.POST.get("status")
+    if "delivery_date" in request.POST:
+        try:
+            delivery_date = DateField(
+                required=False,
+                input_formats=["%Y-%m-%d"],
+            ).clean(request.POST["delivery_date"])
+        except ValidationError:
+            message = (
+                "Choose a valid delivery date."
+                if request.LANGUAGE_CODE == "en"
+                else "Выберите корректную дату доставки."
+            )
+            messages.error(request, message)
+            return redirect("manager_dashboard")
+    else:
+        delivery_date = order.delivery_date
+
     if status not in dict(Preorder.Status.choices):
         message = (
             "Choose a valid order status."
@@ -2158,11 +2211,12 @@ def manager_update_order_status(request, order_id):
         messages.error(request, message)
     else:
         order.status = status
-        order.save(update_fields=("status",))
+        order.delivery_date = delivery_date
+        order.save(update_fields=("status", "delivery_date"))
         message = (
-            f"Order #{order.pk} status updated."
+            f"Order #{order.pk} updated."
             if request.LANGUAGE_CODE == "en"
-            else f"Статус заказа №{order.pk} обновлён."
+            else f"Заказ №{order.pk} обновлён."
         )
         messages.success(request, message)
     return redirect("manager_dashboard")
@@ -2173,8 +2227,10 @@ def home(request):
     calculator_pricing = normalize_calculator_pricing(
         calculator_settings.pricing if calculator_settings else None
     )
+    calculator_options = localized_calculator_options(calculator_pricing)
     initial_quote = calculate_quote(
         {
+            "product": calculator_options["products"][0]["value"],
             "flavor": "classic",
             "quantity": 100,
             "size": "5",
@@ -2184,11 +2240,19 @@ def home(request):
         },
         calculator_pricing,
     )
-    preorder_form = PreorderForm(request.POST or None, request.FILES or None)
+    preorder_form = PreorderForm(
+        request.POST or None,
+        request.FILES or None,
+        product_choices=tuple(
+            (option["value"], option["label"])
+            for option in calculator_options["products"]
+        ),
+    )
     if request.method == "POST" and preorder_form.is_valid():
         configuration = {
             field: preorder_form.cleaned_data[field]
             for field in (
+                "product",
                 "flavor",
                 "quantity",
                 "size",
@@ -2199,6 +2263,12 @@ def home(request):
                 "payment",
             )
         }
+        selected_product = next(
+            option
+            for option in calculator_options["products"]
+            if option["value"] == configuration["product"]
+        )
+        configuration["product_name"] = selected_product["label"]
         quote = calculate_quote(configuration, calculator_pricing)
         with transaction.atomic():
             preorder = Preorder.objects.create(
@@ -2240,7 +2310,7 @@ def home(request):
         .select_related("category")
         .order_by("-is_featured", "display_order", "name")[:9],
         "preorder_form": preorder_form,
-        "calculator_options": localized_calculator_options(calculator_pricing),
+        "calculator_options": calculator_options,
         "calculator_pricing": calculator_pricing,
         "calculator_initial_quote": initial_quote,
     }
@@ -2263,11 +2333,45 @@ def contacts(request):
     return render(request, "core/contacts.html")
 
 
+LEGAL_DOCUMENTS = {
+    "privacy_policy": {
+        "title": "Политика обработки персональных данных",
+        "template": "core/legal/privacy_policy.html",
+    },
+    "personal_data_consent": {
+        "title": "Согласие на обработку персональных данных",
+        "template": "core/legal/personal_data_consent.html",
+    },
+    "terms": {
+        "title": "Пользовательское соглашение",
+        "template": "core/legal/terms.html",
+    },
+    "public_offer": {
+        "title": "Публичная оферта",
+        "template": "core/legal/public_offer.html",
+    },
+}
+
+
+def legal_document(request, document):
+    legal_document = LEGAL_DOCUMENTS.get(document)
+    if legal_document is None:
+        raise Http404
+    return render(
+        request,
+        legal_document["template"],
+        {"legal_title": legal_document["title"]},
+    )
+
+
 def feedback(request):
     form = FeedbackForm(request.POST or None)
     if request.method == "POST":
         if form.is_valid():
-            FeedbackSubmission.objects.create(**form.cleaned_data)
+            FeedbackSubmission.objects.create(
+                **form.cleaned_data,
+                source=FeedbackSubmission.Source.FEEDBACK,
+            )
             message = (
                 "Thank you! We have received your message and will reply by email."
                 if request.LANGUAGE_CODE == "en"
@@ -2282,6 +2386,51 @@ def feedback(request):
         )
         messages.error(request, message)
     return render(request, "core/feedback.html", {"form": form})
+
+
+@require_POST
+def quick_feedback(request):
+    source = request.POST.get("source", FeedbackSubmission.Source.CONTACT)
+    if source not in FeedbackSubmission.Source.values:
+        return JsonResponse(
+            {
+                "message": (
+                    "This message source is not valid."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Указан неверный источник обращения."
+                ),
+                "errors": {},
+            },
+            status=400,
+        )
+
+    form = FeedbackForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse(
+            {
+                "message": (
+                    "Please check the form and correct the marked errors."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Проверьте форму и исправьте отмеченные ошибки."
+                ),
+                "errors": {
+                    field_name: [str(error) for error in errors]
+                    for field_name, errors in form.errors.items()
+                },
+            },
+            status=400,
+        )
+
+    FeedbackSubmission.objects.create(**form.cleaned_data, source=source)
+    return JsonResponse(
+        {
+            "message": (
+                "Thank you! We have received your message and will reply by email."
+                if request.LANGUAGE_CODE == "en"
+                else "Спасибо! Ваше обращение принято. Мы свяжемся с вами по электронной почте."
+            )
+        }
+    )
 
 
 def delivery(request):

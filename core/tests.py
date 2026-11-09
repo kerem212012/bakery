@@ -106,6 +106,24 @@ class AdminDashboardTests(TestCase):
         self.assertIn(reverse("accounts:login"), response["Location"])
         self.assertNotIn("/admin/login/", response["Location"])
 
+    def test_staff_without_permissions_is_redirected_to_manager_workspace(self):
+        staff_user = get_user_model().objects.create_user(
+            username="basic_staff",
+            is_staff=True,
+        )
+        self.client.force_login(staff_user)
+
+        response = self.client.get(self.url)
+
+        self.assertRedirects(
+            response,
+            reverse("manager_dashboard"),
+            fetch_redirect_response=False,
+        )
+        manager_response = self.client.get(reverse("manager_dashboard"))
+        self.assertEqual(manager_response.status_code, 200)
+        self.assertContains(manager_response, "У вашей учётной записи пока нет доступа")
+
     def test_site_content_editor_redirects_to_site_login(self):
         response = self.client.get(reverse("site_content_manager"))
 
@@ -174,9 +192,11 @@ class AdminDashboardTests(TestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
                 self.assertNotContains(response, "calculator-float-toggle")
+                self.assertNotContains(response, 'class="contact-float"')
 
         public_response = self.client.get(reverse("home"))
         self.assertContains(public_response, "calculator-float-toggle")
+        self.assertContains(public_response, 'class="contact-float"')
 
     def test_site_content_editor_requires_site_content_permissions(self):
         manager = get_user_model().objects.create_user(
@@ -2766,7 +2786,11 @@ class AdminDashboardTests(TestCase):
         calculator_url = reverse("calculator_settings")
 
         dashboard = self.client.get(self.url)
-        self.assertNotContains(dashboard, calculator_url)
+        self.assertRedirects(
+            dashboard,
+            reverse("manager_dashboard"),
+            fetch_redirect_response=False,
+        )
         self.assertEqual(self.client.get(calculator_url).status_code, 403)
 
         admin_user = get_user_model().objects.create_superuser(
@@ -2786,6 +2810,12 @@ class AdminDashboardTests(TestCase):
         data.update(
             {
                 "base_unit_price": "110",
+                "product_count": "2",
+                "product_0_name": "Пряник",
+                "product_0_name_en": "Gingerbread",
+                "product_1_name": "Печенье",
+                "product_1_name_en": "Cookies",
+                "product_1_base_price": "45",
                 "delivery_cost_moscow": "750",
                 "discount_quantity_1": "100",
                 "discount_percent_1": "25",
@@ -2797,10 +2827,30 @@ class AdminDashboardTests(TestCase):
         self.assertRedirects(response, calculator_url)
         settings = CalculatorSettings.objects.get(pk=1)
         self.assertEqual(settings.pricing["base_unit_price"], "110")
+        self.assertEqual(
+            settings.pricing["products"],
+            [
+                {
+                    "value": "пряник",
+                    "label": "Пряник",
+                    "label_en": "Gingerbread",
+                    "base_unit_price": "110",
+                },
+                {
+                    "value": "печенье",
+                    "label": "Печенье",
+                    "label_en": "Cookies",
+                    "base_unit_price": "45",
+                },
+            ],
+        )
         self.assertEqual(settings.pricing["delivery_costs"]["moscow"], "750")
         self.assertEqual(settings.pricing["discount_tiers"][0], [100, 25])
         self.assertEqual(settings.pricing["lead_time_days"], 5)
-        self.assertContains(self.client.get(reverse("home")), 'data-base-price="110"')
+        home = self.client.get(reverse("home"))
+        self.assertContains(home, 'data-base-price="110"')
+        self.assertContains(home, 'data-base-price="45"')
+        self.assertContains(home, "Печенье")
 
 
 class ManagerDashboardTests(TestCase):
@@ -2831,14 +2881,15 @@ class ManagerDashboardTests(TestCase):
         )
         self.manager.user_permissions.add(*permissions)
 
-    def test_manager_page_requires_staff_and_order_or_feedback_permission(self):
+    def test_manager_page_requires_staff_and_allows_staff_without_data_permissions(self):
         response = self.client.get(self.manager_url)
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("accounts:login"), response["Location"])
 
         self.client.force_login(self.manager)
         response = self.client.get(self.manager_url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "У вашей учётной записи пока нет доступа")
 
     def test_manager_can_view_orders_and_change_status_with_permissions(self):
         self.grant_order_permissions(
@@ -2865,16 +2916,138 @@ class ManagerDashboardTests(TestCase):
             response,
             reverse(self.status_url_name, args=[self.order.pk]),
         )
+        self.assertContains(response, 'name="delivery_date"')
         self.assertEqual(response.context["order_counts"][Preorder.Status.NEW], 1)
 
+        delivery_date = date.today() + timedelta(days=7)
         response = self.client.post(
             reverse(self.status_url_name, args=[self.order.pk]),
-            {"status": Preorder.Status.PRODUCTION},
+            {
+                "status": Preorder.Status.PRODUCTION,
+                "delivery_date": delivery_date.isoformat(),
+            },
         )
 
         self.assertRedirects(response, self.manager_url)
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Preorder.Status.PRODUCTION)
+        self.assertEqual(self.order.delivery_date, delivery_date)
+
+    def test_manager_can_filter_feedback_by_source(self):
+        self.grant_order_permissions("view_feedbacksubmission")
+        business_feedback = FeedbackSubmission.objects.create(
+            name="Sam",
+            email="sam@example.com",
+            subject="Corporate order question",
+            message="A business client inquiry.",
+            consent_given=True,
+            source=FeedbackSubmission.Source.BUSINESS_CLIENTS,
+        )
+        FeedbackSubmission.objects.create(
+            name="Lee",
+            email="lee@example.com",
+            subject="Partnership question",
+            message="A partnership inquiry.",
+            consent_given=True,
+            source=FeedbackSubmission.Source.PARTNERSHIP,
+        )
+        self.client.force_login(self.manager)
+
+        response = self.client.get(
+            self.manager_url,
+            {"feedback_source": FeedbackSubmission.Source.BUSINESS_CLIENTS},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, business_feedback.subject)
+        self.assertContains(response, "Корпоративные клиенты")
+        self.assertNotContains(response, "Partnership question")
+        self.assertEqual(
+            response.context["selected_feedback_source"],
+            FeedbackSubmission.Source.BUSINESS_CLIENTS,
+        )
+
+        response = self.client.get(
+            self.manager_url,
+            {"feedback_source": "not-a-source"},
+        )
+        self.assertContains(response, "Partnership question")
+        self.assertContains(response, business_feedback.subject)
+        self.assertEqual(response.context["selected_feedback_source"], "")
+
+    def test_manager_order_update_rejects_invalid_delivery_date(self):
+        self.grant_order_permissions("view_preorder", "change_preorder")
+        self.client.force_login(self.manager)
+
+        response = self.client.post(
+            reverse(self.status_url_name, args=[self.order.pk]),
+            {
+                "status": Preorder.Status.PRODUCTION,
+                "delivery_date": "not-a-date",
+            },
+        )
+
+        self.assertRedirects(response, self.manager_url)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Preorder.Status.NEW)
+        self.assertIsNone(self.order.delivery_date)
+
+    def test_manager_can_hide_and_delete_feedback_from_dashboard(self):
+        self.grant_order_permissions(
+            "view_feedbacksubmission",
+            "change_feedbacksubmission",
+            "delete_feedbacksubmission",
+        )
+        feedback = FeedbackSubmission.objects.create(
+            name="Sam",
+            email="sam@example.com",
+            subject="Dashboard feedback",
+            message="Please follow up.",
+            consent_given=True,
+        )
+        self.client.force_login(self.manager)
+
+        response = self.client.get(self.manager_url)
+
+        self.assertContains(response, "Скрыть")
+        self.assertContains(response, "Удалить")
+        self.assertContains(
+            response,
+            reverse("admin_section_edit", args=("messages", feedback.pk)),
+        )
+        self.assertRegex(
+            response.content.decode(),
+            r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}",
+        )
+        hide_url = reverse(
+            "admin_section_visibility",
+            args=("messages", feedback.pk, "hide"),
+        )
+        self.assertRedirects(
+            self.client.post(hide_url, {"return_to_manager": "1"}),
+            self.manager_url,
+        )
+        feedback.refresh_from_db()
+        self.assertTrue(feedback.is_hidden)
+
+        second_feedback = FeedbackSubmission.objects.create(
+            name="Lee",
+            email="lee@example.com",
+            subject="Delete dashboard feedback",
+            message="This can be deleted.",
+            consent_given=True,
+        )
+        delete_url = reverse(
+            "admin_section_delete",
+            args=("messages", second_feedback.pk),
+        )
+        self.assertRedirects(
+            self.client.post(delete_url, {"return_to_manager": "1"}),
+            self.manager_url,
+        )
+        self.assertFalse(
+            FeedbackSubmission.objects.filter(pk=second_feedback.pk).exists()
+        )
 
     def test_manager_without_change_permission_cannot_update_order_status(self):
         self.grant_order_permissions("view_preorder")
@@ -3000,6 +3173,48 @@ class CalculatorTests(TestCase):
         self.assertEqual(preorder.delivery_cost, Decimal("750"))
         self.assertEqual(preorder.total_price, Decimal("9000.00"))
 
+    def test_selected_product_controls_quote_and_is_saved_with_preorder(self):
+        settings = CalculatorSettings.objects.create(
+            pricing={
+                "base_unit_price": "98",
+                "products": [
+                    {
+                        "value": "gingerbread",
+                        "label": "Пряник",
+                        "label_en": "Gingerbread",
+                        "base_unit_price": "98",
+                    },
+                    {
+                        "value": "cookies",
+                        "label": "Печенье",
+                        "label_en": "Cookies",
+                        "base_unit_price": "45",
+                    },
+                ],
+            }
+        )
+        configuration = {**self.configuration, "product": "cookies"}
+
+        quote = calculate_quote(configuration, settings.pricing)
+        response = self.client.post(
+            reverse("preorder"),
+            {
+                **configuration,
+                "name": "Иван",
+                "email": "ivan@example.com",
+                "phone": "+74951234567",
+                "address": "Москва",
+                "consent_given": "on",
+            },
+        )
+
+        self.assertEqual(quote["unit_price"], Decimal("45"))
+        self.assertRedirects(response, "/#calculator")
+        preorder = Preorder.objects.get()
+        self.assertEqual(preorder.configuration["product"], "cookies")
+        self.assertEqual(preorder.configuration["product_name"], "Печенье")
+        self.assertEqual(preorder.unit_price, Decimal("45"))
+
     def test_homepage_renders_calculator_and_preorder_form(self):
         response = self.client.get("/")
 
@@ -3085,6 +3300,87 @@ class CalculatorTests(TestCase):
         self.assertEqual(submission.name, "Иван")
         self.assertEqual(submission.email, "ivan@example.com")
         self.assertEqual(submission.status, FeedbackSubmission.Status.NEW)
+        self.assertEqual(submission.source, FeedbackSubmission.Source.FEEDBACK)
+
+    def test_quick_feedback_submission_returns_json_and_saves_message(self):
+        response = self.client.post(
+            reverse("quick_feedback"),
+            {
+                "name": "Иван",
+                "email": "ivan@example.com",
+                "subject": "Вопрос о заказе",
+                "message": "Подскажите сроки изготовления.",
+                "consent_given": "on",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Спасибо!", response.json()["message"])
+        self.assertTrue(
+            FeedbackSubmission.objects.filter(
+                name="Иван",
+                email="ivan@example.com",
+                subject="Вопрос о заказе",
+                source=FeedbackSubmission.Source.CONTACT,
+            ).exists()
+        )
+        self.assertEqual(self.client.get(reverse("quick_feedback")).status_code, 405)
+
+    def test_quick_feedback_submission_records_selected_source(self):
+        response = self.client.post(
+            reverse("quick_feedback"),
+            {
+                "name": "Иван",
+                "email": "ivan@example.com",
+                "subject": "Корпоративный заказ",
+                "message": "Нужен заказ для команды.",
+                "consent_given": "on",
+                "source": FeedbackSubmission.Source.BUSINESS_CLIENTS,
+                "phone": "+7 900 000-00-00",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            FeedbackSubmission.objects.get().source,
+            FeedbackSubmission.Source.BUSINESS_CLIENTS,
+        )
+        self.assertEqual(FeedbackSubmission.objects.get().phone, "+7 900 000-00-00")
+
+    def test_quick_feedback_submission_rejects_unknown_source(self):
+        response = self.client.post(
+            reverse("quick_feedback"),
+            {
+                "name": "Иван",
+                "email": "ivan@example.com",
+                "subject": "Вопрос",
+                "message": "Нужна помощь.",
+                "consent_given": "on",
+                "source": "not-a-source",
+            },
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(FeedbackSubmission.objects.exists())
+
+    def test_quick_feedback_submission_returns_field_validation_errors(self):
+        response = self.client.post(
+            reverse("quick_feedback"),
+            {
+                "name": "Иван",
+                "email": "not-an-email",
+                "subject": "Вопрос",
+                "message": "Нужна помощь.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("email", response.json()["errors"])
+        self.assertIn("consent_given", response.json()["errors"])
+        self.assertFalse(FeedbackSubmission.objects.exists())
 
     def test_feedback_submission_requires_consent_and_valid_email(self):
         response = self.client.post(
@@ -3114,6 +3410,10 @@ class CalculatorTests(TestCase):
         self.assertContains(response, 'aria-controls="contact-float-menu"')
         self.assertContains(response, 'aria-label="Открыть способы связи"')
         self.assertContains(response, '>Связаться</span>')
+        self.assertContains(response, "Оставить отзыв")
+        self.assertContains(response, 'id="contact-float-feedback"')
+        self.assertContains(response, 'role="dialog" aria-modal="true"')
+        self.assertContains(response, reverse("quick_feedback"))
         self.assertContains(response, 'WhatsApp')
         self.assertContains(response, 'href="https://max.ru/"')
         self.assertContains(response, 'aria-label="Написать в MAX"')
@@ -3125,7 +3425,43 @@ class CalculatorTests(TestCase):
         self.assertContains(response, "Вкусно Да Сладко. Все права защищены.")
         self.assertContains(response, 'href="/#calculator"')
         self.assertContains(response, "Перейти к калькулятору")
-        self.assertContains(response, ">Рассчитать</span>")
+        self.assertContains(response, ">Наша продукция</span>")
+
+        partnership_response = self.client.get(reverse("corporate"))
+        self.assertContains(partnership_response, "data-open-partnership-inquiry")
+        self.assertContains(partnership_response, 'id="partnership-inquiry-modal"')
+        self.assertContains(partnership_response, 'action="/feedback/quick/"')
+
+        self.client.post(
+            reverse("set_language"),
+            {"language": "en", "next": reverse("home")},
+        )
+        english_response = self.client.get(reverse("home"))
+        self.assertContains(
+            english_response,
+            'class="wordmark-name">Vkusno Da Sladko</span>',
+        )
+        self.assertContains(
+            english_response,
+            'class="footer-brand-name">Vkusno Da Sladko</span>',
+        )
+        self.assertContains(
+            english_response,
+            'class="mobile-menu-brand-name">Vkusno Da Sladko</span>',
+        )
+        self.assertContains(
+            english_response,
+            'class="site-intro-name">Vkusno Da Sladko</span>',
+        )
+        self.assertContains(english_response, '<span class="site-intro-mark">V</span>')
+        self.assertContains(
+            self.client.get(reverse("business_clients")),
+            'data-brand="Vkusno Da Sladko"',
+        )
+        self.assertContains(
+            self.client.get(reverse("corporate")),
+            'data-brand="Vkusno Da Sladko"',
+        )
 
     def test_valid_preorder_is_saved_with_server_calculated_quote(self):
         response = self.client.post(
@@ -3266,17 +3602,29 @@ class HomePageCatalogTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "<title>Партнёрство с «Вкусно Да Сладко» — Вкусно Да Сладко</title>")
+        self.assertContains(response, 'class="about-breadcrumbs"', count=1)
+        self.assertNotContains(response, 'class="partnership-kicker"')
+        self.assertNotContains(response, 'class="partnership-card-arrow"')
         self.assertContains(response, "Направления сотрудничества")
         self.assertContains(response, "Франшиза")
         self.assertContains(response, "Производителям и поставщикам")
         self.assertContains(response, "Наши успехи — ваши возможности")
         self.assertContains(response, f'href="{reverse("business_clients")}">Корпоративным клиентам</a>')
+        self.assertContains(response, "data-open-partnership-inquiry")
+        self.assertContains(response, 'id="partnership-inquiry-modal"')
+        self.assertContains(response, 'id="partnership-inquiry-subject"')
+        self.assertContains(response, 'name="source" value="partnership"')
+        self.assertContains(response, 'name="phone" type="tel"')
+        self.assertContains(response, '<option value="Франшиза">Франшиза</option>')
+        self.assertContains(response, '<option value="Реклама и сотрудничество">Реклама и сотрудничество</option>')
+        self.assertContains(response, '<option value="Другое">Другое</option>')
 
     def test_business_clients_page_renders_its_own_content(self):
         response = self.client.get(reverse("business_clients"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "<title>Корпоративным клиентам — Вкусно Да Сладко</title>")
+        self.assertContains(response, 'data-feedback-source="business_clients"')
         self.assertContains(response, "Индивидуальные решения")
         self.assertContains(response, "Взаимодействие")
         self.assertContains(response, "Калькулятор заказа")
@@ -3481,6 +3829,8 @@ class HomePageCatalogTests(TestCase):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<h2>Наша продукция</h2>")
+        self.assertNotContains(response, "Популярные наборы")
         self.assertContains(response, "Подарки компании")
         self.assertContains(response, "Праздничный набор")
         self.assertContains(response, "Скрытый товар")

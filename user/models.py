@@ -25,6 +25,16 @@ class CustomerProfile(models.Model):
     delivery_address = models.CharField("Адрес доставки", max_length=300, blank=True)
     contact_name = models.CharField("Контактное лицо", max_length=200, blank=True)
     phone = models.CharField("Телефон", max_length=32, blank=True)
+    terms_accepted_at = models.DateTimeField(
+        "Пользовательское соглашение принято",
+        null=True,
+        blank=True,
+    )
+    personal_data_consent_at = models.DateTimeField(
+        "Согласие на обработку персональных данных дано",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = "Профиль клиента"

@@ -69,6 +69,7 @@ class AccountTests(TestCase):
         self.assertContains(orders_page, "1 order")
         self.assertContains(orders_page, "English gift set × 2")
         self.assertContains(orders_page, "In production")
+        self.assertContains(orders_page, "Approximate delivery date: To be confirmed")
 
         detail_page = self.client.get(
             reverse("accounts:order_detail", args=[order.pk])
@@ -117,6 +118,7 @@ class AccountTests(TestCase):
         self.assertContains(response, "Подарочный набор × 2")
         self.assertContains(response, "1 заказ")
         self.assertNotContains(response, "Заказ #2")
+        self.assertContains(response, "Приблизительный срок доставки: Уточняется")
 
     def test_dashboard_shows_current_user_order_count_and_recent_order(self):
         user = User.objects.create_user(
@@ -144,6 +146,7 @@ class AccountTests(TestCase):
         self.assertContains(response, "1 заказ")
         self.assertContains(response, f"Заказ #{order.pk}")
         self.assertContains(response, "4 шт. · 8 см")
+        self.assertContains(response, "Приблизительный срок доставки: Уточняется")
 
     def test_order_detail_shows_items_and_production_tracking(self):
         user = User.objects.create_user(
@@ -250,6 +253,22 @@ class AccountTests(TestCase):
         self.assertContains(response, "Физическое лицо")
         self.assertContains(response, "Юридическое лицо")
         self.assertContains(response, 'id="registration-company-fields" hidden')
+        self.assertContains(response, reverse("terms"))
+        self.assertContains(response, reverse("personal_data_consent"))
+
+    def test_legal_documents_are_available(self):
+        documents = (
+            ("privacy_policy", "Политика обработки персональных данных"),
+            ("personal_data_consent", "Согласие на обработку персональных данных"),
+            ("terms", "Пользовательское соглашение"),
+            ("public_offer", "Публичная оферта"),
+        )
+        for route_name, title in documents:
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, title)
+                self.assertContains(response, "Проект документа")
 
     def test_registration_creates_user_and_logs_them_in(self):
         response = self.client.post(
@@ -262,6 +281,8 @@ class AccountTests(TestCase):
                 "password1": "A-long-password-482!",
                 "password2": "A-long-password-482!",
                 "customer_type": CustomerProfile.CustomerType.INDIVIDUAL,
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
             },
         )
 
@@ -272,7 +293,35 @@ class AccountTests(TestCase):
             user.customer_profile.customer_type,
             CustomerProfile.CustomerType.INDIVIDUAL,
         )
+        self.assertIsNotNone(user.customer_profile.terms_accepted_at)
+        self.assertEqual(
+            user.customer_profile.terms_accepted_at,
+            user.customer_profile.personal_data_consent_at,
+        )
         self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
+
+    def test_registration_requires_separate_terms_and_data_consent(self):
+        response = self.client.post(
+            reverse("accounts:register"),
+            {
+                "username": "no_consent_customer",
+                "email": "no-consent@example.com",
+                "password1": "A-long-password-482!",
+                "password2": "A-long-password-482!",
+                "customer_type": CustomerProfile.CustomerType.INDIVIDUAL,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username="no_consent_customer").exists())
+        self.assertIn(
+            "Необходимо принять пользовательское соглашение.",
+            response.context["form"]["agreement_accepted"].errors,
+        )
+        self.assertIn(
+            "Необходимо дать согласие на обработку персональных данных.",
+            response.context["form"]["personal_data_consent"].errors,
+        )
 
     def test_legal_entity_registration_requires_all_company_fields(self):
         response = self.client.post(
@@ -301,6 +350,8 @@ class AccountTests(TestCase):
                 "password1": "A-long-password-482!",
                 "password2": "A-long-password-482!",
                 "customer_type": CustomerProfile.CustomerType.LEGAL_ENTITY,
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
                 "company_name": "ООО Пример",
                 "inn": "1234567890",
                 "kpp": "123456789",
@@ -409,6 +460,8 @@ class AccountTests(TestCase):
                 "password1": "Another-long-password-583!",
                 "password2": "Another-long-password-583!",
                 "customer_type": CustomerProfile.CustomerType.INDIVIDUAL,
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
             },
         )
 

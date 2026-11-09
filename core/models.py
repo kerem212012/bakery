@@ -91,11 +91,25 @@ class FeedbackSubmission(models.Model):
         IN_PROGRESS = "in_progress", "В работе"
         RESOLVED = "resolved", "Решено"
 
+    class Source(models.TextChoices):
+        CONTACT = "contact", "Контактная панель"
+        FEEDBACK = "feedback", "Страница обратной связи"
+        PARTNERSHIP = "partnership", "Партнёрство"
+        BUSINESS_CLIENTS = "business_clients", "Корпоративным клиентам"
+        OTHER = "other", "Другое"
+
     name = models.CharField("Имя", max_length=120)
     email = models.EmailField("Электронная почта")
+    phone = models.CharField("Телефон", max_length=32, blank=True)
     subject = models.CharField("Тема", max_length=160)
     message = models.TextField("Сообщение", max_length=5000)
     consent_given = models.BooleanField("Согласие на обработку данных")
+    source = models.CharField(
+        "Источник",
+        max_length=24,
+        choices=Source.choices,
+        default=Source.OTHER,
+    )
     status = models.CharField(
         "Статус",
         max_length=16,

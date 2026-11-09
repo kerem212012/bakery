@@ -12,7 +12,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import quote
 
+import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
@@ -101,11 +103,29 @@ WSGI_APPLICATION = 'bakery.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    postgres_password = os.environ.get("POSTGRES_PASSWORD")
+    if not postgres_password:
+        raise ImproperlyConfigured(
+            "Set POSTGRES_PASSWORD or DATABASE_URL in the environment or .env file."
+        )
+    postgres_user = os.environ.get("POSTGRES_USER", "bakery")
+    postgres_db = os.environ.get("POSTGRES_DB", "bakery")
+    postgres_host = os.environ.get("POSTGRES_HOST", "127.0.0.1")
+    postgres_port = os.environ.get("POSTGRES_PORT", "5432")
+    DATABASE_URL = (
+        f"postgresql://{quote(postgres_user, safe='')}:"
+        f"{quote(postgres_password, safe='')}@{postgres_host}:"
+        f"{postgres_port}/{quote(postgres_db, safe='')}"
+    )
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 

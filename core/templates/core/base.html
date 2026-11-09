@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Prata&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=98">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=111">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -19,7 +19,7 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
             </button>
             <a class="wordmark" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — home{% else %}Вкусно Да Сладко — главная{% endif %}">
-                <span class="wordmark-name">Вкусно Да Сладко</span>
+                <span class="wordmark-name">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}</span>
                 <span class="wordmark-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
             </a>
             <nav class="header-actions" aria-label="{% if LANGUAGE_CODE == 'en' %}Quick links{% else %}Быстрые ссылки{% endif %}">
@@ -134,7 +134,7 @@
             <div class="footer-bottom">
                 <a class="footer-brand" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — home{% else %}Вкусно Да Сладко — главная{% endif %}">
                     <span class="footer-brand-mark" aria-hidden="true">❧</span>
-                    <span class="footer-brand-name">Вкусно Да Сладко</span>
+                    <span class="footer-brand-name">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}</span>
                     <span class="footer-brand-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
                 </a>
                 <p class="footer-tagline">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery products.{% else %}Вкусно Да Сладко — кондитерские изделия.{% endif %}</p>
@@ -147,7 +147,12 @@
                 </div>
                 <div class="footer-legal">
                     <span>© 2026 {% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko. All rights reserved.{% else %}Вкусно Да Сладко. Все права защищены.{% endif %}</span>
-                    <span>{% if LANGUAGE_CODE == 'en' %}Privacy policy&nbsp; | &nbsp;Terms of service{% else %}Политика конфиденциальности&nbsp; | &nbsp;Пользовательское соглашение{% endif %}</span>
+                    <span class="footer-legal-links">
+                        <a href="{% url 'privacy_policy' %}">{% if LANGUAGE_CODE == 'en' %}Privacy policy{% else %}Политика обработки персональных данных{% endif %}</a>
+                        <a href="{% url 'personal_data_consent' %}">{% if LANGUAGE_CODE == 'en' %}Data consent{% else %}Согласие на обработку данных{% endif %}</a>
+                        <a href="{% url 'terms' %}">{% if LANGUAGE_CODE == 'en' %}User agreement{% else %}Пользовательское соглашение{% endif %}</a>
+                        <a href="{% url 'public_offer' %}">{% if LANGUAGE_CODE == 'en' %}Public offer{% else %}Публичная оферта{% endif %}</a>
+                    </span>
                 </div>
             </div>
         </footer>
@@ -170,7 +175,7 @@
         </div>
         <div class="mobile-menu-header">
             <a class="mobile-menu-brand" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — home{% else %}Вкусно Да Сладко — главная{% endif %}">
-                <span class="mobile-menu-brand-name">Вкусно Да Сладко</span>
+                <span class="mobile-menu-brand-name">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}</span>
                 <span class="mobile-menu-brand-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
             </a>
             <button class="mobile-menu-close" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Close menu{% else %}Закрыть меню{% endif %}">
@@ -206,40 +211,77 @@
         </div>
     </nav>
     <button class="menu-backdrop" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Close menu{% else %}Закрыть меню{% endif %}"></button>
-    <div class="contact-float" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact options{% else %}Способы связи{% endif %}">
-        {% if request.path|slice:":13" != "/admin-panel/" and request.path|slice:":9" != "/manager/" %}
+    {% if request.path|slice:":13" != "/admin-panel/" and request.path|slice:":9" != "/manager/" %}
+        <div class="contact-float" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact options{% else %}Способы связи{% endif %}">
             <a class="contact-float-toggle calculator-float-toggle" href="{% url 'home' %}#calculator" aria-label="{% if LANGUAGE_CODE == 'en' %}Go to the price calculator{% else %}Перейти к калькулятору{% endif %}">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <rect x="5" y="3" width="14" height="18" rx="2"/>
                     <path d="M8 7h8M8 11h2m4 0h2m-8 4h2m4 0h2m-8 3h2m4 0h2"/>
                 </svg>
-                <span>{% if LANGUAGE_CODE == 'en' %}Calculator{% else %}Рассчитать{% endif %}</span>
+                <span>{% if LANGUAGE_CODE == 'en' %}Our products{% else %}Наша продукция{% endif %}</span>
             </a>
-        {% endif %}
-        <div class="contact-float-menu" id="contact-float-menu" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact us via Telegram, WhatsApp, MAX, or phone{% else %}Связаться через Telegram, WhatsApp, MAX или звонок{% endif %}">
-            <a class="contact-float-option contact-float-telegram" href="https://t.me/" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Message us on Telegram{% else %}Написать в Telegram{% endif %}">
-                <span>Telegram</span>
-            </a>
-            <a class="contact-float-option contact-float-whatsapp" href="https://wa.me/" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Message us on WhatsApp{% else %}Написать в WhatsApp{% endif %}">
-                <span>WhatsApp</span>
-            </a>
-            <a class="contact-float-option contact-float-max" href="https://max.ru/" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Message us on MAX{% else %}Написать в MAX{% endif %}">
-                <span>MAX</span>
-            </a>
-            <a class="contact-float-option contact-float-phone" href="tel:+74951234567" aria-label="{% if LANGUAGE_CODE == 'en' %}Call us{% else %}Позвонить{% endif %}">
-                <span>{% if LANGUAGE_CODE == 'en' %}Call us{% else %}Позвонить{% endif %}</span>
-            </a>
+            <div class="contact-float-menu" id="contact-float-menu" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact us via Telegram, WhatsApp, MAX, or phone{% else %}Связаться через Telegram, WhatsApp, MAX или звонок{% endif %}">
+                <div class="contact-float-options" id="contact-float-options">
+                    <a class="contact-float-option contact-float-telegram" href="https://t.me/" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Message us on Telegram{% else %}Написать в Telegram{% endif %}">
+                        <span>Telegram</span>
+                    </a>
+                    <a class="contact-float-option contact-float-whatsapp" href="https://wa.me/" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Message us on WhatsApp{% else %}Написать в WhatsApp{% endif %}">
+                        <span>WhatsApp</span>
+                    </a>
+                    <a class="contact-float-option contact-float-max" href="https://max.ru/" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Message us on MAX{% else %}Написать в MAX{% endif %}">
+                        <span>MAX</span>
+                    </a>
+                    <a class="contact-float-option contact-float-phone" href="tel:+74951234567" aria-label="{% if LANGUAGE_CODE == 'en' %}Call us{% else %}Позвонить{% endif %}">
+                        <span>{% if LANGUAGE_CODE == 'en' %}Call us{% else %}Позвонить{% endif %}</span>
+                    </a>
+                    <button class="contact-float-option contact-float-feedback-open" type="button" aria-controls="contact-float-feedback">
+                        {% if LANGUAGE_CODE == 'en' %}Send feedback{% else %}Оставить отзыв{% endif %}
+                    </button>
+                </div>
+            </div>
+            <section class="contact-float-feedback" id="contact-float-feedback" hidden>
+                <div class="contact-float-feedback-card" role="dialog" aria-modal="true" aria-labelledby="contact-float-feedback-title">
+                    <header class="contact-float-feedback-heading">
+                        <h2 id="contact-float-feedback-title">{% if LANGUAGE_CODE == 'en' %}Send feedback{% else %}Обратная связь{% endif %}</h2>
+                        <button class="contact-float-feedback-back" type="button">{% if LANGUAGE_CODE == 'en' %}Back{% else %}Назад{% endif %}</button>
+                    </header>
+                    <form class="contact-float-feedback-form" action="{% url 'quick_feedback' %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="source" value="contact">
+                    <label for="quick-feedback-name">{% if LANGUAGE_CODE == 'en' %}Your name{% else %}Ваше имя{% endif %}</label>
+                    <input id="quick-feedback-name" name="name" type="text" maxlength="120" autocomplete="name" required>
+                    <span class="quick-feedback-error" data-error-for="name"></span>
+                    <label for="quick-feedback-email">{% if LANGUAGE_CODE == 'en' %}Email{% else %}Электронная почта{% endif %}</label>
+                    <input id="quick-feedback-email" name="email" type="email" maxlength="254" autocomplete="email" required>
+                    <span class="quick-feedback-error" data-error-for="email"></span>
+                    <label for="quick-feedback-subject">{% if LANGUAGE_CODE == 'en' %}Subject{% else %}Тема{% endif %}</label>
+                    <input id="quick-feedback-subject" name="subject" type="text" maxlength="160" required>
+                    <span class="quick-feedback-error" data-error-for="subject"></span>
+                    <label for="quick-feedback-message">{% if LANGUAGE_CODE == 'en' %}Message{% else %}Сообщение{% endif %}</label>
+                    <textarea id="quick-feedback-message" name="message" rows="3" maxlength="5000" required></textarea>
+                    <span class="quick-feedback-error" data-error-for="message"></span>
+                    <label class="contact-float-feedback-consent" for="quick-feedback-consent">
+                        <input id="quick-feedback-consent" name="consent_given" type="checkbox" required>
+                        <span>{% if LANGUAGE_CODE == 'en' %}I agree to the processing of my personal data{% else %}Согласен(на) на обработку персональных данных{% endif %}</span>
+                    </label>
+                    <small class="consent-document-links"><a href="{% url 'privacy_policy' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Privacy Policy{% else %}Политика обработки персональных данных{% endif %}</a><a href="{% url 'personal_data_consent' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Consent text{% else %}Текст согласия{% endif %}</a></small>
+                    <span class="quick-feedback-error" data-error-for="consent_given"></span>
+                    <p class="quick-feedback-status" role="status" aria-live="polite"></p>
+                    <button class="contact-float-feedback-submit" type="submit">{% if LANGUAGE_CODE == 'en' %}Send message{% else %}Отправить сообщение{% endif %}</button>
+                    </form>
+                </div>
+            </section>
+            <button class="contact-float-toggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="contact-float-menu" aria-label="{% if LANGUAGE_CODE == 'en' %}Open contact options{% else %}Открыть способы связи{% endif %}">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3.5c-4.8 0-8.7 3.3-8.7 7.4 0 2.2 1.1 4.1 3 5.4l-.8 4.2 4.4-2.2c.7.2 1.4.3 2.1.3 4.8 0 8.7-3.3 8.7-7.4S16.8 3.5 12 3.5Z"/>
+                    <circle cx="8.2" cy="11" r="1"/>
+                    <circle cx="12" cy="11" r="1"/>
+                    <circle cx="15.8" cy="11" r="1"/>
+                </svg>
+                <span>{% if LANGUAGE_CODE == 'en' %}Contact us{% else %}Связаться{% endif %}</span>
+            </button>
         </div>
-        <button class="contact-float-toggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="contact-float-menu" aria-label="{% if LANGUAGE_CODE == 'en' %}Open contact options{% else %}Открыть способы связи{% endif %}">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 3.5c-4.8 0-8.7 3.3-8.7 7.4 0 2.2 1.1 4.1 3 5.4l-.8 4.2 4.4-2.2c.7.2 1.4.3 2.1.3 4.8 0 8.7-3.3 8.7-7.4S16.8 3.5 12 3.5Z"/>
-                <circle cx="8.2" cy="11" r="1"/>
-                <circle cx="12" cy="11" r="1"/>
-                <circle cx="15.8" cy="11" r="1"/>
-            </svg>
-            <span>{% if LANGUAGE_CODE == 'en' %}Contact us{% else %}Связаться{% endif %}</span>
-        </button>
-    </div>
+    {% endif %}
     {% block entrance %}{% endblock %}
     <script>
         const interfaceText = {
@@ -259,6 +301,11 @@
         const contactFloat = document.querySelector(".contact-float");
         const contactToggle = document.querySelector(".contact-float-toggle[type=\"button\"]");
         const contactMenu = document.querySelector(".contact-float-menu");
+        const quickFeedbackOpen = document.querySelector(".contact-float-feedback-open");
+        const quickFeedbackPanel = document.querySelector("#contact-float-feedback");
+        const quickFeedbackBack = document.querySelector(".contact-float-feedback-back");
+        const quickFeedbackForm = document.querySelector(".contact-float-feedback-form");
+        let quickFeedbackReturnFocus = quickFeedbackOpen;
 
         function setNavigationOpen(isOpen) {
             menuToggle.setAttribute("aria-expanded", String(isOpen));
@@ -287,6 +334,10 @@
             contactFloat.classList.toggle("is-open", isOpen);
             contactToggle.setAttribute("aria-expanded", String(isOpen));
             contactToggle.setAttribute("aria-label", isOpen ? interfaceText.closeContactOptions : interfaceText.openContactOptions);
+            if (!isOpen && contactMenu && quickFeedbackPanel && quickFeedbackOpen) {
+                contactMenu.classList.remove("is-feedback-open");
+                quickFeedbackPanel.hidden = true;
+            }
         }
 
         menuToggle.addEventListener("click", () => {
@@ -309,6 +360,75 @@
         if (contactMenu) {
             contactMenu.querySelectorAll("a").forEach((link) => {
                 link.addEventListener("click", () => setContactMenuOpen(false));
+            });
+        }
+        if (quickFeedbackPanel && quickFeedbackBack && quickFeedbackForm) {
+            document.querySelectorAll("[data-open-quick-feedback]").forEach((trigger) => {
+                trigger.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    quickFeedbackReturnFocus = trigger;
+                    setContactMenuOpen(true);
+                    contactMenu.classList.add("is-feedback-open");
+                    quickFeedbackPanel.hidden = false;
+                    const subject = quickFeedbackForm.querySelector('[name="subject"]');
+                    if (trigger.dataset.feedbackSubject) {
+                        subject.value = trigger.dataset.feedbackSubject;
+                    }
+                    const source = quickFeedbackForm.querySelector('[name="source"]');
+                    source.value = trigger.dataset.feedbackSource || "contact";
+                    quickFeedbackForm.querySelector('[name="name"]').focus();
+                });
+            });
+            quickFeedbackOpen.addEventListener("click", () => {
+                quickFeedbackReturnFocus = quickFeedbackOpen;
+                contactMenu.classList.add("is-feedback-open");
+                quickFeedbackPanel.hidden = false;
+                quickFeedbackForm.querySelector('[name="source"]').value = "contact";
+                quickFeedbackForm.querySelector('[name="subject"]').value = "";
+                quickFeedbackForm.querySelector('[name="name"]').focus();
+            });
+            quickFeedbackBack.addEventListener("click", () => {
+                contactMenu.classList.remove("is-feedback-open");
+                quickFeedbackPanel.hidden = true;
+                quickFeedbackReturnFocus.focus();
+            });
+            quickFeedbackForm.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                const submitButton = quickFeedbackForm.querySelector('[type="submit"]');
+                const status = quickFeedbackForm.querySelector(".quick-feedback-status");
+                quickFeedbackForm.querySelectorAll(".quick-feedback-error").forEach((element) => {
+                    element.textContent = "";
+                });
+                quickFeedbackForm.querySelectorAll("[aria-invalid='true']").forEach((element) => {
+                    element.removeAttribute("aria-invalid");
+                });
+                submitButton.disabled = true;
+                status.textContent = "";
+                try {
+                    const response = await fetch(quickFeedbackForm.action, {
+                        method: "POST",
+                        body: new FormData(quickFeedbackForm),
+                        headers: { "Accept": "application/json" },
+                    });
+                    const result = await response.json();
+                    if (!response.ok) {
+                        Object.entries(result.errors || {}).forEach(([name, errors]) => {
+                            const input = quickFeedbackForm.querySelector(`[name="${name}"]`);
+                            const error = quickFeedbackForm.querySelector(`[data-error-for="${name}"]`);
+                            if (input) input.setAttribute("aria-invalid", "true");
+                            if (error) error.textContent = errors.join(" ");
+                        });
+                        status.textContent = result.message;
+                        return;
+                    }
+                    quickFeedbackForm.reset();
+                    status.textContent = result.message;
+                } catch {
+                    status.textContent = "{% if LANGUAGE_CODE == 'en' %}We could not send your message. Please try again.{% else %}Не удалось отправить сообщение. Попробуйте ещё раз.{% endif %}";
+                } finally {
+                    submitButton.disabled = false;
+                }
             });
         }
         document.addEventListener("click", (event) => {

@@ -210,6 +210,7 @@
                                 {{ form.consent_given }}
                                 <span>{% if LANGUAGE_CODE == 'en' %}I agree to the processing of my personal data *{% else %}Согласен(на) на обработку персональных данных *{% endif %}</span>
                             </label>
+                            <small class="consent-document-links"><a href="{% url 'privacy_policy' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Privacy Policy{% else %}Политика обработки персональных данных{% endif %}</a><a href="{% url 'personal_data_consent' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Consent text{% else %}Текст согласия{% endif %}</a></small>
                             {% for error in form.consent_given.errors %}<p class="cart-field-error">{{ error }}</p>{% endfor %}
                             <button class="cart-submit-button" type="submit">
                                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5c-4.8 0-8.7 3.3-8.7 7.4 0 2.2 1.1 4.1 3 5.4l-.8 4.2 4.4-2.2c.7.2 1.4.3 2.1.3 4.8 0 8.7-3.3 8.7-7.4S16.8 3.5 12 3.5Z"/></svg>

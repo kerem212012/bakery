@@ -75,6 +75,8 @@ class CustomerProfileAdmin(admin.ModelAdmin):
         "kpp",
         "contact_name",
         "phone",
+        "terms_accepted_at",
+        "personal_data_consent_at",
     )
     list_filter = ("customer_type",)
     search_fields = (

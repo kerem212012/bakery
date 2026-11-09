@@ -177,17 +177,21 @@ class ProductFilterOptionAdmin(admin.ModelAdmin):
         "value",
     )
     list_per_page = 50
+
+    class Media:
+        js = ("catalog/filter-option-editor.js",)
+
     def get_fieldsets(self, request, obj=None):
-        fields = [
-            ("filter_type", "value"),
-            ("label", "label_en"),
-        ]
-        if obj is None or obj.filter_type in {
-            ProductFilterOption.FilterType.COATING,
-            ProductFilterOption.FilterType.DOUGH,
-        }:
-            fields.append(("description", "description_en"))
         return (
-            ("Параметр каталога", {"fields": tuple(fields)}),
+            (
+                "Параметр каталога",
+                {
+                    "fields": (
+                        ("filter_type", "value"),
+                        ("label", "label_en"),
+                        ("description", "description_en"),
+                    )
+                },
+            ),
             ("Отображение", {"fields": (("is_active", "display_order"),)}),
         )

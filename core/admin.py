@@ -47,11 +47,29 @@ class PreorderAdmin(admin.ModelAdmin):
 
 @admin.register(FeedbackSubmission)
 class FeedbackSubmissionAdmin(admin.ModelAdmin):
-    list_display = ("subject", "name", "email", "status", "is_hidden", "created_at")
-    list_filter = ("status", "is_hidden", "created_at")
+    list_display = (
+        "subject",
+        "name",
+        "email",
+        "phone",
+        "source",
+        "status",
+        "is_hidden",
+        "created_at",
+    )
+    list_filter = ("source", "status", "is_hidden", "created_at")
     list_editable = ("status",)
-    search_fields = ("name", "email", "subject", "message")
-    readonly_fields = ("name", "email", "subject", "message", "consent_given", "created_at")
+    search_fields = ("name", "email", "phone", "subject", "message")
+    readonly_fields = (
+        "name",
+        "email",
+        "phone",
+        "subject",
+        "message",
+        "consent_given",
+        "source",
+        "created_at",
+    )
 
 
 @admin.register(SitePageContent)

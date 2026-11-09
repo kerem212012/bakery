@@ -15,6 +15,23 @@
                 {% endif %}
                 {% for field in form %}
                     {% if field.name == "company_name" %}<div class="registration-company-fields" id="registration-company-fields" hidden>{% endif %}
+                    {% if field.name == "agreement_accepted" %}
+                        <div class="form-field consent-field">
+                            <label for="{{ field.id_for_label }}">{{ field }}
+                                <span>{% if LANGUAGE_CODE == 'en' %}I accept the User Agreement.{% else %}Принимаю Пользовательское соглашение.{% endif %}</span>
+                            </label>
+                            <small class="consent-document-links"><a href="{% url 'terms' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Read the User Agreement{% else %}Открыть Пользовательское соглашение{% endif %}</a></small>
+                            {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
+                        </div>
+                    {% elif field.name == "personal_data_consent" %}
+                        <div class="form-field consent-field">
+                            <label for="{{ field.id_for_label }}">{{ field }}
+                                <span>{% if LANGUAGE_CODE == 'en' %}I give separate consent to the processing of my personal data.{% else %}Даю отдельное согласие на обработку персональных данных.{% endif %}</span>
+                            </label>
+                            <small class="consent-document-links"><a href="{% url 'privacy_policy' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Privacy Policy{% else %}Политика обработки персональных данных{% endif %}</a><a href="{% url 'personal_data_consent' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Consent text{% else %}Текст согласия{% endif %}</a></small>
+                            {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
+                        </div>
+                    {% else %}
                     <div class="form-field{% if field.name == 'customer_type' %} customer-type-field{% endif %}">
                         {% if field.name == "customer_type" %}
                             <span class="form-field-label">{{ field.label }}</span>
@@ -26,6 +43,7 @@
                         {% if field.help_text %}<small class="field-help">{{ field.help_text|safe }}</small>{% endif %}
                         {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
                     </div>
+                    {% endif %}
                     {% if field.name == "phone" %}</div>{% endif %}
                 {% endfor %}
                 <button class="button button-dark auth-submit" type="submit">{% if LANGUAGE_CODE == 'en' %}Create account{% else %}Зарегистрироваться{% endif %}</button>

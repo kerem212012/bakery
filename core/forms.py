@@ -3,6 +3,7 @@ from pathlib import Path
 from django import forms
 from django.forms import BaseModelFormSet
 from django.core.exceptions import ValidationError
+from django.utils.text import slugify
 from django.utils.translation import get_language
 
 from .calculator import (
@@ -214,6 +215,7 @@ class MultipleFileField(forms.FileField):
 
 
 class PreorderForm(forms.Form):
+    product = forms.ChoiceField(required=False)
     flavor = forms.ChoiceField(choices=FLAVOR_CHOICES)
     quantity = forms.IntegerField(min_value=1, max_value=10000, initial=100)
     size = forms.ChoiceField(choices=SIZE_CHOICES)
@@ -252,8 +254,15 @@ class PreorderForm(forms.Form):
         error_messages={"required": "Необходимо дать согласие на обработку данных."},
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, product_choices=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if product_choices is not None:
+            self.fields["product"].choices = product_choices
+        self.fields["product"].initial = (
+            self.fields["product"].choices[0][0]
+            if self.fields["product"].choices
+            else ""
+        )
         for field_name, group in (
             ("flavor", "flavor"),
             ("shape", "shape"),
@@ -287,6 +296,8 @@ class PreorderForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
+        if not cleaned_data.get("product") and self.fields["product"].choices:
+            cleaned_data["product"] = self.fields["product"].choices[0][0]
         if (
             cleaned_data.get("delivery") != "pickup"
             and not cleaned_data.get("address")
@@ -309,6 +320,18 @@ class FeedbackForm(forms.Form):
     email = forms.EmailField(
         label="Электронная почта",
         widget=forms.EmailInput(attrs={"placeholder": "name@example.com"}),
+    )
+    phone = forms.CharField(
+        max_length=32,
+        required=False,
+        label="Телефон",
+        widget=forms.TextInput(
+            attrs={
+                "type": "tel",
+                "autocomplete": "tel",
+                "placeholder": "+7 900 000-00-00",
+            }
+        ),
     )
     subject = forms.CharField(
         max_length=160,
@@ -334,6 +357,7 @@ class FeedbackForm(forms.Form):
             labels = {
                 "name": "Your name",
                 "email": "Email",
+                "phone": "Phone number",
                 "subject": "Subject",
                 "message": "Message",
                 "consent_given": "I agree to the processing of my personal data",
@@ -1992,6 +2016,8 @@ class AdminFeedbackStatusForm(forms.Form):
 
 
 class CalculatorPricingForm(forms.Form):
+    MAX_PRODUCTS = 30
+
     def __init__(self, *args, pricing=None, **kwargs):
         super().__init__(*args, **kwargs)
         pricing = normalize_calculator_pricing(pricing)
@@ -1999,24 +2025,57 @@ class CalculatorPricingForm(forms.Form):
         english = (get_language() or "").startswith("en")
         currency = "RUB" if english else "₽"
         self.field_groups = []
-
-        self._add_price_field(
-            "base_unit_price",
-            (
+        self.product_count = self._get_product_count(pricing)
+        self.fields["product_count"] = forms.IntegerField(
+            required=False,
+            min_value=1,
+            max_value=self.MAX_PRODUCTS,
+            initial=self.product_count,
+            widget=forms.HiddenInput(),
+        )
+        self.product_groups = []
+        for index in range(self.product_count):
+            product = (
+                pricing["products"][index]
+                if index < len(pricing["products"])
+                else {"label": "", "label_en": "", "base_unit_price": 0}
+            )
+            name = f"product_{index}_name"
+            name_en = f"product_{index}_name_en"
+            price_name = "base_unit_price" if index == 0 else f"product_{index}_base_price"
+            self.fields[name] = forms.CharField(
+                max_length=80,
+                label="Product name" if english else "Название товара",
+                initial=product["label"],
+                widget=forms.TextInput(
+                    attrs={"class": "site-content-form-control", "data-product-name": ""}
+                ),
+            )
+            self.fields[name_en] = forms.CharField(
+                max_length=80,
+                required=False,
+                label="Product name (English)" if english else "Название товара (английский)",
+                initial=product.get("label_en", ""),
+                widget=forms.TextInput(
+                    attrs={"class": "site-content-form-control", "data-product-name-en": ""}
+                ),
+            )
+            self._add_price_field(
+                price_name,
                 f"Base price per item ({currency})"
                 if english
-                else f"Базовая цена за штуку ({currency})"
-            ),
-            pricing["base_unit_price"],
-            minimum=0,
-            decimal_places=2,
-        )
-        self.field_groups.append(
-            (
-                "General" if english else "Общие настройки",
-                ("base_unit_price",),
+                else f"Базовая цена за штуку ({currency})",
+                product["base_unit_price"],
+                minimum=0,
+                decimal_places=2,
             )
-        )
+            self.fields[price_name].widget.attrs["data-product-price"] = ""
+            self.product_groups.append(
+                {
+                    "index": index,
+                    "fields": (name, name_en, price_name),
+                }
+            )
         for group_key, pricing_key in (
             ("sizes", "size_multipliers"),
             ("flavors", "flavor_additions"),
@@ -2130,6 +2189,15 @@ class CalculatorPricingForm(forms.Form):
             )
         )
 
+    def _get_product_count(self, pricing):
+        if self.is_bound and "product_count" in self.data:
+            try:
+                count = int(self.data["product_count"])
+            except (TypeError, ValueError):
+                return 1
+            return min(max(count, 1), self.MAX_PRODUCTS)
+        return min(max(len(pricing["products"]), 1), self.MAX_PRODUCTS)
+
     def _add_price_field(self, name, label, initial, *, minimum, decimal_places):
         self.fields[name] = forms.DecimalField(
             label=label,
@@ -2147,6 +2215,42 @@ class CalculatorPricingForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
+        product_count = cleaned_data.get("product_count") or self.product_count
+        products = []
+        seen_values = set()
+        for index in range(min(product_count, self.MAX_PRODUCTS)):
+            name_field = f"product_{index}_name"
+            label = (cleaned_data.get(name_field) or "").strip()
+            label_en = (cleaned_data.get(f"product_{index}_name_en") or "").strip()
+            value = slugify(label, allow_unicode=True)
+            if not value:
+                value = f"product-{index + 1}"
+            if value in seen_values:
+                self.add_error(
+                    name_field,
+                    "Product names must be unique."
+                    if (get_language() or "").startswith("en")
+                    else "Названия товаров должны быть уникальными.",
+                )
+                continue
+            seen_values.add(value)
+            price_field = (
+                "base_unit_price"
+                if index == 0
+                else f"product_{index}_base_price"
+            )
+            price = cleaned_data.get(price_field)
+            if label and price is not None:
+                products.append(
+                    {
+                        "value": value,
+                        "label": label,
+                        "label_en": label_en,
+                        "base_unit_price": str(price),
+                    }
+                )
+        if products:
+            cleaned_data["products"] = products
         tiers = []
         for slot in range(1, 4):
             threshold_name = f"discount_quantity_{slot}"
@@ -2171,7 +2275,12 @@ class CalculatorPricingForm(forms.Form):
             )
             self.add_error(None, message)
         cleaned_data["pricing"] = {
-            "base_unit_price": str(cleaned_data.get("base_unit_price", 0)),
+            "base_unit_price": str(
+                products[0]["base_unit_price"]
+                if products
+                else cleaned_data.get("base_unit_price", 0)
+            ),
+            "products": products,
             "size_multipliers": {
                 value: str(cleaned_data.get(f"size_multiplier_{value}", 0))
                 for value, _ in SIZE_CHOICES

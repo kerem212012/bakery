@@ -144,3 +144,12 @@ class ProductFilterOption(models.Model):
         if get_language() == "en" and self.description_en:
             return self.description_en
         return self.description or self.description_en
+
+    def save(self, *args, **kwargs):
+        if self.filter_type not in {
+            self.FilterType.COATING,
+            self.FilterType.DOUGH,
+        }:
+            self.description = ""
+            self.description_en = ""
+        super().save(*args, **kwargs)

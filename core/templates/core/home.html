@@ -12,9 +12,9 @@
 {% block entrance %}
     <div class="site-intro" id="site-intro" aria-hidden="true">
         <div class="site-intro-logo">
-            <span class="site-intro-mark">В</span>
+            <span class="site-intro-mark">{% if LANGUAGE_CODE == 'en' %}V{% else %}В{% endif %}</span>
             <span class="site-intro-copy">
-                <span class="site-intro-name">Вкусно Да Сладко</span>
+                <span class="site-intro-name">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}</span>
                 <span class="site-intro-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
             </span>
         </div>
@@ -110,26 +110,11 @@
                 </div>
             </section>
 
-            <section class="about-section" id="about">
-                <div class="about-copy">
-                    <p class="eyebrow">{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}About us{% else %}О компании{% endif %}{% endif %}</p>
-                    <h2>{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery products.{% else %}Вкусно Да Сладко — кондитерские изделия.{% endif %}{% endif %}</h2>
-                    {% if site_page_sections.home_about %}
-                        {% for item in site_page_sections.home_about %}<p>{{ item.localized_description }}</p>{% endfor %}
-                    {% else %}
-                        <p>{% if LANGUAGE_CODE == 'en' %}We create corporate gifts that express gratitude and strengthen relationships.{% else %}Мы создаём корпоративные подарки, которые помогают выразить благодарность и укрепить отношения.{% endif %}</p>
-                        <p>{% if LANGUAGE_CODE == 'en' %}From concept to packaging, every detail is considered to make your gift memorable and truly delightful.{% else %}От концепции до упаковки — продумываем каждую мелочь, чтобы ваш подарок запомнился и по-настоящему порадовал.{% endif %}</p>
-                    {% endif %}
-                    <a class="button button-dark" href="{% if site_page_sections.home_about and site_page_sections.home_about.0.url %}{{ site_page_sections.home_about.0.url }}{% else %}{% url 'about' %}{% endif %}">{% if site_page_sections.home_about and site_page_sections.home_about.0.localized_value %}{{ site_page_sections.home_about.0.localized_value }}{% else %}{% if LANGUAGE_CODE == 'en' %}More about us{% else %}Подробнее о компании{% endif %}{% endif %} <span aria-hidden="true">→</span></a>
-                </div>
-                <div class="about-photo" role="img" aria-label="{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_image_alt }}{% elif LANGUAGE_CODE == 'en' %}A baker decorates handmade cookies{% else %}Мастер украшает авторское печенье{% endif %}"{% if site_page_sections.home_about.0.image %} style="background-image:url('{{ site_page_sections.home_about.0.image.url }}')"{% endif %}></div>
-            </section>
-
             <section class="section catalog-section" id="catalog">
                 <div class="section-heading">
                     <div>
                         <p class="eyebrow">{% if site_page_sections.catalog %}{{ site_page_sections.catalog.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}Made for your brand{% else %}Для вашего бренда{% endif %}{% endif %}</p>
-                        <h2>{% if site_page_sections.catalog %}{{ site_page_sections.catalog.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Popular gift sets{% else %}Популярные наборы{% endif %}{% endif %}</h2>
+                        <h2>{% if site_page_sections.catalog %}{{ site_page_sections.catalog.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Our products{% else %}Наша продукция{% endif %}{% endif %}</h2>
                     </div>
                 </div>
                 <div class="catalog-grid">
@@ -170,8 +155,17 @@
                     {% endif %}
 
                     <div class="calculator-panel">
+                        <div class="calculator-group select-group calculator-product-group">
+                            <label for="id_product"><span class="calculator-icon" aria-hidden="true">♧</span><b>1.</b> {% if LANGUAGE_CODE == 'en' %}Product{% else %}Товар{% endif %}</label>
+                            <select id="id_product" name="product">
+                                {% for option in calculator_options.products %}
+                                    <option value="{{ option.value }}" data-base-price="{{ option.base_unit_price|unlocalize }}" {% if preorder_form.product.value == option.value %}selected{% endif %}>{{ option.label }}</option>
+                                {% endfor %}
+                            </select>
+                            {{ preorder_form.product.errors }}
+                        </div>
                         <fieldset class="calculator-group flavor-group">
-                            <legend><span class="calculator-icon" aria-hidden="true">♡</span><span><b>1.</b> {% if LANGUAGE_CODE == 'en' %}Flavor{% else %}Вкус{% endif %}</span></legend>
+                            <legend><span class="calculator-icon" aria-hidden="true">♡</span><span><b>2.</b> {% if LANGUAGE_CODE == 'en' %}Flavor{% else %}Вкус{% endif %}</span></legend>
                             <div class="flavor-options">
                                 {% for option in calculator_options.flavors %}
                                     <label class="flavor-option">
@@ -185,7 +179,7 @@
                         </fieldset>
 
                         <fieldset class="calculator-group quantity-group">
-                            <legend><span class="calculator-icon" aria-hidden="true">▤</span><span><b>2.</b> {% if LANGUAGE_CODE == 'en' %}Quantity{% else %}Количество{% endif %}</span></legend>
+                            <legend><span class="calculator-icon" aria-hidden="true">▤</span><span><b>3.</b> {% if LANGUAGE_CODE == 'en' %}Quantity{% else %}Количество{% endif %}</span></legend>
                             <div class="quantity-control">
                                 <button type="button" class="quantity-step" data-quantity-step="-1" aria-label="{% if LANGUAGE_CODE == 'en' %}Decrease quantity{% else %}Уменьшить количество{% endif %}">−</button>
                                 {{ preorder_form.quantity }}
@@ -196,7 +190,7 @@
                         </fieldset>
 
                         <fieldset class="calculator-group size-group">
-                            <legend><span class="calculator-icon" aria-hidden="true">⌁</span><span><b>3.</b> {% if LANGUAGE_CODE == 'en' %}Size, cm{% else %}Размер, см{% endif %}</span></legend>
+                            <legend><span class="calculator-icon" aria-hidden="true">⌁</span><span><b>4.</b> {% if LANGUAGE_CODE == 'en' %}Size, cm{% else %}Размер, см{% endif %}</span></legend>
                             <div class="size-options">
                                 {% for option in calculator_options.sizes %}
                                     <label class="size-option">
@@ -209,7 +203,7 @@
                         </fieldset>
 
                         <fieldset class="calculator-group shape-group">
-                            <legend><span class="calculator-icon" aria-hidden="true">☆</span><span><b>4.</b> {% if LANGUAGE_CODE == 'en' %}Shape{% else %}Форма{% endif %}</span></legend>
+                            <legend><span class="calculator-icon" aria-hidden="true">☆</span><span><b>5.</b> {% if LANGUAGE_CODE == 'en' %}Shape{% else %}Форма{% endif %}</span></legend>
                             <div class="shape-options">
                                 {% for option in calculator_options.shapes %}
                                     <label class="shape-option">
@@ -223,7 +217,7 @@
                         </fieldset>
 
                         <fieldset class="calculator-group coating-group">
-                            <legend><span class="calculator-icon" aria-hidden="true">♧</span><span><b>5.</b> {% if LANGUAGE_CODE == 'en' %}Icing{% else %}Покрытие{% endif %}</span></legend>
+                            <legend><span class="calculator-icon" aria-hidden="true">♧</span><span><b>6.</b> {% if LANGUAGE_CODE == 'en' %}Icing{% else %}Покрытие{% endif %}</span></legend>
                             <div class="coating-options">
                                 {% for option in calculator_options.coatings %}
                                     <label class="image-option">
@@ -237,7 +231,7 @@
                         </fieldset>
 
                         <fieldset class="calculator-group packaging-group">
-                            <legend><span class="calculator-icon" aria-hidden="true">♙</span><span><b>6.</b> {% if LANGUAGE_CODE == 'en' %}Packaging{% else %}Упаковка{% endif %}</span></legend>
+                            <legend><span class="calculator-icon" aria-hidden="true">♙</span><span><b>7.</b> {% if LANGUAGE_CODE == 'en' %}Packaging{% else %}Упаковка{% endif %}</span></legend>
                             <div class="packaging-options">
                                 {% for option in calculator_options.packaging %}
                                     <label class="image-option">
@@ -251,7 +245,7 @@
                         </fieldset>
 
                         <div class="calculator-group select-group">
-                            <label for="id_delivery"><span class="calculator-icon" aria-hidden="true">♧</span><b>7.</b> {% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</label>
+                            <label for="id_delivery"><span class="calculator-icon" aria-hidden="true">♧</span><b>8.</b> {% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</label>
                             <select id="id_delivery" name="delivery">
                                 {% for option in calculator_options.deliveries %}
                                     <option value="{{ option.value }}" data-cost="{{ option.cost|unlocalize }}" {% if preorder_form.delivery.value == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -261,7 +255,7 @@
                         </div>
 
                         <div class="calculator-group select-group">
-                            <label for="id_payment"><span class="calculator-icon" aria-hidden="true">▤</span><b>8.</b> {% if LANGUAGE_CODE == 'en' %}Payment method{% else %}Способ оплаты{% endif %}</label>
+                            <label for="id_payment"><span class="calculator-icon" aria-hidden="true">▤</span><b>9.</b> {% if LANGUAGE_CODE == 'en' %}Payment method{% else %}Способ оплаты{% endif %}</label>
                             <select id="id_payment" name="payment">
                                 {% for option in calculator_options.payments %}
                                     <option value="{{ option.value }}" {% if preorder_form.payment.value == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -332,6 +326,7 @@
                             </div>
                             <div class="preorder-field consent-field">
                                 <label class="consent-label">{{ preorder_form.consent_given }}<span>{% if LANGUAGE_CODE == 'en' %}I agree to the processing of my personal data{% else %}Принимаю условия обработки персональных данных{% endif %}</span></label>
+                                <small class="consent-document-links"><a href="{% url 'privacy_policy' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Privacy Policy{% else %}Политика обработки персональных данных{% endif %}</a><a href="{% url 'personal_data_consent' %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Consent text{% else %}Текст согласия{% endif %}</a></small>
                                 {{ preorder_form.consent_given.errors }}
                             </div>
                             <div class="preorder-field comment-field">
@@ -344,6 +339,21 @@
                         <p class="privacy-note">{% if LANGUAGE_CODE == 'en' %}By submitting, you agree to the processing of your personal data.{% else %}Нажимая на кнопку, вы соглашаетесь на обработку персональных данных.{% endif %}</p>
                     </section>
                 </form>
+            </section>
+
+            <section class="about-section" id="about">
+                <div class="about-copy">
+                    <p class="eyebrow">{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}About us{% else %}О компании{% endif %}{% endif %}</p>
+                    <h2>{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery products.{% else %}Вкусно Да Сладко — кондитерские изделия.{% endif %}{% endif %}</h2>
+                    {% if site_page_sections.home_about %}
+                        {% for item in site_page_sections.home_about %}<p>{{ item.localized_description }}</p>{% endfor %}
+                    {% else %}
+                        <p>{% if LANGUAGE_CODE == 'en' %}We create corporate gifts that express gratitude and strengthen relationships.{% else %}Мы создаём корпоративные подарки, которые помогают выразить благодарность и укрепить отношения.{% endif %}</p>
+                        <p>{% if LANGUAGE_CODE == 'en' %}From concept to packaging, every detail is considered to make your gift memorable and truly delightful.{% else %}От концепции до упаковки — продумываем каждую мелочь, чтобы ваш подарок запомнился и по-настоящему порадовал.{% endif %}</p>
+                    {% endif %}
+                    <a class="button button-dark" href="{% if site_page_sections.home_about and site_page_sections.home_about.0.url %}{{ site_page_sections.home_about.0.url }}{% else %}{% url 'about' %}{% endif %}">{% if site_page_sections.home_about and site_page_sections.home_about.0.localized_value %}{{ site_page_sections.home_about.0.localized_value }}{% else %}{% if LANGUAGE_CODE == 'en' %}More about us{% else %}Подробнее о компании{% endif %}{% endif %} <span aria-hidden="true">→</span></a>
+                </div>
+                <div class="about-photo" role="img" aria-label="{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_image_alt }}{% elif LANGUAGE_CODE == 'en' %}A baker decorates handmade cookies{% else %}Мастер украшает авторское печенье{% endif %}"{% if site_page_sections.home_about.0.image %} style="background-image:url('{{ site_page_sections.home_about.0.image.url }}')"{% endif %}></div>
             </section>
 
             <section class="partners-section" aria-labelledby="partners-heading">
@@ -431,7 +441,15 @@
             deliveryCost: document.querySelector("#quote-delivery"),
             total: document.querySelector("#quote-total"),
         };
-        const quoteValues = { unitPrice: 98, discount: 20, deliveryCost: 700, total: 8540 };
+        const initialQuoteValue = (output) => Number(
+            output.textContent.replace(/[^\d.-]/g, "")
+        );
+        const quoteValues = {
+            unitPrice: initialQuoteValue(quoteOutputs.unitPrice),
+            discount: initialQuoteValue(quoteOutputs.discount),
+            deliveryCost: initialQuoteValue(quoteOutputs.deliveryCost),
+            total: initialQuoteValue(quoteOutputs.total),
+        };
         const quoteFrames = {};
         const quoteAnimations = {};
         const quoteSuffixes = {
@@ -497,13 +515,14 @@
             const flavor = preorderForm.querySelector('[name="flavor"]:checked');
             const coating = preorderForm.querySelector('[name="coating"]:checked');
             const packaging = preorderForm.querySelector('[name="packaging"]:checked');
-            if (!size || !flavor || !coating || !packaging) {
+            const product = preorderForm.querySelector('[name="product"]');
+            if (!product || !size || !flavor || !coating || !packaging) {
                 return;
             }
 
             const quantity = Math.min(10000, Math.max(1, Number(quantityInput.value) || 1));
             const unitPrice = Math.round(
-                Number(preorderForm.dataset.basePrice) * Number(size.dataset.multiplier)
+                Number(product.selectedOptions[0].dataset.basePrice) * Number(size.dataset.multiplier)
                 + Number(flavor.dataset.extra)
                 + Number(coating.dataset.extra)
                 + Number(packaging.dataset.extra)

@@ -91,8 +91,92 @@ class CatalogAdminTests(TestCase):
 
         self.assertContains(dough_response, 'name="description"')
         self.assertContains(dough_response, 'name="description_en"')
-        self.assertNotContains(color_response, 'name="description"')
-        self.assertNotContains(color_response, 'name="description_en"')
+        self.assertContains(color_response, 'name="description"')
+        self.assertContains(color_response, 'name="description_en"')
+        self.assertContains(color_response, "filter-option-editor.js")
+
+    def test_custom_admin_only_shows_descriptions_for_dough_and_icing(self):
+        dough = ProductFilterOption.objects.create(
+            filter_type=ProductFilterOption.FilterType.DOUGH,
+            value="description-test-dough",
+            label="Классическое",
+        )
+        icing = ProductFilterOption.objects.create(
+            filter_type=ProductFilterOption.FilterType.COATING,
+            value="description-test-icing",
+            label="Айсинг",
+        )
+        color = ProductFilterOption.objects.create(
+            filter_type=ProductFilterOption.FilterType.COLOR,
+            value="description-test-color",
+            label="Розовый",
+        )
+
+        for option in (dough, icing):
+            with self.subTest(filter_type=option.filter_type):
+                response = self.client.get(
+                    reverse("admin_section_edit", args=("filters", option.pk))
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'data-filter-description-field')
+                self.assertNotContains(response, 'data-filter-description-field hidden')
+
+        color_response = self.client.get(
+            reverse("admin_section_edit", args=("filters", color.pk))
+        )
+        self.assertEqual(color_response.status_code, 200)
+        self.assertContains(
+            color_response,
+            'data-filter-description-field hidden style="display:none"',
+        )
+        self.assertContains(color_response, "filter-option-editor.js")
+
+        response = self.client.post(
+            reverse("admin_section_edit", args=("filters", color.pk)),
+            {
+                "filter_type": ProductFilterOption.FilterType.COLOR,
+                "value": color.value,
+                "label": color.label,
+                "label_en": "",
+                "description": "Should not be saved.",
+                "description_en": "Should not be saved either.",
+                "display_order": "1",
+                "is_active": "on",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        color.refresh_from_db()
+        self.assertEqual(color.description, "")
+        self.assertEqual(color.description_en, "")
+
+    def test_custom_admin_saves_dough_description_for_catalog_help(self):
+        dough, _ = ProductFilterOption.objects.update_or_create(
+            filter_type=ProductFilterOption.FilterType.DOUGH,
+            value="classic",
+            defaults={"label": "Классическое", "is_active": True},
+        )
+
+        response = self.client.post(
+            reverse("admin_section_edit", args=("filters", dough.pk)),
+            {
+                "filter_type": ProductFilterOption.FilterType.DOUGH,
+                "value": "classic",
+                "label": "Классическое",
+                "label_en": "Classic",
+                "description": "Подробно о классическом тесте.",
+                "description_en": "About classic dough.",
+                "display_order": "1",
+                "is_active": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        dough.refresh_from_db()
+        self.assertEqual(dough.description, "Подробно о классическом тесте.")
+
+        catalog_response = self.client.get(reverse("catalog:category_list"))
+        self.assertContains(catalog_response, "Подробно о классическом тесте.")
+        self.assertContains(catalog_response, 'aria-label="О параметре «Классическое»"')
 
     def test_admin_can_upload_and_preview_a_product_photo(self):
         image_buffer = BytesIO()

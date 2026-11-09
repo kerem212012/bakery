@@ -43,6 +43,10 @@
             {% endif %}
         </div>
 
+        {% if not can_view_orders and not can_view_feedback %}
+            <p class="manager-dashboard-empty">{% if LANGUAGE_CODE == 'en' %}Your staff account does not have access to customer orders or messages yet.{% else %}У вашей учётной записи пока нет доступа к заказам и обращениям клиентов.{% endif %}</p>
+        {% endif %}
+
         {% if can_view_orders %}
             <section class="manager-dashboard-section" id="manager-orders">
                 <div class="manager-dashboard-section-heading">
@@ -87,7 +91,9 @@
                                                     <option value="{{ value }}"{% if order.status == value %} selected{% endif %}>{{ label }}</option>
                                                 {% endfor %}
                                             </select>
-                                            <button type="submit">{% if LANGUAGE_CODE == 'en' %}Save status{% else %}Сохранить статус{% endif %}</button>
+                                            <label for="order-delivery-date-{{ order.pk }}">{% if LANGUAGE_CODE == 'en' %}Delivery date{% else %}Дата доставки{% endif %}</label>
+                                            <input id="order-delivery-date-{{ order.pk }}" type="date" name="delivery_date" value="{{ order.delivery_date|date:'Y-m-d' }}">
+                                            <button type="submit">{% if LANGUAGE_CODE == 'en' %}Save changes{% else %}Сохранить изменения{% endif %}</button>
                                         </form>
                                     {% endif %}
                                     {% if can_change_orders %}
@@ -112,17 +118,51 @@
                     </div>
                     <a href="{% url 'admin_section' 'messages' %}">{% if LANGUAGE_CODE == 'en' %}All messages{% else %}Все обращения{% endif %} →</a>
                 </div>
+                <form class="manager-feedback-filter" method="get" action="#manager-messages">
+                    <label for="manager-feedback-source">{% if LANGUAGE_CODE == 'en' %}Filter by source{% else %}Фильтр по источнику{% endif %}</label>
+                    <select id="manager-feedback-source" name="feedback_source">
+                        <option value="">{% if LANGUAGE_CODE == 'en' %}All sources{% else %}Все источники{% endif %}</option>
+                        {% for value, label in feedback_source_choices %}
+                            <option value="{{ value }}"{% if selected_feedback_source == value %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">{% if LANGUAGE_CODE == 'en' %}Apply{% else %}Показать{% endif %}</button>
+                    {% if selected_feedback_source %}<a href="{% url 'manager_dashboard' %}#manager-messages">{% if LANGUAGE_CODE == 'en' %}Clear{% else %}Сбросить{% endif %}</a>{% endif %}
+                </form>
                 {% if feedback_items %}
                     <div class="manager-message-list">
                         {% for item in feedback_items %}
                             <article class="manager-message-card">
-                                <div>
+                                <div class="manager-message-content">
+                                    <span class="manager-message-source">{{ item.manager_source_label }}</span>
                                     <h3>{{ item.subject }}</h3>
                                     <p>{{ item.message|truncatechars:180 }}</p>
                                     <a href="mailto:{{ item.email }}">{{ item.name }} · {{ item.email }}</a>
+                                    {% if item.phone %}<a href="tel:{{ item.phone }}">{{ item.phone }}</a>{% endif %}
                                 </div>
-                                <span class="manager-message-status status-{{ item.status }}">{{ item.manager_status_label }}</span>
-                                <time datetime="{{ item.created_at|date:'c' }}">{{ item.created_at|date:"d.m.Y" }}</time>
+                                <div class="manager-message-meta">
+                                    <span class="manager-message-status status-{{ item.status }}">{{ item.manager_status_label }}</span>
+                                    <time datetime="{{ item.created_at|date:'c' }}">{{ item.created_at|date:"d.m.Y H:i" }}</time>
+                                </div>
+                                {% if can_change_feedback or can_delete_feedback %}
+                                    <div class="manager-message-actions">
+                                        {% if can_change_feedback %}
+                                            <a class="manager-message-action-link" href="{% url 'admin_section_edit' 'messages' item.pk %}">{% if LANGUAGE_CODE == 'en' %}Open{% else %}Открыть{% endif %}</a>
+                                            <form method="post" action="{% url 'admin_section_visibility' 'messages' item.pk 'hide' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="return_to_manager" value="1">
+                                                <button type="submit">{% if LANGUAGE_CODE == 'en' %}Hide{% else %}Скрыть{% endif %}</button>
+                                            </form>
+                                        {% endif %}
+                                        {% if can_delete_feedback %}
+                                            <form method="post" action="{% url 'admin_section_delete' 'messages' item.pk %}" onsubmit="return confirm('{% if LANGUAGE_CODE == 'en' %}Delete this feedback?{% else %}Удалить это обращение?{% endif %}')">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="return_to_manager" value="1">
+                                                <button class="manager-message-delete" type="submit">{% if LANGUAGE_CODE == 'en' %}Delete{% else %}Удалить{% endif %}</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
                             </article>
                         {% endfor %}
                     </div>

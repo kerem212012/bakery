@@ -24,7 +24,7 @@
                         <a href="#order-items">{% if LANGUAGE_CODE == 'en' %}Order details{% else %}Подробнее о заказе{% endif %} ↓</a>
                     </section>
                     <section class="account-order-summary-card">
-                        <span>{% if LANGUAGE_CODE == 'en' %}Delivery date{% else %}Срок доставки{% endif %}</span>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Delivery date{% else %}Приблизительный срок доставки{% endif %}</span>
                         <strong>{% if order.delivery_date %}{{ order.delivery_date|date:"d E Y" }}{% else %}{% if LANGUAGE_CODE == 'en' %}To be confirmed{% else %}Уточняется{% endif %}{% endif %}</strong>
                     </section>
                     <section class="account-order-summary-card">
