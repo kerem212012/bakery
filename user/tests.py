@@ -1,12 +1,13 @@
 from io import BytesIO
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from openpyxl import load_workbook
 
 from catalog.models import Category, Product
-from core.models import Preorder
+from core.models import Preorder, PreorderContract
 
 from .models import CustomerProfile
 
@@ -299,6 +300,142 @@ class AccountTests(TestCase):
             user.customer_profile.personal_data_consent_at,
         )
         self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
+
+    def test_registration_returns_to_next_and_preserves_cart_session(self):
+        category = Category.objects.create(name="Подарки")
+        product = Product.objects.create(name="Пряник", category=category)
+        session = self.client.session
+        item_id = f"{product.pk}:8:painting:classic:gift_box"
+        session["cart"] = {
+            item_id: {
+                "product_id": product.pk,
+                "quantity": 1,
+                "size": "8",
+                "coating": "painting",
+                "dough": "classic",
+                "packaging": "gift_box",
+            }
+        }
+        session.save()
+        cart_url = reverse("catalog:cart")
+
+        response = self.client.post(
+            reverse("accounts:register"),
+            {
+                "next": cart_url,
+                "username": "returning_cart_customer",
+                "email": "returning-cart@example.com",
+                "password1": "A-long-password-482!",
+                "password2": "A-long-password-482!",
+                "customer_type": CustomerProfile.CustomerType.INDIVIDUAL,
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
+            },
+        )
+
+        self.assertRedirects(response, cart_url)
+        self.assertEqual(self.client.session["cart"][item_id]["quantity"], 1)
+        self.assertEqual(
+            int(self.client.session["_auth_user_id"]),
+            User.objects.get(username="returning_cart_customer").pk,
+        )
+
+    def test_only_order_owner_and_order_managers_can_access_contract(self):
+        user = User.objects.create_user(
+            username="contract_owner",
+            email="contract-owner@example.com",
+            password="A-long-password-482!",
+        )
+        other_user = User.objects.create_user(
+            username="not_contract_owner",
+            email="not-contract-owner@example.com",
+            password="A-long-password-583!",
+        )
+        order = Preorder.objects.create(
+            user=user,
+            name="Contract owner",
+            email=user.email,
+            phone="+7 900 000-00-00",
+            configuration={"items": []},
+            unit_price="100.00",
+            discount_percent=0,
+            delivery_cost="0.00",
+            total_price="100.00",
+            payment_status=Preorder.PaymentStatus.PAID,
+            consent_given=True,
+        )
+        contract = PreorderContract.objects.create(
+            preorder=order,
+            file=SimpleUploadedFile(
+                "signed.pdf",
+                b"%PDF-1.4 private contract",
+                content_type="application/pdf",
+            ),
+        )
+        self.addCleanup(contract.file.delete, save=False)
+        contract_url = reverse("accounts:order_contract", args=[order.pk])
+
+        self.client.force_login(other_user)
+        self.assertEqual(self.client.get(contract_url).status_code, 404)
+
+        self.client.force_login(user)
+        detail_response = self.client.get(
+            reverse("accounts:order_detail", args=[order.pk])
+        )
+        self.assertContains(detail_response, "Открыть PDF")
+        self.assertContains(detail_response, "Оплачено")
+
+        response = self.client.get(contract_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertEqual(b"".join(response.streaming_content), b"%PDF-1.4 private contract")
+        self.assertNotIn("attachment", response.get("Content-Disposition", ""))
+        for close_resource in response._resource_closers:
+            close_resource()
+
+    def test_customer_cannot_view_contract_until_payment_is_marked_paid(self):
+        user = User.objects.create_user(
+            username="pending_contract_owner",
+            email="pending-contract@example.com",
+            password="A-long-password-482!",
+        )
+        order = Preorder.objects.create(
+            user=user,
+            name="Pending contract owner",
+            email=user.email,
+            phone="+7 900 000-00-00",
+            configuration={"items": []},
+            unit_price="100.00",
+            discount_percent=0,
+            delivery_cost="0.00",
+            total_price="100.00",
+            payment_status=Preorder.PaymentStatus.PENDING,
+            consent_given=True,
+        )
+        contract = PreorderContract.objects.create(
+            preorder=order,
+            file=SimpleUploadedFile("signed.pdf", b"%PDF-1.4 private contract"),
+        )
+        self.addCleanup(contract.file.delete, save=False)
+        self.client.force_login(user)
+        detail_url = reverse("accounts:order_detail", args=[order.pk])
+        contract_url = reverse("accounts:order_contract", args=[order.pk])
+
+        self.assertNotContains(self.client.get(detail_url), "Открыть PDF")
+        self.assertEqual(self.client.get(contract_url).status_code, 404)
+
+        order.payment_status = Preorder.PaymentStatus.PAID
+        order.save(update_fields=("payment_status",))
+        self.assertContains(self.client.get(detail_url), "Открыть PDF")
+        response = self.client.get(contract_url)
+        self.assertEqual(response.status_code, 200)
+        for close_resource in response._resource_closers:
+            close_resource()
+
+        response = self.client.get(f"{contract_url}?download=1")
+        self.assertIn("attachment", response["Content-Disposition"])
+        for close_resource in response._resource_closers:
+            close_resource()
 
     def test_registration_requires_separate_terms_and_data_consent(self):
         response = self.client.post(

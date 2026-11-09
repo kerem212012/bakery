@@ -12,6 +12,35 @@
 
         {% include "user/_account_messages.html" %}
 
+        {% if show_order_confirmation %}
+            <div class="order-confirmation-backdrop" data-order-confirmation>
+                <section class="order-confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="order-confirmation-title">
+                    <button class="order-confirmation-close" type="button" data-order-confirmation-close aria-label="{% if LANGUAGE_CODE == 'en' %}Close{% else %}Закрыть{% endif %}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                    </button>
+                    <span class="order-confirmation-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="m12 25 8 8 17-18"/></svg></span>
+                    <h2 id="order-confirmation-title">{% if LANGUAGE_CODE == 'en' %}Your order has been placed{% else %}Ваш заказ сформирован{% endif %}</h2>
+                    <p>{% if LANGUAGE_CODE == 'en' %}Order #{{ order.pk }} has been placed. A manager will contact you to confirm it and arrange payment.{% else %}Заказ #{{ order.pk }} оформлен. Менеджер свяжется с вами, чтобы подтвердить его и согласовать оплату.{% endif %}</p>
+                    <div class="order-confirmation-thanks">
+                        <span aria-hidden="true">♡</span>
+                        {% if LANGUAGE_CODE == 'en' %}Thank you for your order!{% else %}Спасибо за заказ!{% endif %}
+                    </div>
+                </section>
+            </div>
+            <script>
+                const confirmation = document.querySelector("[data-order-confirmation]");
+                const closeConfirmation = () => confirmation?.remove();
+                confirmation?.querySelector("[data-order-confirmation-close]").addEventListener("click", closeConfirmation);
+                confirmation?.addEventListener("click", (event) => {
+                    if (event.target === confirmation) closeConfirmation();
+                });
+                document.addEventListener("keydown", (event) => {
+                    if (event.key === "Escape") closeConfirmation();
+                }, { once: true });
+                confirmation?.querySelector("[data-order-confirmation-close]").focus();
+            </script>
+        {% endif %}
+
         <div class="account-layout">
             {% include "user/_account_sidebar.html" %}
             <div class="account-content">
@@ -93,10 +122,18 @@
                             <div><dt>{% if LANGUAGE_CODE == 'en' %}Order date{% else %}Дата оформления{% endif %}</dt><dd>{{ order.created_at|date:"d.m.Y, H:i" }}</dd></div>
                             <div><dt>{% if LANGUAGE_CODE == 'en' %}Order total{% else %}Сумма заказа{% endif %}</dt><dd>{{ order.total_price }} ₽</dd></div>
                             <div><dt>{% if LANGUAGE_CODE == 'en' %}Payment method{% else %}Способ оплаты{% endif %}</dt><dd>{{ payment_label }}</dd></div>
+                            <div><dt>{% if LANGUAGE_CODE == 'en' %}Payment status{% else %}Статус оплаты{% endif %}</dt><dd>{{ payment_status_label }}</dd></div>
                             <div><dt>{% if LANGUAGE_CODE == 'en' %}Delivery method{% else %}Способ доставки{% endif %}</dt><dd>{{ delivery_label }}</dd></div>
                             <div><dt>{% if LANGUAGE_CODE == 'en' %}Recipient{% else %}Получатель{% endif %}</dt><dd>{{ order.name }}</dd></div>
                             <div><dt>{% if LANGUAGE_CODE == 'en' %}Phone{% else %}Телефон{% endif %}</dt><dd>{{ order.phone }}</dd></div>
                         </dl>
+                        {% if contract %}
+                            <div class="account-order-contract">
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Contract{% else %}Договор{% endif %}</h3>
+                                <a href="{% url 'accounts:order_contract' order.pk %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Open PDF{% else %}Открыть PDF{% endif %}</a>
+                                <a href="{% url 'accounts:order_contract' order.pk %}?download=1">{% if LANGUAGE_CODE == 'en' %}Download{% else %}Скачать{% endif %}</a>
+                            </div>
+                        {% endif %}
                     </section>
                 </div>
                 <a class="account-order-support" href="{% url 'contacts' %}">

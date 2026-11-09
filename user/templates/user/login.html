@@ -23,7 +23,7 @@
                 {% endfor %}
                 <button class="button button-dark auth-submit" type="submit">{% if LANGUAGE_CODE == 'en' %}Sign in{% else %}Войти{% endif %}</button>
             </form>
-            <p class="auth-switch">{% if LANGUAGE_CODE == 'en' %}Don't have an account yet?{% else %}Ещё нет аккаунта?{% endif %} <a href="{% url 'accounts:register' %}">{% if LANGUAGE_CODE == 'en' %}Create one{% else %}Зарегистрироваться{% endif %}</a></p>
+            <p class="auth-switch">{% if LANGUAGE_CODE == 'en' %}Don't have an account yet?{% else %}Ещё нет аккаунта?{% endif %} <a href="{% url 'accounts:register' %}{% if next %}?next={{ next|urlencode }}{% endif %}">{% if LANGUAGE_CODE == 'en' %}Create one{% else %}Зарегистрироваться{% endif %}</a></p>
         </div>
     </section>
 {% endblock %}

@@ -1,5 +1,6 @@
 from io import BytesIO
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
 from django.conf import settings
@@ -678,30 +679,69 @@ class CartTests(TestCase):
         data.update(overrides)
         return self.client.post(self.add_url, data)
 
-    def test_guest_cannot_add_to_cart_and_is_sent_to_login(self):
+    def test_guest_can_add_to_cart_and_cart_is_kept_for_checkout(self):
         self.client.logout()
 
-        response = self.add_product()
+        response = self.add_product(quantity="2")
 
+        self.assertRedirects(response, self.cart_url)
+        self.assertEqual(len(self.client.session["cart"]), 1)
+        response = self.client.post(self.cart_url)
         self.assertRedirects(
             response,
-            f'{reverse("accounts:login")}?next={reverse("catalog:category_list")}',
+            f'{reverse("accounts:register")}?next={self.cart_url}',
         )
+        self.assertEqual(len(self.client.session["cart"]), 1)
+        self.assertFalse(Preorder.objects.exists())
+
+        response = self.client.post(
+            reverse("accounts:register"),
+            {
+                "next": self.cart_url,
+                "username": "guest_cart_customer",
+                "first_name": "Анна",
+                "last_name": "Иванова",
+                "email": "guest-cart@example.com",
+                "password1": "A-long-password-482!",
+                "password2": "A-long-password-482!",
+                "customer_type": "individual",
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
+            },
+        )
+        self.assertRedirects(response, self.cart_url)
+        self.assertTrue(self.client.session["cart"])
+
+        response = self.client.post(
+            self.cart_url,
+            {
+                "delivery": "pickup",
+                "payment": "card",
+                "name": "Анна Иванова",
+                "phone": "+7 900 000-00-00",
+                "email": "guest-cart@example.com",
+                "consent_given": "on",
+            },
+        )
+        order = Preorder.objects.get()
+        self.assertRedirects(
+            response,
+            reverse("accounts:order_detail", args=[order.pk]),
+        )
+        self.assertEqual(order.user.username, "guest_cart_customer")
         self.assertNotIn("cart", self.client.session)
 
-    def test_guest_catalog_buttons_link_to_login(self):
+    def test_guest_catalog_buttons_add_products_to_cart(self):
         self.client.logout()
 
         response = self.client.get(reverse("catalog:category_list"))
 
-        self.assertContains(
-            response,
-            f'href="{reverse("accounts:login")}?next={reverse("catalog:category_list")}"',
-        )
-        self.assertContains(response, "Войти, чтобы добавить")
+        self.assertContains(response, "В корзину")
         self.assertContains(response, 'class="catalog-cart-form"')
+        self.add_product()
+        self.assertEqual(len(self.client.session["cart"]), 1)
 
-    def test_guest_product_detail_links_to_login(self):
+    def test_guest_product_detail_adds_product_to_cart(self):
         self.client.logout()
 
         product_url = reverse(
@@ -710,11 +750,9 @@ class CartTests(TestCase):
         )
         response = self.client.get(product_url)
 
-        self.assertContains(
-            response,
-            f'href="{reverse("accounts:login")}?next={product_url}"',
-        )
-        self.assertNotContains(response, '<button class="primary-action" type="submit">В корзину</button>')
+        self.assertContains(response, '<button class="primary-action" type="submit">В корзину</button>')
+        self.add_product()
+        self.assertEqual(len(self.client.session["cart"]), 1)
 
     def test_add_to_cart_saves_validated_options_and_updates_header_count(self):
         response = self.add_product(quantity="2", size="10", dough="chocolate")
@@ -758,6 +796,34 @@ class CartTests(TestCase):
         self.client.post(self.add_url, {"size": "999", "quantity": "1"})
         response = self.client.get(self.cart_url)
         self.assertContains(response, "5 товара")
+
+    def test_cart_items_load_products_in_one_query(self):
+        from .views import _cart_items
+
+        cart = {
+            "first": {
+                "product_id": self.product.pk,
+                "quantity": 1,
+                "size": "8",
+                "coating": "painting",
+                "dough": "classic",
+                "packaging": "gift_box",
+            },
+            "second": {
+                "product_id": self.product.pk,
+                "quantity": 2,
+                "size": "10",
+                "coating": "printing",
+                "dough": "classic",
+                "packaging": "gift_box",
+            },
+        }
+
+        with self.assertNumQueries(1):
+            items = _cart_items(SimpleNamespace(session={"cart": cart}))
+
+        self.assertEqual(len(items), 2)
+        self.assertEqual([item["item_id"] for item in items], ["first", "second"])
 
     def test_cart_update_remove_and_clear(self):
         self.add_product()
@@ -812,6 +878,8 @@ class CartTests(TestCase):
         order_page = self.client.get(response.url)
         self.assertContains(order_page, f"Заказ #{preorder.pk} оформлен")
         self.assertContains(order_page, self.product.name)
+        self.assertContains(order_page, "Ваш заказ сформирован")
+        self.assertContains(order_page, "Ожидает оплаты")
 
     def test_successful_checkout_updates_saved_delivery_address(self):
         self.add_product()
@@ -835,7 +903,7 @@ class CartTests(TestCase):
             "Москва, ул. Садовая, 7",
         )
 
-    def test_guest_checkout_creates_order_without_account_owner(self):
+    def test_guest_checkout_requires_registration_and_keeps_cart(self):
         self.add_product(quantity="2")
         cart_data = self.client.session["cart"]
         self.client.logout()
@@ -855,11 +923,12 @@ class CartTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, self.cart_url)
-        preorder = Preorder.objects.get()
-        self.assertIsNone(preorder.user)
-        self.assertEqual(preorder.total_price, 2980)
-        self.assertNotIn("cart", self.client.session)
+        self.assertRedirects(
+            response,
+            f'{reverse("accounts:register")}?next={self.cart_url}',
+        )
+        self.assertFalse(Preorder.objects.exists())
+        self.assertEqual(len(self.client.session["cart"]), 1)
 
     def test_checkout_requires_delivery_address(self):
         self.add_product()

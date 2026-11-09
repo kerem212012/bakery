@@ -3,7 +3,10 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from catalog.cart_forms import (
     COATING_OPTIONS,
@@ -14,7 +17,7 @@ from catalog.cart_forms import (
 from catalog.favorites import get_favorite_ids
 from catalog.models import Product
 from core.calculator import DELIVERY_CHOICES, PAYMENT_CHOICES, localized_choices
-from core.models import Preorder
+from core.models import Preorder, PreorderContract
 
 from .forms import AccountProfileForm, DeliveryAddressForm, RegistrationForm
 from .models import CustomerProfile
@@ -92,8 +95,15 @@ def _order_row(order, language_code="ru"):
 
 
 def register(request):
+    next_url = request.POST.get("next") or request.GET.get("next", "")
+    if not url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        next_url = ""
     if request.user.is_authenticated:
-        return redirect("accounts:dashboard")
+        return redirect(next_url or reverse("accounts:dashboard"))
 
     form = RegistrationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -105,9 +115,9 @@ def register(request):
             else "Аккаунт создан. Добро пожаловать!"
         )
         messages.success(request, message)
-        return redirect("accounts:dashboard")
+        return redirect(next_url or reverse("accounts:dashboard"))
 
-    return render(request, "user/register.html", {"form": form})
+    return render(request, "user/register.html", {"form": form, "next": next_url})
 
 
 @login_required
@@ -163,7 +173,7 @@ def orders(request):
 @login_required
 def order_detail(request, order_id):
     order = get_object_or_404(
-        Preorder,
+        Preorder.objects.select_related("contract"),
         pk=order_id,
         user=request.user,
     )
@@ -279,6 +289,25 @@ def order_detail(request, order_id):
         "completed": "Delivered",
         "cancelled": "Cancelled",
     }.get(order.status, order.get_status_display()) if request.LANGUAGE_CODE == "en" else order.get_status_display()
+    payment_status_label = {
+        Preorder.PaymentStatus.PENDING: (
+            "Awaiting payment"
+            if request.LANGUAGE_CODE == "en"
+            else "Ожидает оплаты"
+        ),
+        Preorder.PaymentStatus.PAID: (
+            "Paid" if request.LANGUAGE_CODE == "en" else "Оплачено"
+        ),
+    }[order.payment_status]
+    show_order_confirmation = (
+        request.session.pop("order_confirmation_id", None) == order.pk
+    )
+    contract = None
+    if order.payment_status == Preorder.PaymentStatus.PAID:
+        try:
+            contract = order.contract
+        except PreorderContract.DoesNotExist:
+            pass
 
     return render(
         request,
@@ -291,6 +320,9 @@ def order_detail(request, order_id):
             "delivery_label": delivery_label,
             "payment_label": payment_label,
             "order_status_label": order_status_label,
+            "payment_status_label": payment_status_label,
+            "contract": contract,
+            "show_order_confirmation": show_order_confirmation,
             "status_stages": [
                 {
                     "label": label,
@@ -301,6 +333,27 @@ def order_detail(request, order_id):
             ],
             "is_cancelled": order.status == Preorder.Status.CANCELLED,
         },
+    )
+
+
+@login_required
+def order_contract(request, order_id):
+    orders = Preorder.objects.select_related("contract")
+    if request.user.is_staff and request.user.has_perm("core.view_preorder"):
+        order = get_object_or_404(orders, pk=order_id)
+    else:
+        order = get_object_or_404(
+            orders,
+            pk=order_id,
+            user=request.user,
+            payment_status=Preorder.PaymentStatus.PAID,
+        )
+    contract = get_object_or_404(PreorderContract, preorder=order)
+    return FileResponse(
+        contract.file.open("rb"),
+        as_attachment=request.GET.get("download") == "1",
+        filename=f"contract-order-{order.pk}.pdf",
+        content_type="application/pdf",
     )
 
 

@@ -4,6 +4,7 @@ from io import BytesIO
 from tempfile import TemporaryDirectory
 
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth.models import Permission
 from django import forms
@@ -18,6 +19,7 @@ from .models import (
     FeedbackSubmission,
     HomeHeroSlide,
     Preorder,
+    PreorderContract,
     SiteContentBlock,
     SitePageContent,
     SitePageSection,
@@ -2916,6 +2918,10 @@ class ManagerDashboardTests(TestCase):
             response,
             reverse(self.status_url_name, args=[self.order.pk]),
         )
+        self.assertContains(
+            response,
+            reverse("manager_order_contract_draft", args=[self.order.pk]),
+        )
         self.assertContains(response, 'name="delivery_date"')
         self.assertEqual(response.context["order_counts"][Preorder.Status.NEW], 1)
 
@@ -2924,14 +2930,95 @@ class ManagerDashboardTests(TestCase):
             reverse(self.status_url_name, args=[self.order.pk]),
             {
                 "status": Preorder.Status.PRODUCTION,
+                "payment_status": Preorder.PaymentStatus.PAID,
                 "delivery_date": delivery_date.isoformat(),
+                "contract": SimpleUploadedFile(
+                    "signed-contract.pdf",
+                    b"%PDF-1.4 test contract",
+                    content_type="application/pdf",
+                ),
             },
         )
 
         self.assertRedirects(response, self.manager_url)
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Preorder.Status.PRODUCTION)
+        self.assertEqual(self.order.payment_status, Preorder.PaymentStatus.PAID)
         self.assertEqual(self.order.delivery_date, delivery_date)
+        contract = PreorderContract.objects.get(preorder=self.order)
+        self.assertTrue(contract.file.name.endswith(".pdf"))
+        self.assertEqual(
+            contract.file.storage.location,
+            str(settings.PRIVATE_MEDIA_ROOT),
+        )
+        self.addCleanup(contract.file.delete, save=False)
+        self.assertContains(
+            self.client.get(self.manager_url),
+            reverse("accounts:order_contract", args=[self.order.pk]),
+        )
+
+    def test_manager_can_open_printable_contract_draft(self):
+        self.grant_order_permissions("view_preorder")
+        self.client.force_login(self.manager)
+        draft_url = reverse("manager_order_contract_draft", args=[self.order.pk])
+
+        response = self.client.get(draft_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ПРОЕКТ ДЛЯ ОБСУЖДЕНИЯ")
+        self.assertContains(response, "Alex Customer")
+        self.assertContains(response, "200.00 ₽")
+
+    def test_contract_draft_requires_order_view_permission(self):
+        self.client.force_login(self.manager)
+
+        response = self.client.get(
+            reverse("manager_order_contract_draft", args=[self.order.pk])
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_manager_rejects_non_pdf_contract_upload_without_changing_order(self):
+        self.grant_order_permissions("view_preorder", "change_preorder")
+        self.client.force_login(self.manager)
+
+        response = self.client.post(
+            reverse(self.status_url_name, args=[self.order.pk]),
+            {
+                "status": Preorder.Status.PRODUCTION,
+                "payment_status": Preorder.PaymentStatus.PAID,
+                "contract": SimpleUploadedFile("contract.txt", b"not a PDF"),
+            },
+        )
+
+        self.assertRedirects(response, self.manager_url)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Preorder.Status.NEW)
+        self.assertEqual(self.order.payment_status, Preorder.PaymentStatus.PENDING)
+        self.assertFalse(PreorderContract.objects.filter(preorder=self.order).exists())
+
+    def test_manager_cannot_upload_contract_before_marking_order_paid(self):
+        self.grant_order_permissions("view_preorder", "change_preorder")
+        self.client.force_login(self.manager)
+
+        response = self.client.post(
+            reverse(self.status_url_name, args=[self.order.pk]),
+            {
+                "status": Preorder.Status.CONTACTED,
+                "payment_status": Preorder.PaymentStatus.PENDING,
+                "contract": SimpleUploadedFile(
+                    "signed-contract.pdf",
+                    b"%PDF-1.4 test contract",
+                    content_type="application/pdf",
+                ),
+            },
+        )
+
+        self.assertRedirects(response, self.manager_url)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Preorder.Status.NEW)
+        self.assertEqual(self.order.payment_status, Preorder.PaymentStatus.PENDING)
+        self.assertFalse(PreorderContract.objects.filter(preorder=self.order).exists())
 
     def test_manager_can_filter_feedback_by_source(self):
         self.grant_order_permissions("view_feedbacksubmission")

@@ -261,11 +261,7 @@
                                     </div>
                                 </div>
                                 <input type="hidden" name="packaging" value="gift_box">
-                                {% if user.is_authenticated %}
-                                    <button class="catalog-cart-button" type="submit">{% if LANGUAGE_CODE == 'en' %}Add to cart{% else %}В корзину{% endif %}</button>
-                                {% else %}
-                                    <a class="catalog-cart-button" href="{% url 'accounts:login' %}?next={{ request.get_full_path }}">{% if LANGUAGE_CODE == 'en' %}Sign in to add{% else %}Войти, чтобы добавить{% endif %}</a>
-                                {% endif %}
+                                <button class="catalog-cart-button" type="submit">{% if LANGUAGE_CODE == 'en' %}Add to cart{% else %}В корзину{% endif %}</button>
                             </form>
                         </div>
                     </article>

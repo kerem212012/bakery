@@ -5,6 +5,7 @@ from .models import (
     HomeHeroSlide,
     Preorder,
     PreorderAttachment,
+    PreorderContract,
     SiteContentBlock,
     SitePageContent,
 )
@@ -13,6 +14,13 @@ from .models import (
 class PreorderAttachmentInline(admin.TabularInline):
     model = PreorderAttachment
     extra = 0
+    readonly_fields = ("uploaded_at",)
+
+
+class PreorderContractInline(admin.StackedInline):
+    model = PreorderContract
+    extra = 0
+    max_num = 1
     readonly_fields = ("uploaded_at",)
 
 
@@ -42,7 +50,7 @@ class PreorderAdmin(admin.ModelAdmin):
         "total_price",
         "created_at",
     )
-    inlines = (PreorderAttachmentInline,)
+    inlines = (PreorderAttachmentInline, PreorderContractInline)
 
 
 @admin.register(FeedbackSubmission)

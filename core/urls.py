@@ -48,6 +48,11 @@ urlpatterns = [
     ),
     path("manager/", views.manager_dashboard, name="manager_dashboard"),
     path(
+        "manager/orders/<int:order_id>/contract-draft/",
+        views.manager_order_contract_draft,
+        name="manager_order_contract_draft",
+    ),
+    path(
         "manager/orders/<int:order_id>/status/",
         views.manager_update_order_status,
         name="manager_update_order_status",

@@ -1,0 +1,88 @@
+{% extends "core/base.html" %}
+
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Draft contract #{{ order.pk }}{% else %}Проект договора №{{ order.pk }}{% endif %} — Вкусно Да Сладко{% endblock %}
+{% block shell_class %} contract-draft-shell{% endblock %}
+{% block main_class %}contract-draft-main{% endblock %}
+
+{% block content %}
+    <section class="contract-draft-page">
+        <header class="contract-draft-toolbar">
+            <div>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Manager workspace{% else %}Кабинет менеджера{% endif %}</p>
+                <h1>{% if LANGUAGE_CODE == 'en' %}Draft contract{% else %}Проект договора{% endif %} №{{ order.pk }}</h1>
+                <p>{% if LANGUAGE_CODE == 'en' %}Prepared from the order details for discussion with the customer.{% else %}Сформирован по данным заказа для обсуждения с клиентом.{% endif %}</p>
+            </div>
+            <button type="button" class="contract-draft-print" onclick="window.print()">
+                {% if LANGUAGE_CODE == 'en' %}Print / Save as PDF{% else %}Печать / Сохранить в PDF{% endif %}
+            </button>
+        </header>
+
+        <article class="contract-draft-paper">
+            <div class="contract-draft-notice" role="note">
+                <strong>{% if LANGUAGE_CODE == 'en' %}DRAFT FOR DISCUSSION{% else %}ПРОЕКТ ДЛЯ ОБСУЖДЕНИЯ{% endif %}</strong>
+                <p>{% if LANGUAGE_CODE == 'en' %}This document is not a signed contract. Confirm the final terms, seller details, price, delivery, and payment with the customer before issuing the final contract.{% else %}Этот документ не является подписанным договором. Перед выдачей финального договора согласуйте с клиентом реквизиты продавца, условия, стоимость, доставку и оплату.{% endif %}</p>
+            </div>
+
+            <div class="contract-draft-title">
+                <p>{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}</p>
+                <h2>{% if LANGUAGE_CODE == 'en' %}Order terms draft{% else %}Проект условий заказа{% endif %} №{{ order.pk }}</h2>
+                <time datetime="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d.m.Y" }}</time>
+            </div>
+
+            <section class="contract-draft-section">
+                <h3>{% if LANGUAGE_CODE == 'en' %}Customer{% else %}Заказчик{% endif %}</h3>
+                <dl>
+                    <div><dt>{% if LANGUAGE_CODE == 'en' %}Name{% else %}Имя{% endif %}</dt><dd>{{ order.name }}</dd></div>
+                    <div><dt>Email</dt><dd>{{ order.email }}</dd></div>
+                    <div><dt>{% if LANGUAGE_CODE == 'en' %}Phone{% else %}Телефон{% endif %}</dt><dd>{{ order.phone }}</dd></div>
+                </dl>
+            </section>
+
+            <section class="contract-draft-section">
+                <h3>{% if LANGUAGE_CODE == 'en' %}Order contents{% else %}Состав заказа{% endif %}</h3>
+                {% if order_configuration.items %}
+                    <table>
+                        <thead><tr><th>#</th><th>{% if LANGUAGE_CODE == 'en' %}Product{% else %}Товар{% endif %}</th><th>{% if LANGUAGE_CODE == 'en' %}Options{% else %}Параметры{% endif %}</th></tr></thead>
+                        <tbody>
+                            {% for item in order_configuration.items %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ item.name }}</td>
+                                    <td>{% for detail in item.details %}{{ detail.label }}: {{ detail.value }}{% if not forloop.last %}; {% endif %}{% empty %}—{% endfor %}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <dl>
+                        {% for detail in order_configuration.details %}<div><dt>{{ detail.label }}</dt><dd>{{ detail.value }}</dd></div>{% endfor %}
+                    </dl>
+                {% endif %}
+            </section>
+
+            <section class="contract-draft-section">
+                <h3>{% if LANGUAGE_CODE == 'en' %}Price and fulfilment{% else %}Стоимость и исполнение заказа{% endif %}</h3>
+                <dl>
+                    <div><dt>{% if LANGUAGE_CODE == 'en' %}Order total{% else %}Итого по заказу{% endif %}</dt><dd><strong>{{ order.total_price|floatformat:"2u" }} ₽</strong></dd></div>
+                    <div><dt>{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</dt><dd>{{ delivery_label }}{% if order.address %}, {{ order.address }}{% endif %}</dd></div>
+                    <div><dt>{% if LANGUAGE_CODE == 'en' %}Delivery cost{% else %}Стоимость доставки{% endif %}</dt><dd>{{ order.delivery_cost|floatformat:"2u" }} ₽</dd></div>
+                    <div><dt>{% if LANGUAGE_CODE == 'en' %}Payment method{% else %}Способ оплаты{% endif %}</dt><dd>{{ payment_label }}</dd></div>
+                    <div><dt>{% if LANGUAGE_CODE == 'en' %}Payment status{% else %}Статус оплаты{% endif %}</dt><dd>{{ payment_status_label }}</dd></div>
+                    {% if order.delivery_date %}<div><dt>{% if LANGUAGE_CODE == 'en' %}Delivery date{% else %}Дата доставки{% endif %}</dt><dd>{{ order.delivery_date|date:"d.m.Y" }}</dd></div>{% endif %}
+                </dl>
+            </section>
+
+            {% if order.comment %}
+                <section class="contract-draft-section">
+                    <h3>{% if LANGUAGE_CODE == 'en' %}Customer note{% else %}Комментарий к заказу{% endif %}</h3>
+                    <p>{{ order.comment|linebreaksbr }}</p>
+                </section>
+            {% endif %}
+
+            <div class="contract-draft-signatures">
+                <div><span>{% if LANGUAGE_CODE == 'en' %}Seller representative{% else %}Представитель продавца{% endif %}</span><i></i></div>
+                <div><span>{% if LANGUAGE_CODE == 'en' %}Customer{% else %}Заказчик{% endif %}</span><i></i></div>
+            </div>
+        </article>
+    </section>
+{% endblock %}

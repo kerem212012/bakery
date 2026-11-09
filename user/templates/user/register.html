@@ -10,6 +10,7 @@
             <p class="auth-intro">{% if LANGUAGE_CODE == 'en' %}Save your profile details and keep track of your orders.{% else %}Сохраняйте данные профиля и следите за своими заказами.{% endif %}</p>
             <form method="post" class="account-form" id="registration-form">
                 {% csrf_token %}
+                {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
                 {% if form.non_field_errors %}
                     <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
                 {% endif %}
@@ -48,7 +49,7 @@
                 {% endfor %}
                 <button class="button button-dark auth-submit" type="submit">{% if LANGUAGE_CODE == 'en' %}Create account{% else %}Зарегистрироваться{% endif %}</button>
             </form>
-            <p class="auth-switch">{% if LANGUAGE_CODE == 'en' %}Already have an account?{% else %}Уже есть аккаунт?{% endif %} <a href="{% url 'accounts:login' %}">{% if LANGUAGE_CODE == 'en' %}Sign in{% else %}Войти{% endif %}</a></p>
+            <p class="auth-switch">{% if LANGUAGE_CODE == 'en' %}Already have an account?{% else %}Уже есть аккаунт?{% endif %} <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">{% if LANGUAGE_CODE == 'en' %}Sign in{% else %}Войти{% endif %}</a></p>
         </div>
     </section>
     <script>

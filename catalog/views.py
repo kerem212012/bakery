@@ -1,7 +1,6 @@
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.contrib import messages
-from django.contrib.auth.views import redirect_to_login
 from django.db import connection
 from django.db.models import Count, F, Q
 from django.db import transaction
@@ -54,6 +53,8 @@ def _cart_items(request):
     cart = _session_cart(request)
     items = []
     stale_ids = []
+    validated_entries = []
+    product_ids = set()
     labels = {
         "coating": dict(localized_cart_options(COATING_OPTIONS, "coating")),
         "dough": dict(localized_cart_options(DOUGH_OPTIONS, "dough")),
@@ -67,15 +68,24 @@ def _cart_items(request):
             if not form.is_valid():
                 stale_ids.append(item_id)
                 continue
-            product = Product.objects.select_related("category").get(
-                pk=product_id,
-                is_active=True,
-                category__is_active=True,
-            )
-        except (KeyError, TypeError, ValueError, Product.DoesNotExist):
+        except (KeyError, TypeError, ValueError):
             stale_ids.append(item_id)
             continue
+        validated_entries.append((item_id, product_id, form))
+        product_ids.add(product_id)
 
+    products = Product.objects.filter(
+        pk__in=product_ids,
+        is_active=True,
+        category__is_active=True,
+    ).select_related("category")
+    products_by_id = {product.pk: product for product in products}
+
+    for item_id, product_id, form in validated_entries:
+        product = products_by_id.get(product_id)
+        if product is None:
+            stale_ids.append(item_id)
+            continue
         quantity = form.cleaned_data["quantity"]
         size = form.cleaned_data["size"]
         base_price = product.price or DEFAULT_PRODUCT_PRICE
@@ -140,11 +150,16 @@ def _cart_context(request, form=None):
 
 def cart(request):
     if request.method == "POST":
-        form = CartCheckoutForm(request.POST, request.FILES)
-        context = _cart_context(request, form)
+        context = _cart_context(request)
         if not context["items"]:
             messages.error(request, "Корзина пуста.")
             return redirect("catalog:cart")
+        if not request.user.is_authenticated:
+            return redirect(
+                f"{reverse('accounts:register')}?next={reverse('catalog:cart')}"
+            )
+        form = CartCheckoutForm(request.POST, request.FILES)
+        context = _cart_context(request, form)
         if form.is_valid():
             subtotal = context["subtotal"]
             delivery_cost = DELIVERY_COSTS[form.cleaned_data["delivery"]]
@@ -194,10 +209,7 @@ def cart(request):
                         profile.delivery_address = form.cleaned_data["address"]
                         profile.save(update_fields=("delivery_address",))
             request.session.pop(CART_SESSION_KEY, None)
-            messages.success(
-                request,
-                f"Заказ #{preorder.pk} оформлен. Мы свяжемся с вами для подтверждения.",
-            )
+            request.session["order_confirmation_id"] = preorder.pk
             if request.user.is_authenticated:
                 return redirect("accounts:order_detail", order_id=preorder.pk)
             return redirect("catalog:cart")
@@ -208,16 +220,6 @@ def cart(request):
 
 @require_POST
 def add_to_cart(request, product_id):
-    if not request.user.is_authenticated:
-        next_url = request.POST.get("next") or request.META.get("HTTP_REFERER")
-        if not next_url or not url_has_allowed_host_and_scheme(
-            next_url,
-            allowed_hosts={request.get_host()},
-            require_https=request.is_secure(),
-        ):
-            next_url = reverse("catalog:category_list")
-        return redirect_to_login(next_url, login_url=reverse("accounts:login"))
-
     product = get_object_or_404(
         Product,
         pk=product_id,

@@ -4,10 +4,17 @@ from django.db import models
 from django.utils.translation import get_language
 
 from .calculator import default_calculator_pricing
+from .storage import PrivateMediaStorage
 
 
 def preorder_attachment_path(instance, filename):
     return f"preorders/{instance.preorder_id}/{filename}"
+
+
+def preorder_contract_path(instance, filename):
+    import uuid
+
+    return f"order-contracts/{instance.preorder_id}/{uuid.uuid4().hex}.pdf"
 
 
 def localized_content(instance, field_name):
@@ -25,6 +32,10 @@ class Preorder(models.Model):
         SHIPPING = "shipping", "В пути"
         COMPLETED = "completed", "Доставлена"
         CANCELLED = "cancelled", "Отменена"
+
+    class PaymentStatus(models.TextChoices):
+        PENDING = "pending", "Ожидает оплаты"
+        PAID = "paid", "Оплачено"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -50,6 +61,12 @@ class Preorder(models.Model):
         max_length=12,
         choices=Status.choices,
         default=Status.NEW,
+    )
+    payment_status = models.CharField(
+        "Статус оплаты",
+        max_length=12,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PENDING,
     )
     created_at = models.DateTimeField("Создано", auto_now_add=True)
     consent_given = models.BooleanField("Согласие на обработку данных")
@@ -83,6 +100,29 @@ class PreorderAttachment(models.Model):
 
     def __str__(self):
         return self.file.name
+
+
+class PreorderContract(models.Model):
+    preorder = models.OneToOneField(
+        Preorder,
+        on_delete=models.CASCADE,
+        related_name="contract",
+        verbose_name="Заказ",
+    )
+    file = models.FileField(
+        "Договор",
+        upload_to=preorder_contract_path,
+        storage=PrivateMediaStorage(),
+        validators=[FileExtensionValidator(["pdf"])],
+    )
+    uploaded_at = models.DateTimeField("Загружено", auto_now=True)
+
+    class Meta:
+        verbose_name = "договор заказа"
+        verbose_name_plural = "договоры заказов"
+
+    def __str__(self):
+        return f"Договор заказа #{self.preorder_id}"
 
 
 class FeedbackSubmission(models.Model):

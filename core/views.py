@@ -1,6 +1,7 @@
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db import transaction
 from django.forms import DateField
 from django.forms import modelformset_factory
@@ -32,6 +33,7 @@ from .calculator import (
     SIZE_CHOICES,
     calculate_quote,
     localized_calculator_options,
+    localized_choices,
     normalize_calculator_pricing,
 )
 from .forms import (
@@ -74,6 +76,7 @@ from .models import (
     HomeHeroSlide,
     Preorder,
     PreorderAttachment,
+    PreorderContract,
     SiteContentBlock,
     SitePageContent,
     SitePageSection,
@@ -2100,14 +2103,21 @@ def manager_dashboard(request):
         Preorder.Status.COMPLETED: ("Delivered", "Доставлен"),
         Preorder.Status.CANCELLED: ("Cancelled", "Отменён"),
     }
+    payment_status_labels = {
+        Preorder.PaymentStatus.PENDING: ("Awaiting payment", "Ожидает оплаты"),
+        Preorder.PaymentStatus.PAID: ("Paid", "Оплачено"),
+    }
     orders = (
-        list(Preorder.objects.order_by("-created_at")[:12])
+        list(Preorder.objects.select_related("contract").order_by("-created_at")[:12])
         if can_view_orders
         else []
     )
     status_label_index = 0 if request.LANGUAGE_CODE == "en" else 1
     for order in orders:
         order.manager_status_label = order_status_labels[order.status][status_label_index]
+        order.manager_payment_status_label = payment_status_labels[
+            order.payment_status
+        ][status_label_index]
     order_counts = (
         {
             status: Preorder.objects.filter(status=status).count()
@@ -2160,6 +2170,10 @@ def manager_dashboard(request):
                 (value, order_status_labels[value][0 if request.LANGUAGE_CODE == "en" else 1])
                 for value, _ in Preorder.Status.choices
             ],
+            "payment_status_choices": [
+                (value, payment_status_labels[value][status_label_index])
+                for value, _ in Preorder.PaymentStatus.choices
+            ],
             "feedback_items": feedback_items,
             "feedback_source_choices": [
                 (value, labels[status_label_index])
@@ -2179,12 +2193,48 @@ def manager_dashboard(request):
 
 
 @staff_member_required(login_url="accounts:login")
+def manager_order_contract_draft(request, order_id):
+    if not request.user.has_perm("core.view_preorder"):
+        raise PermissionDenied
+
+    order = get_object_or_404(Preorder, pk=order_id)
+    configuration = (
+        order.configuration if isinstance(order.configuration, dict) else {}
+    )
+    english = request.LANGUAGE_CODE == "en"
+    payment_status_labels = {
+        Preorder.PaymentStatus.PENDING: "Awaiting payment" if english else "Ожидает оплаты",
+        Preorder.PaymentStatus.PAID: "Paid" if english else "Оплачено",
+    }
+    return render(
+        request,
+        "core/order_contract_draft.html",
+        {
+            "order": order,
+            "order_configuration": _format_order_configuration(
+                configuration,
+                request.LANGUAGE_CODE,
+            ),
+            "delivery_label": dict(
+                localized_choices(DELIVERY_CHOICES, "delivery")
+            ).get(configuration.get("delivery"), "—"),
+            "payment_label": dict(
+                localized_choices(PAYMENT_CHOICES, "payment")
+            ).get(configuration.get("payment"), "—"),
+            "payment_status_label": payment_status_labels[order.payment_status],
+        },
+    )
+
+
+@staff_member_required(login_url="accounts:login")
 @require_POST
 def manager_update_order_status(request, order_id):
     if not request.user.has_perms(("core.view_preorder", "core.change_preorder")):
         raise PermissionDenied
     order = get_object_or_404(Preorder, pk=order_id)
     status = request.POST.get("status")
+    payment_status = request.POST.get("payment_status", order.payment_status)
+    contract_file = request.FILES.get("contract")
     if "delivery_date" in request.POST:
         try:
             delivery_date = DateField(
@@ -2209,10 +2259,55 @@ def manager_update_order_status(request, order_id):
             else "Выберите допустимый статус заказа."
         )
         messages.error(request, message)
+    elif payment_status not in dict(Preorder.PaymentStatus.choices):
+        message = (
+            "Choose a valid payment status."
+            if request.LANGUAGE_CODE == "en"
+            else "Выберите допустимый статус оплаты."
+        )
+        messages.error(request, message)
+    elif contract_file and payment_status != Preorder.PaymentStatus.PAID:
+        message = (
+            "Mark the order as paid before uploading the contract."
+            if request.LANGUAGE_CODE == "en"
+            else "Сначала отметьте заказ как оплаченный, затем загрузите договор."
+        )
+        messages.error(request, message)
+    elif contract_file:
+        try:
+            FileExtensionValidator(["pdf"])(contract_file)
+        except ValidationError:
+            message = (
+                "Upload the contract as a PDF file."
+                if request.LANGUAGE_CODE == "en"
+                else "Загрузите договор в формате PDF."
+            )
+            messages.error(request, message)
+        else:
+            order.status = status
+            order.payment_status = payment_status
+            order.delivery_date = delivery_date
+            order.save(update_fields=("status", "payment_status", "delivery_date"))
+            contract, created = PreorderContract.objects.get_or_create(
+                preorder=order,
+                defaults={"file": contract_file},
+            )
+            if not created:
+                old_file = contract.file
+                contract.file = contract_file
+                contract.save(update_fields=("file", "uploaded_at"))
+                old_file.delete(save=False)
+            message = (
+                f"Order #{order.pk} updated."
+                if request.LANGUAGE_CODE == "en"
+                else f"Заказ №{order.pk} обновлён."
+            )
+            messages.success(request, message)
     else:
         order.status = status
+        order.payment_status = payment_status
         order.delivery_date = delivery_date
-        order.save(update_fields=("status", "delivery_date"))
+        order.save(update_fields=("status", "payment_status", "delivery_date"))
         message = (
             f"Order #{order.pk} updated."
             if request.LANGUAGE_CODE == "en"
