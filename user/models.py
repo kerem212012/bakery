@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 
 class CustomerProfile(models.Model):
@@ -18,12 +19,9 @@ class CustomerProfile(models.Model):
         choices=CustomerType.choices,
         default=CustomerType.INDIVIDUAL,
     )
-    company_name = models.CharField("Организация", max_length=200, blank=True)
     inn = models.CharField("ИНН", max_length=12, blank=True)
     kpp = models.CharField("КПП", max_length=9, blank=True)
-    legal_address = models.CharField("Юридический адрес", max_length=500, blank=True)
     delivery_address = models.CharField("Адрес доставки", max_length=300, blank=True)
-    contact_name = models.CharField("Контактное лицо", max_length=200, blank=True)
     phone = models.CharField("Телефон", max_length=32, blank=True)
     terms_accepted_at = models.DateTimeField(
         "Пользовательское соглашение принято",
@@ -41,6 +39,34 @@ class CustomerProfile(models.Model):
         verbose_name_plural = "Профили клиентов"
 
     def __str__(self):
-        if self.customer_type == self.CustomerType.LEGAL_ENTITY:
-            return self.company_name or self.user.get_username()
         return self.user.get_username()
+
+
+class CustomerDeliveryAddress(models.Model):
+    profile = models.ForeignKey(
+        CustomerProfile,
+        on_delete=models.CASCADE,
+        related_name="delivery_addresses",
+        verbose_name="Профиль клиента",
+    )
+    delivery_address = models.CharField("Адрес доставки", max_length=300)
+    is_default = models.BooleanField("Адрес по умолчанию", default=False)
+
+    class Meta:
+        ordering = ("-is_default", "pk")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("profile",),
+                condition=Q(is_default=True),
+                name="user_single_default_delivery_address",
+            ),
+            models.UniqueConstraint(
+                fields=("profile", "delivery_address"),
+                name="user_unique_delivery_address_per_profile",
+            ),
+        ]
+        verbose_name = "адрес доставки клиента"
+        verbose_name_plural = "адреса доставки клиентов"
+
+    def __str__(self):
+        return self.delivery_address

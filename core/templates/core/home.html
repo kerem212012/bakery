@@ -12,7 +12,6 @@
 {% block entrance %}
     <div class="site-intro" id="site-intro" aria-hidden="true">
         <div class="site-intro-logo">
-            <span class="site-intro-mark">{% if LANGUAGE_CODE == 'en' %}V{% else %}В{% endif %}</span>
             <span class="site-intro-copy">
                 <span class="site-intro-name">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}</span>
                 <span class="site-intro-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
@@ -114,7 +113,7 @@
                 <div class="section-heading">
                     <div>
                         <p class="eyebrow">{% if site_page_sections.catalog %}{{ site_page_sections.catalog.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}Made for your brand{% else %}Для вашего бренда{% endif %}{% endif %}</p>
-                        <h2>{% if site_page_sections.catalog %}{{ site_page_sections.catalog.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Our products{% else %}Наша продукция{% endif %}{% endif %}</h2>
+                        <h2>{% if site_page_sections.catalog %}{{ site_page_sections.catalog.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Calculator here{% else %}Калькулятор тут{% endif %}{% endif %}</h2>
                     </div>
                 </div>
                 <div class="catalog-grid">
@@ -356,34 +355,6 @@
                 <div class="about-photo" role="img" aria-label="{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_image_alt }}{% elif LANGUAGE_CODE == 'en' %}A baker decorates handmade cookies{% else %}Мастер украшает авторское печенье{% endif %}"{% if site_page_sections.home_about.0.image %} style="background-image:url('{{ site_page_sections.home_about.0.image.url }}')"{% endif %}></div>
             </section>
 
-            <section class="partners-section" aria-labelledby="partners-heading">
-                <h2 id="partners-heading" class="partners-heading">{% if site_page_sections.partners %}{{ site_page_sections.partners.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Our partners{% else %}Наши партнёры{% endif %}{% endif %}</h2>
-                <div class="partners-carousel">
-                    <button class="partners-arrow" type="button" data-partners-direction="-1" aria-label="{% if LANGUAGE_CODE == 'en' %}Previous partners{% else %}Предыдущие партнёры{% endif %}">
-                        <span aria-hidden="true">‹</span>
-                    </button>
-                    <div class="partners-track" id="partners-track" tabindex="0" aria-label="{% if LANGUAGE_CODE == 'en' %}Partners{% else %}Партнёры{% endif %}">
-                        {% if site_page_sections.partners %}
-                            {% for partner in site_page_sections.partners %}
-                                <div class="partner-logo">{% if partner.image %}<img src="{{ partner.image.url }}" alt="{{ partner.localized_image_alt }}">{% else %}{{ partner.localized_title }}{% endif %}</div>
-                            {% endfor %}
-                        {% else %}
-                        <div class="partner-logo">◉ СБЕР</div>
-                        <div class="partner-logo partner-vtb">ВТБ</div>
-                        <div class="partner-logo partner-gazprom">Газпром</div>
-                        <div class="partner-logo partner-aeroflot">Аэрофлот</div>
-                        <div class="partner-logo partner-yandex">Яндекс</div>
-                        <div class="partner-logo partner-x5">X5 Group</div>
-                        <div class="partner-logo partner-rosneft">Роснефть</div>
-                        <div class="partner-logo partner-sogaz">согаз</div>
-                        <div class="partner-logo partner-loreal">L’ORÉAL</div>
-                        {% endif %}
-                    </div>
-                    <button class="partners-arrow" type="button" data-partners-direction="1" aria-label="{% if LANGUAGE_CODE == 'en' %}Next partners{% else %}Следующие партнёры{% endif %}">
-                        <span aria-hidden="true">›</span>
-                    </button>
-                </div>
-            </section>
 
 {% endblock %}
 
@@ -397,32 +368,6 @@
         const heroSlides = [...document.querySelectorAll(".hero-slide")];
         const heroDots = [...document.querySelectorAll(".hero-dot")];
         const heroArrows = document.querySelectorAll(".hero-arrow");
-        const partnersTrack = document.querySelector("#partners-track");
-        const partnersArrows = document.querySelectorAll(".partners-arrow");
-        function updatePartnersArrows() {
-            const maxScroll = partnersTrack.scrollWidth - partnersTrack.clientWidth;
-            partnersArrows.forEach((arrow) => {
-                const direction = Number(arrow.dataset.partnersDirection);
-                arrow.disabled = maxScroll <= 1 || (
-                    direction < 0
-                        ? partnersTrack.scrollLeft <= 1
-                        : partnersTrack.scrollLeft >= maxScroll - 1
-                );
-            });
-        }
-
-        partnersArrows.forEach((arrow) => {
-            arrow.addEventListener("click", () => {
-                partnersTrack.scrollBy({
-                    left: Number(arrow.dataset.partnersDirection) * partnersTrack.clientWidth * 0.75,
-                    behavior: "smooth",
-                });
-            });
-        });
-
-        partnersTrack.addEventListener("scroll", updatePartnersArrows, { passive: true });
-        window.addEventListener("resize", updatePartnersArrows);
-        updatePartnersArrows();
 
         const preorderForm = document.querySelector(".preorder-form");
         const calculatorDiscountTiers = JSON.parse(

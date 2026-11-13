@@ -15,25 +15,20 @@ def export_legal_entities_xlsx(modeladmin, request, queryset):
     worksheet.title = "Юридические лица"
     worksheet.append(
         (
-            "Контактное лицо",
             "Телефон",
-            "Организация",
             "ИНН",
             "КПП",
-            "Юридический адрес",
             "Email",
             "Дата регистрации",
         )
     )
     for profile in profiles:
         values = (
-            profile.contact_name,
             profile.phone,
-            profile.company_name,
             profile.inn,
             profile.kpp,
-            profile.legal_address,
             profile.user.email,
+            profile.user.date_joined.date(),
         )
         worksheet.append(
             [
@@ -47,13 +42,11 @@ def export_legal_entities_xlsx(modeladmin, request, queryset):
     worksheet.freeze_panes = "A2"
     worksheet.auto_filter.ref = worksheet.dimensions
     for column, width in {
-        "A": 28,
-        "B": 20,
-        "C": 34,
-        "D": 16,
-        "E": 14,
-        "F": 50,
-        "G": 34,
+        "A": 20,
+        "B": 16,
+        "C": 14,
+        "D": 34,
+        "E": 24,
     }.items():
         worksheet.column_dimensions[column].width = width
 
@@ -70,10 +63,8 @@ class CustomerProfileAdmin(admin.ModelAdmin):
     list_display = (
         "user",
         "customer_type",
-        "company_name",
         "inn",
         "kpp",
-        "contact_name",
         "phone",
         "terms_accepted_at",
         "personal_data_consent_at",
@@ -82,9 +73,7 @@ class CustomerProfileAdmin(admin.ModelAdmin):
     search_fields = (
         "user__username",
         "user__email",
-        "company_name",
         "inn",
         "kpp",
-        "contact_name",
     )
     actions = (export_legal_entities_xlsx,)

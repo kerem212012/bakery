@@ -10,7 +10,7 @@ from django.urls import reverse
 from PIL import Image
 
 from core.models import Preorder
-from user.models import CustomerProfile
+from user.models import CustomerDeliveryAddress, CustomerProfile
 
 from .models import Category, Product, ProductFilterOption
 
@@ -772,19 +772,56 @@ class CartTests(TestCase):
         self.assertContains(response, 'class="cart-field-control"')
         self.assertContains(response, 'class="cart-upload"')
         self.assertContains(response, 'class="cart-submit-button"')
+        self.assertContains(response, 'class="cart-continue-shopping"')
+        self.assertContains(response, "Продолжить покупки")
 
-    def test_saved_account_address_is_prefilled_in_checkout(self):
+    def test_account_contact_details_and_saved_address_are_prefilled_in_checkout(self):
         self.add_product()
+        self.user.first_name = "Анна"
+        self.user.last_name = "Иванова"
+        self.user.email = "anna@example.com"
+        self.user.save(update_fields=("first_name", "last_name", "email"))
         CustomerProfile.objects.create(
             user=self.user,
+            phone="+7 900 000-00-00",
             delivery_address="Москва, ул. Тестовая, 1",
         )
 
         response = self.client.get(self.cart_url)
 
         self.assertTrue(response.wsgi_request.user.is_authenticated)
+        self.assertEqual(response.context["form"].initial.get("name"), "Анна Иванова")
+        self.assertEqual(response.context["form"].initial.get("phone"), "+7 900 000-00-00")
+        self.assertEqual(response.context["form"].initial.get("email"), "anna@example.com")
         self.assertEqual(response.context["form"].initial.get("address"), "Москва, ул. Тестовая, 1")
+        self.assertContains(response, 'value="Анна Иванова"')
+        self.assertContains(response, 'value="+7 900 000-00-00"')
+        self.assertContains(response, 'value="anna@example.com"')
         self.assertContains(response, 'value="Москва, ул. Тестовая, 1"')
+
+    def test_default_saved_profile_address_is_prefilled_in_checkout(self):
+        self.add_product()
+        profile = CustomerProfile.objects.create(
+            user=self.user,
+            delivery_address="Старый адрес профиля",
+        )
+        CustomerDeliveryAddress.objects.create(
+            profile=profile,
+            delivery_address="Домашний адрес",
+        )
+        default_address = CustomerDeliveryAddress.objects.create(
+            profile=profile,
+            delivery_address="Рабочий адрес",
+            is_default=True,
+        )
+
+        response = self.client.get(self.cart_url)
+
+        self.assertEqual(
+            response.context["form"].initial.get("address"),
+            default_address.delivery_address,
+        )
+        self.assertContains(response, 'value="Рабочий адрес"')
 
     def test_add_to_cart_merges_identical_variants_and_rejects_bad_options(self):
         self.add_product(quantity="3")

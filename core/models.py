@@ -103,10 +103,10 @@ class PreorderAttachment(models.Model):
 
 
 class PreorderContract(models.Model):
-    preorder = models.OneToOneField(
+    preorder = models.ForeignKey(
         Preorder,
         on_delete=models.CASCADE,
-        related_name="contract",
+        related_name="contracts",
         verbose_name="Заказ",
     )
     file = models.FileField(

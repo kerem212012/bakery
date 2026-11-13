@@ -83,32 +83,55 @@
                                     <p class="manager-order-comment">{{ order.comment }}</p>
                                 {% endif %}
                                 <div class="manager-order-actions">
-                                    <a class="manager-order-details" href="{% url 'manager_order_contract_draft' order.pk %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Draft contract{% else %}Проект договора{% endif %} ↗</a>
+                                    <div class="manager-order-action-links">
+                                        <a class="manager-order-details" href="{% url 'manager_order_contract_draft' order.pk %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Draft contract{% else %}Проект договора{% endif %} ↗</a>
+                                        {% if can_change_orders %}
+                                            <a class="manager-order-details" href="{% url 'admin_section_edit' 'orders' order.pk %}">{% if LANGUAGE_CODE == 'en' %}Order details{% else %}Подробности заказа{% endif %} →</a>
+                                        {% endif %}
+                                    </div>
                                     {% if can_change_orders %}
                                         <form method="post" enctype="multipart/form-data" action="{% url 'manager_update_order_status' order.pk %}" class="manager-order-status-form">
                                             {% csrf_token %}
-                                            <label for="order-status-{{ order.pk }}">{% if LANGUAGE_CODE == 'en' %}Update status{% else %}Изменить статус{% endif %}</label>
-                                            <select id="order-status-{{ order.pk }}" name="status">
-                                                {% for value, label in order_status_choices %}
-                                                    <option value="{{ value }}"{% if order.status == value %} selected{% endif %}>{{ label }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <label for="order-payment-status-{{ order.pk }}">{% if LANGUAGE_CODE == 'en' %}Payment{% else %}Оплата{% endif %}</label>
-                                            <select id="order-payment-status-{{ order.pk }}" name="payment_status">
-                                                {% for value, label in payment_status_choices %}
-                                                    <option value="{{ value }}"{% if order.payment_status == value %} selected{% endif %}>{{ label }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <label for="order-delivery-date-{{ order.pk }}">{% if LANGUAGE_CODE == 'en' %}Delivery date{% else %}Дата доставки{% endif %}</label>
-                                            <input id="order-delivery-date-{{ order.pk }}" type="date" name="delivery_date" value="{{ order.delivery_date|date:'Y-m-d' }}">
-                                            <label for="order-contract-{{ order.pk }}">{% if LANGUAGE_CODE == 'en' %}Contract PDF{% else %}Договор PDF{% endif %}</label>
-                                            <input id="order-contract-{{ order.pk }}" type="file" name="contract" accept="application/pdf,.pdf">
-                                            {% if order.contract %}<a href="{% url 'accounts:order_contract' order.pk %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Open contract{% else %}Открыть договор{% endif %}</a>{% endif %}
-                                            <button type="submit">{% if LANGUAGE_CODE == 'en' %}Save changes{% else %}Сохранить изменения{% endif %}</button>
+                                            <div class="manager-order-status-fields">
+                                                <div class="manager-order-status-field">
+                                                    <label for="order-status-{{ order.pk }}">{% if LANGUAGE_CODE == 'en' %}Update status{% else %}Изменить статус{% endif %}</label>
+                                                    <select id="order-status-{{ order.pk }}" name="status">
+                                                        {% for value, label in order_status_choices %}
+                                                            <option value="{{ value }}"{% if order.status == value %} selected{% endif %}>{{ label }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="manager-order-status-field">
+                                                    <label for="order-payment-status-{{ order.pk }}">{% if LANGUAGE_CODE == 'en' %}Payment{% else %}Оплата{% endif %}</label>
+                                                    <select id="order-payment-status-{{ order.pk }}" name="payment_status">
+                                                        {% for value, label in payment_status_choices %}
+                                                            <option value="{{ value }}"{% if order.payment_status == value %} selected{% endif %}>{{ label }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="manager-order-status-field">
+                                                    <label for="order-delivery-date-{{ order.pk }}">{% if LANGUAGE_CODE == 'en' %}Delivery date{% else %}Дата доставки{% endif %}</label>
+                                                    <input id="order-delivery-date-{{ order.pk }}" type="date" name="delivery_date" value="{{ order.delivery_date|date:'Y-m-d' }}">
+                                                </div>
+                                            </div>
+                                            <div class="manager-order-contract-upload">
+                                                <div class="manager-order-status-field">
+                                                    <label for="order-contract-{{ order.pk }}">{% if LANGUAGE_CODE == 'en' %}Contract PDF files{% else %}Файлы договоров PDF{% endif %}</label>
+                                                    <input id="order-contract-{{ order.pk }}" type="file" name="contract" accept="application/pdf,.pdf" multiple>
+                                                    <small>{% if LANGUAGE_CODE == 'en' %}Select up to 5 PDF files, 10 MB each.{% else %}Выберите до 5 PDF-файлов размером до 10 МБ каждый.{% endif %}</small>
+                                                </div>
+                                                {% if order.contracts.all %}
+                                                    <div class="manager-order-contract-list">
+                                                        {% for contract in order.contracts.all %}
+                                                            <a href="{% url 'accounts:order_contract_file' order.pk contract.pk %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Open contract {{ forloop.counter }}{% else %}Открыть договор {{ forloop.counter }}{% endif %} ↗</a>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="manager-order-status-actions">
+                                                <button type="submit">{% if LANGUAGE_CODE == 'en' %}Save changes{% else %}Сохранить изменения{% endif %}</button>
+                                            </div>
                                         </form>
-                                    {% endif %}
-                                    {% if can_change_orders %}
-                                        <a class="manager-order-details" href="{% url 'admin_section_edit' 'orders' order.pk %}">{% if LANGUAGE_CODE == 'en' %}Order details{% else %}Подробности заказа{% endif %} →</a>
                                     {% endif %}
                                 </div>
                             </article>

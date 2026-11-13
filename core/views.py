@@ -63,6 +63,8 @@ from .forms import (
     HomeHeroSlideBaseFormSet,
     HOME_HERO_SLIDE_DEFAULTS,
     HomeHeroSlideForm,
+    MAX_ATTACHMENT_COUNT,
+    MAX_ATTACHMENT_SIZE,
     PackagingCardForm,
     PartnershipDirectionForm,
     PartnershipSuccessForm,
@@ -1887,9 +1889,7 @@ ADMIN_SECTION_CONFIG = {
         "search_fields": (
             "user__username",
             "user__email",
-            "company_name",
             "inn",
-            "contact_name",
         ),
         "title": ("Customers", "Клиенты"),
         "kind": "customer",
@@ -2108,7 +2108,7 @@ def manager_dashboard(request):
         Preorder.PaymentStatus.PAID: ("Paid", "Оплачено"),
     }
     orders = (
-        list(Preorder.objects.select_related("contract").order_by("-created_at")[:12])
+        list(Preorder.objects.prefetch_related("contracts").order_by("-created_at")[:12])
         if can_view_orders
         else []
     )
@@ -2234,7 +2234,7 @@ def manager_update_order_status(request, order_id):
     order = get_object_or_404(Preorder, pk=order_id)
     status = request.POST.get("status")
     payment_status = request.POST.get("payment_status", order.payment_status)
-    contract_file = request.FILES.get("contract")
+    contract_files = request.FILES.getlist("contract")
     if "delivery_date" in request.POST:
         try:
             delivery_date = DateField(
@@ -2252,7 +2252,14 @@ def manager_update_order_status(request, order_id):
     else:
         delivery_date = order.delivery_date
 
-    if status not in dict(Preorder.Status.choices):
+    if len(contract_files) > MAX_ATTACHMENT_COUNT:
+        message = (
+            f"You can upload no more than {MAX_ATTACHMENT_COUNT} contract PDFs at a time."
+            if request.LANGUAGE_CODE == "en"
+            else f"Можно загрузить не более {MAX_ATTACHMENT_COUNT} договоров за раз."
+        )
+        messages.error(request, message)
+    elif status not in dict(Preorder.Status.choices):
         message = (
             "Choose a valid order status."
             if request.LANGUAGE_CODE == "en"
@@ -2266,41 +2273,48 @@ def manager_update_order_status(request, order_id):
             else "Выберите допустимый статус оплаты."
         )
         messages.error(request, message)
-    elif contract_file and payment_status != Preorder.PaymentStatus.PAID:
+    elif contract_files and payment_status != Preorder.PaymentStatus.PAID:
         message = (
             "Mark the order as paid before uploading the contract."
             if request.LANGUAGE_CODE == "en"
             else "Сначала отметьте заказ как оплаченный, затем загрузите договор."
         )
         messages.error(request, message)
-    elif contract_file:
+    elif contract_files:
         try:
-            FileExtensionValidator(["pdf"])(contract_file)
-        except ValidationError:
-            message = (
-                "Upload the contract as a PDF file."
-                if request.LANGUAGE_CODE == "en"
-                else "Загрузите договор в формате PDF."
-            )
-            messages.error(request, message)
+            for contract_file in contract_files:
+                try:
+                    FileExtensionValidator(["pdf"])(contract_file)
+                except ValidationError:
+                    message = (
+                        "Upload all contracts as PDF files."
+                        if request.LANGUAGE_CODE == "en"
+                        else "Загрузите все договоры в формате PDF."
+                    )
+                    raise ValidationError(message) from None
+                if contract_file.size > MAX_ATTACHMENT_SIZE:
+                    message = (
+                        "Each contract PDF must be no larger than 10 MB."
+                        if request.LANGUAGE_CODE == "en"
+                        else "Размер каждого договора не должен превышать 10 МБ."
+                    )
+                    raise ValidationError(message)
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
         else:
-            order.status = status
-            order.payment_status = payment_status
-            order.delivery_date = delivery_date
-            order.save(update_fields=("status", "payment_status", "delivery_date"))
-            contract, created = PreorderContract.objects.get_or_create(
-                preorder=order,
-                defaults={"file": contract_file},
-            )
-            if not created:
-                old_file = contract.file
-                contract.file = contract_file
-                contract.save(update_fields=("file", "uploaded_at"))
-                old_file.delete(save=False)
+            with transaction.atomic():
+                order.status = status
+                order.payment_status = payment_status
+                order.delivery_date = delivery_date
+                order.save(update_fields=("status", "payment_status", "delivery_date"))
+                PreorderContract.objects.bulk_create(
+                    PreorderContract(preorder=order, file=contract_file)
+                    for contract_file in contract_files
+                )
             message = (
-                f"Order #{order.pk} updated."
+                f"Order #{order.pk} updated with {len(contract_files)} contract file(s)."
                 if request.LANGUAGE_CODE == "en"
-                else f"Заказ №{order.pk} обновлён."
+                else f"Заказ №{order.pk} обновлён, загружено договоров: {len(contract_files)}."
             )
             messages.success(request, message)
     else:

@@ -21,6 +21,7 @@
                     </div>
                     <form method="post" class="account-form profile-form">
                         {% csrf_token %}
+                        <input type="hidden" name="action" value="save_profile">
                         {% for field in profile_form %}
                             <div class="form-field">
                                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -29,6 +30,24 @@
                             </div>
                         {% endfor %}
                         <button class="button button-dark" type="submit">{% if LANGUAGE_CODE == 'en' %}Save changes{% else %}Сохранить изменения{% endif %}</button>
+                    </form>
+                </section>
+                <section class="account-panel">
+                    <div class="account-panel-heading">
+                        <div><p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Security{% else %}Безопасность{% endif %}</p><h2>{% if LANGUAGE_CODE == 'en' %}Change password{% else %}Изменить пароль{% endif %}</h2></div>
+                    </div>
+                    <form method="post" class="account-form profile-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="change_password">
+                        {% for field in password_form %}
+                            <div class="form-field">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
+                            </div>
+                        {% endfor %}
+                        <button class="button button-dark" type="submit">{% if LANGUAGE_CODE == 'en' %}Change password{% else %}Изменить пароль{% endif %}</button>
                     </form>
                 </section>
             </div>

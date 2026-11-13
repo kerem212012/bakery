@@ -5,9 +5,14 @@
 {% block content %}
     <section class="account-page">
         <div class="account-heading">
+            <nav class="account-breadcrumbs" aria-label="{% if LANGUAGE_CODE == 'en' %}Breadcrumb{% else %}Навигационная цепочка{% endif %}">
+                <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
+                <span aria-hidden="true">›</span>
+                <span aria-current="page">{% if LANGUAGE_CODE == 'en' %}My account{% else %}Личный кабинет{% endif %}</span>
+            </nav>
             <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Your account{% else %}Ваше пространство{% endif %}</p>
             <h1>{% if LANGUAGE_CODE == 'en' %}My account{% else %}Личный кабинет{% endif %}</h1>
-            <p>{% if LANGUAGE_CODE == 'en' %}Hello{% else %}Здравствуйте{% endif %}{% if user.first_name %}, {{ user.first_name }}{% endif %}! {% if LANGUAGE_CODE == 'en' %}Here is your account information.{% else %}Здесь собрана информация о вашем аккаунте.{% endif %}</p>
+            <p>{% if LANGUAGE_CODE == 'en' %}Track your orders, manage delivery addresses, and update your personal details here.{% else %}Здесь вы можете отслеживать заказы, управлять адресами доставки и личными данными.{% endif %}</p>
         </div>
 
         {% include "user/_account_messages.html" %}
@@ -18,10 +23,25 @@
             {% endwith %}
 
             <div class="account-content">
-                <div class="account-stats">
-                    <a class="account-stat" href="{% url 'accounts:orders' %}"><span>{% if LANGUAGE_CODE == 'en' %}My orders{% else %}Мои заказы{% endif %}</span><strong>{{ orders_count }}</strong></a>
-                    <a class="account-stat" href="{% url 'accounts:favorites' %}"><span>{% if LANGUAGE_CODE == 'en' %}Favorites{% else %}Избранное{% endif %}</span><strong>0</strong></a>
-                    <a class="account-stat" href="{% url 'accounts:addresses' %}"><span>{% if LANGUAGE_CODE == 'en' %}Delivery address{% else %}Адрес доставки{% endif %}</span><strong>{{ saved_address_label }}</strong></a>
+                <div class="account-stats account-overview-stats">
+                    <a class="account-stat account-overview-stat" href="{% url 'accounts:orders' %}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h8l4 4V20a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2Z"/><path d="M15 3.5v5h5M8.5 13h7m-7 3.5h7"/></svg>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Total orders{% else %}Всего заказов{% endif %}</span>
+                        <strong>{{ year_orders_count }}</strong>
+                        <small>{% if LANGUAGE_CODE == 'en' %}In the last year{% else %}За последний год{% endif %}</small>
+                    </a>
+                    <a class="account-stat account-overview-stat" href="{% url 'accounts:orders' %}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="m3.8 7.7 8.2 4.5 8.2-4.5M12 12.2V21m-4.5-15 8.3 4.5"/></svg>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Total spent{% else %}Общая сумма{% endif %}</span>
+                        <strong>{{ total_spent|floatformat:0 }} ₽</strong>
+                        <small>{% if LANGUAGE_CODE == 'en' %}All time{% else %}За всё время{% endif %}</small>
+                    </a>
+                    <a class="account-stat account-overview-stat" href="{% if next_delivery %}{% url 'accounts:order_detail' next_delivery.pk %}{% else %}{% url 'accounts:orders' %}{% endif %}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M7.5 3v4m9-4v4M3.5 9.5h17M8 13h2m4 0h2m-8 4h2"/></svg>
+                        <span>{% if LANGUAGE_CODE == 'en' %}Next delivery{% else %}Ближайшая доставка{% endif %}</span>
+                        <strong>{% if next_delivery %}{{ next_delivery.delivery_date|date:"j F Y" }}{% else %}—{% endif %}</strong>
+                        <small>{% if next_delivery %}{% if LANGUAGE_CODE == 'en' %}Order{% else %}Заказ{% endif %} №{{ next_delivery.pk }}{% else %}{% if LANGUAGE_CODE == 'en' %}No scheduled deliveries{% else %}Нет запланированных доставок{% endif %}{% endif %}</small>
+                    </a>
                 </div>
 
                 <section class="account-panel">

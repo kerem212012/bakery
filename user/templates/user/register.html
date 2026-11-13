@@ -15,7 +15,7 @@
                     <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
                 {% endif %}
                 {% for field in form %}
-                    {% if field.name == "company_name" %}<div class="registration-company-fields" id="registration-company-fields" hidden>{% endif %}
+                    {% if field.name == "inn" %}<div class="registration-business-fields" id="registration-business-fields">{% endif %}
                     {% if field.name == "agreement_accepted" %}
                         <div class="form-field consent-field">
                             <label for="{{ field.id_for_label }}">{{ field }}
@@ -45,32 +45,11 @@
                         {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
                     </div>
                     {% endif %}
-                    {% if field.name == "phone" %}</div>{% endif %}
+                    {% if field.name == "kpp" %}</div>{% endif %}
                 {% endfor %}
                 <button class="button button-dark auth-submit" type="submit">{% if LANGUAGE_CODE == 'en' %}Create account{% else %}Зарегистрироваться{% endif %}</button>
             </form>
             <p class="auth-switch">{% if LANGUAGE_CODE == 'en' %}Already have an account?{% else %}Уже есть аккаунт?{% endif %} <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">{% if LANGUAGE_CODE == 'en' %}Sign in{% else %}Войти{% endif %}</a></p>
         </div>
     </section>
-    <script>
-        const customerTypeInputs = document.querySelectorAll(
-            '#registration-form [name="customer_type"]'
-        );
-        const companyFields = document.querySelector("#registration-company-fields");
-
-        function updateCompanyFields() {
-            const isLegalEntity = document.querySelector(
-                '#registration-form [name="customer_type"]:checked'
-            )?.value === "legal_entity";
-            companyFields.hidden = !isLegalEntity;
-            companyFields.querySelectorAll("input, textarea").forEach((input) => {
-                input.required = isLegalEntity;
-            });
-        }
-
-        customerTypeInputs.forEach((input) => {
-            input.addEventListener("change", updateCompanyFields);
-        });
-        updateCompanyFields();
-    </script>
 {% endblock %}

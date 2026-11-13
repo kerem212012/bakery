@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from core.calculator import DELIVERY_COSTS
 from core.models import Preorder, PreorderAttachment
-from user.models import CustomerProfile
+from user.models import CustomerDeliveryAddress, CustomerProfile
 
 from .cart_forms import (
     COATING_OPTIONS,
@@ -124,11 +124,23 @@ def _cart_context(request, form=None):
     delivery_cost = DELIVERY_COSTS.get(delivery, DELIVERY_COSTS["moscow"])
     initial = {"delivery": "moscow", "payment": "card"}
     if request.user.is_authenticated:
-        saved_address = CustomerProfile.objects.filter(user=request.user).values_list(
-            "delivery_address", flat=True
-        ).first()
-        if saved_address:
-            initial["address"] = saved_address
+        profile = CustomerProfile.objects.filter(user=request.user).first()
+        saved_address = (
+            CustomerDeliveryAddress.objects.filter(
+                profile=profile,
+                is_default=True,
+            )
+            .values_list("delivery_address", flat=True)
+            .first()
+            if profile
+            else ""
+        )
+        initial.update(
+            name=request.user.get_full_name(),
+            phone=profile.phone if profile else "",
+            email=request.user.email,
+            address=saved_address or (profile.delivery_address if profile else ""),
+        )
 
     return {
         "items": items,
@@ -205,8 +217,19 @@ def cart(request):
                 )
                 if request.user.is_authenticated and form.cleaned_data["address"]:
                     profile, _ = CustomerProfile.objects.get_or_create(user=request.user)
-                    if profile.delivery_address != form.cleaned_data["address"]:
-                        profile.delivery_address = form.cleaned_data["address"]
+                    address, _ = CustomerDeliveryAddress.objects.get_or_create(
+                        profile=profile,
+                        delivery_address=form.cleaned_data["address"],
+                    )
+                    CustomerDeliveryAddress.objects.filter(
+                        profile=profile,
+                        is_default=True,
+                    ).exclude(pk=address.pk).update(is_default=False)
+                    if not address.is_default:
+                        address.is_default = True
+                        address.save(update_fields=("is_default",))
+                    if profile.delivery_address != address.delivery_address:
+                        profile.delivery_address = address.delivery_address
                         profile.save(update_fields=("delivery_address",))
             request.session.pop(CART_SESSION_KEY, None)
             request.session["order_confirmation_id"] = preorder.pk

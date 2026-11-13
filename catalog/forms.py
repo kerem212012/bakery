@@ -80,12 +80,6 @@ class ProductEditorForm(forms.ModelForm):
         }
         for field_name, label in labels.items():
             self.fields[field_name].label = label
-        if self.instance.pk and self.instance.filter_type not in {
-            ProductFilterOption.FilterType.COATING,
-            ProductFilterOption.FilterType.DOUGH,
-        }:
-            self.fields.pop("description")
-            self.fields.pop("description_en")
         if self.instance.pk:
             self.initial["display_order"] = self.instance.display_order + 1
         else:

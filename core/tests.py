@@ -2127,6 +2127,8 @@ class AdminDashboardTests(TestCase):
         edit_response = self.client.get(
             reverse("admin_section_edit", args=("products", product.pk))
         )
+        self.assertIn("description", edit_response.context["form"].fields)
+        self.assertIn("description_en", edit_response.context["form"].fields)
         self.assertEqual(
             edit_response.context["form"]["display_order"].value(),
             5,
@@ -2923,6 +2925,11 @@ class ManagerDashboardTests(TestCase):
             reverse("manager_order_contract_draft", args=[self.order.pk]),
         )
         self.assertContains(response, 'name="delivery_date"')
+        self.assertContains(response, 'name="contract"')
+        self.assertContains(response, "multiple")
+        self.assertContains(response, 'class="manager-order-status-fields"')
+        self.assertContains(response, 'class="manager-order-contract-upload"')
+        self.assertContains(response, 'class="manager-order-status-actions"')
         self.assertEqual(response.context["order_counts"][Preorder.Status.NEW], 1)
 
         delivery_date = date.today() + timedelta(days=7)
@@ -2954,8 +2961,62 @@ class ManagerDashboardTests(TestCase):
         self.addCleanup(contract.file.delete, save=False)
         self.assertContains(
             self.client.get(self.manager_url),
-            reverse("accounts:order_contract", args=[self.order.pk]),
+            reverse("accounts:order_contract_file", args=[self.order.pk, contract.pk]),
         )
+
+    def test_manager_can_upload_multiple_contract_pdfs_for_one_order(self):
+        self.grant_order_permissions("view_preorder", "change_preorder")
+        self.client.force_login(self.manager)
+        contract_uploads = [
+            SimpleUploadedFile(
+                f"signed-contract-{index}.pdf",
+                f"%PDF-1.4 contract {index}".encode(),
+                content_type="application/pdf",
+            )
+            for index in (1, 2)
+        ]
+
+        response = self.client.post(
+            reverse(self.status_url_name, args=[self.order.pk]),
+            {
+                "status": Preorder.Status.CONTACTED,
+                "payment_status": Preorder.PaymentStatus.PAID,
+                "contract": contract_uploads,
+            },
+        )
+
+        self.assertRedirects(response, self.manager_url)
+        contracts = list(PreorderContract.objects.filter(preorder=self.order))
+        self.assertEqual(len(contracts), 2)
+        for contract in contracts:
+            self.addCleanup(contract.file.delete, save=False)
+        dashboard = self.client.get(self.manager_url)
+        for contract in contracts:
+            self.assertContains(
+                dashboard,
+                reverse("accounts:order_contract_file", args=[self.order.pk, contract.pk]),
+            )
+
+        customer = get_user_model().objects.create_user(
+            username="contract_customer",
+            email="contract-customer@example.com",
+            password="A-long-password-482!",
+        )
+        self.order.user = customer
+        self.order.save(update_fields=("user",))
+        self.client.force_login(customer)
+        detail = self.client.get(reverse("accounts:order_detail", args=[self.order.pk]))
+        for contract in contracts:
+            self.assertContains(
+                detail,
+                reverse("accounts:order_contract_file", args=[self.order.pk, contract.pk]),
+            )
+            contract_response = self.client.get(
+                reverse("accounts:order_contract_file", args=[self.order.pk, contract.pk])
+            )
+            self.assertEqual(contract_response.status_code, 200)
+            for close_resource in contract_response._resource_closers:
+                close_resource()
 
     def test_manager_can_open_printable_contract_draft(self):
         self.grant_order_permissions("view_preorder")
@@ -3505,6 +3566,7 @@ class CalculatorTests(TestCase):
         self.assertContains(response, 'href="https://max.ru/"')
         self.assertContains(response, 'aria-label="Написать в MAX"')
         self.assertContains(response, 'Позвонить')
+        self.assertContains(response, 'class="contact-float-toggle calculator-float-toggle"')
         self.assertContains(response, 'class="wordmark-name">Вкусно Да Сладко</span>')
         self.assertContains(response, 'class="wordmark-caption">Кондитерские изделия</span>')
         self.assertContains(response, 'class="site-intro-name">Вкусно Да Сладко</span>')
@@ -3518,7 +3580,6 @@ class CalculatorTests(TestCase):
         self.assertContains(partnership_response, "data-open-partnership-inquiry")
         self.assertContains(partnership_response, 'id="partnership-inquiry-modal"')
         self.assertContains(partnership_response, 'action="/feedback/quick/"')
-
         self.client.post(
             reverse("set_language"),
             {"language": "en", "next": reverse("home")},
@@ -3549,6 +3610,27 @@ class CalculatorTests(TestCase):
             self.client.get(reverse("corporate")),
             'data-brand="Vkusno Da Sladko"',
         )
+
+    def test_mobile_action_bar_renders_search_and_account_actions(self):
+        response = self.client.get("/")
+
+        self.assertContains(response, 'class="mobile-action-bar"')
+        self.assertContains(response, 'class="language-switch"')
+        self.assertContains(response, 'name="language" value="ru"')
+        self.assertContains(response, 'name="language" value="en"')
+        self.assertContains(response, 'querySelectorAll(".search-link")')
+        self.assertContains(response, 'href="/account/login/" aria-label="Войти в аккаунт"')
+
+    def test_calculator_floating_button_is_hidden_on_login_and_registration(self):
+        for path in ("/account/login/", "/account/register/"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(
+                    response,
+                    'class="contact-float-toggle calculator-float-toggle"',
+                )
+                self.assertContains(response, 'class="contact-float-menu"')
 
     def test_valid_preorder_is_saved_with_server_calculated_quote(self):
         response = self.client.post(
@@ -3670,6 +3752,22 @@ class CalculatorTests(TestCase):
 
 
 class HomePageCatalogTests(TestCase):
+    def test_cookie_notice_is_rendered_in_the_shared_layout(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="cookie-consent"')
+        self.assertContains(response, "Мы используем cookie")
+        self.assertContains(response, 'id="cookie-consent-accept"')
+        self.assertContains(response, "bakery_cookie_consent=accepted")
+
+        english_response = self.client.get(
+            reverse("home"),
+            HTTP_ACCEPT_LANGUAGE="en",
+        )
+        self.assertContains(english_response, "We use cookies needed to operate the site")
+        self.assertContains(english_response, ">Accept</button>")
+
     def test_about_page_renders_reference_sections_and_navigation_links(self):
         response = self.client.get(reverse("about"))
 

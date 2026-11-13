@@ -20,7 +20,6 @@ class PreorderAttachmentInline(admin.TabularInline):
 class PreorderContractInline(admin.StackedInline):
     model = PreorderContract
     extra = 0
-    max_num = 1
     readonly_fields = ("uploaded_at",)
 
 

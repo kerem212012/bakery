@@ -61,17 +61,50 @@
                         <div class="account-panel-heading">
                             <div><p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</p><h2>{% if LANGUAGE_CODE == 'en' %}Saved addresses{% else %}Сохранённые адреса{% endif %}</h2></div>
                         </div>
+                        {% if saved_addresses %}
+                            <ul class="saved-address-list">
+                                {% for address in saved_addresses %}
+                                    <li class="saved-address-card">
+                                        <p>{{ address.delivery_address }}</p>
+                                        <div class="saved-address-actions">
+                                            {% if address.is_default %}
+                                                <span class="saved-address-default">{% if LANGUAGE_CODE == 'en' %}Default{% else %}По умолчанию{% endif %}</span>
+                                            {% else %}
+                                                <form method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="action" value="default">
+                                                    <input type="hidden" name="address_id" value="{{ address.pk }}">
+                                                    <button class="saved-address-action" type="submit">{% if LANGUAGE_CODE == 'en' %}Make default{% else %}Сделать основным{% endif %}</button>
+                                                </form>
+                                            {% endif %}
+                                            <form method="post">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="address_id" value="{{ address.pk }}">
+                                                <button class="saved-address-action is-delete" type="submit">{% if LANGUAGE_CODE == 'en' %}Delete{% else %}Удалить{% endif %}</button>
+                                            </form>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="saved-address-help">{% if LANGUAGE_CODE == 'en' %}No saved addresses yet.{% else %}Сохранённых адресов пока нет.{% endif %}</p>
+                        {% endif %}
                         <form method="post" class="account-form saved-address-form">
                             {% csrf_token %}
+                            <input type="hidden" name="action" value="add">
                             <label class="account-form-field" for="{{ address_form.delivery_address.id_for_label }}">
-                                <span>{{ address_form.delivery_address.label }}</span>
+                                <span>{% if LANGUAGE_CODE == 'en' %}Add a delivery address{% else %}Добавить адрес доставки{% endif %}</span>
                                 {{ address_form.delivery_address }}
                             </label>
                             {% for error in address_form.delivery_address.errors %}
                                 <p class="account-form-error">{{ error }}</p>
                             {% endfor %}
-                            <p class="saved-address-help">{% if LANGUAGE_CODE == 'en' %}This address will be filled in automatically at checkout. You can change it in your cart.{% else %}Этот адрес будет автоматически подставляться при следующем оформлении заказа. Вы сможете изменить его в корзине.{% endif %}</p>
-                            <button class="button button-dark" type="submit">{% if LANGUAGE_CODE == 'en' %}Save address{% else %}Сохранить адрес{% endif %}</button>
+                            {% for error in address_form.non_field_errors %}
+                                <p class="account-form-error">{{ error }}</p>
+                            {% endfor %}
+                            <p class="saved-address-help">{% if LANGUAGE_CODE == 'en' %}Your default address is filled in at checkout. You can save multiple addresses and change the default at any time.{% else %}Основной адрес будет подставляться при оформлении заказа. Можно сохранить несколько адресов и в любой момент изменить основной.{% endif %}</p>
+                            <button class="button button-dark" type="submit">{% if LANGUAGE_CODE == 'en' %}Add address{% else %}Добавить адрес{% endif %}</button>
                         </form>
                     {% else %}
                     {% endif %}

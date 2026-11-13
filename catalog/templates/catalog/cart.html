@@ -8,6 +8,11 @@
         <header class="cart-page-heading">
             <h1>{% if LANGUAGE_CODE == 'en' %}Shopping cart{% else %}Корзина{% endif %}</h1>
             <span>{{ item_count }} {% if LANGUAGE_CODE == 'en' %}items{% else %}товара{% endif %}</span>
+            {% if items %}
+                <a class="cart-continue-shopping" href="{% url 'catalog:category_list' %}">
+                    {% if LANGUAGE_CODE == 'en' %}Continue shopping{% else %}Продолжить покупки{% endif %}
+                </a>
+            {% endif %}
         </header>
 
         {% if messages %}

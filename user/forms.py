@@ -1,19 +1,24 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    PasswordChangeForm,
+    UserCreationForm,
+)
+from django.utils.text import slugify
 from django.utils import timezone
 from django.utils.translation import get_language
 
-from .models import CustomerProfile
+from .models import CustomerDeliveryAddress, CustomerProfile
 
 
 User = get_user_model()
 
 
 class LoginForm(AuthenticationForm):
-    username = forms.CharField(
-        label="Логин",
-        widget=forms.TextInput(attrs={"autofocus": True, "autocomplete": "username"}),
+    username = forms.EmailField(
+        label="Электронная почта",
+        widget=forms.EmailInput(attrs={"autofocus": True, "autocomplete": "email"}),
     )
     password = forms.CharField(
         label="Пароль",
@@ -24,11 +29,23 @@ class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if get_language() == "en":
-            self.fields["username"].label = "Username"
+            self.fields["username"].label = "Email"
             self.fields["password"].label = "Password"
         else:
-            self.fields["username"].label = "Логин"
+            self.fields["username"].label = "Электронная почта"
             self.fields["password"].label = "Пароль"
+
+    def clean(self):
+        email = self.cleaned_data.get("username")
+        if email:
+            matching_usernames = list(
+                User.objects.filter(email__iexact=email).values_list(
+                    "username", flat=True
+                )[:2]
+            )
+            if len(matching_usernames) == 1:
+                self.cleaned_data["username"] = matching_usernames[0]
+        return super().clean()
 
 
 class RegistrationForm(UserCreationForm):
@@ -44,18 +61,11 @@ class RegistrationForm(UserCreationForm):
             "required": "Необходимо дать согласие на обработку персональных данных."
         },
     )
-    customer_type = forms.ChoiceField(
-        label="Тип клиента",
-        choices=CustomerProfile.CustomerType.choices,
-        initial=CustomerProfile.CustomerType.INDIVIDUAL,
-        widget=forms.RadioSelect,
-    )
-    company_name = forms.CharField(label="Название организации", max_length=200, required=False)
     inn = forms.RegexField(
         label="ИНН",
         regex=r"^\d{10}(?:\d{2})?$",
         max_length=12,
-        required=False,
+        required=True,
         error_messages={"invalid": "Введите 10 или 12 цифр."},
         widget=forms.TextInput(attrs={"inputmode": "numeric", "autocomplete": "off"}),
     )
@@ -67,22 +77,11 @@ class RegistrationForm(UserCreationForm):
         error_messages={"invalid": "Введите 9 цифр."},
         widget=forms.TextInput(attrs={"inputmode": "numeric", "autocomplete": "off"}),
     )
-    legal_address = forms.CharField(
-        label="Юридический адрес",
-        max_length=500,
-        required=False,
-        widget=forms.Textarea(attrs={"rows": 2, "autocomplete": "street-address"}),
-    )
-    contact_name = forms.CharField(label="Контактное лицо", max_length=200, required=False)
     phone = forms.CharField(
         label="Телефон",
         max_length=32,
-        required=False,
+        required=True,
         widget=forms.TextInput(attrs={"type": "tel", "autocomplete": "tel"}),
-    )
-    username = forms.CharField(
-        label="Логин",
-        help_text="До 150 символов: буквы, цифры и символы @ . + - _.",
     )
     password1 = forms.CharField(
         label="Пароль",
@@ -100,9 +99,8 @@ class RegistrationForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ("username", "first_name", "last_name", "email")
+        fields = ("first_name", "last_name", "email")
         labels = {
-            "username": "Логин",
             "first_name": "Имя",
             "last_name": "Фамилия",
         }
@@ -111,45 +109,31 @@ class RegistrationForm(UserCreationForm):
         super().__init__(*args, **kwargs)
         self.order_fields(
             (
-                "customer_type",
-                "username",
                 "first_name",
                 "last_name",
                 "email",
-                "password1",
-                "password2",
-                "company_name",
                 "inn",
                 "kpp",
-                "legal_address",
-                "contact_name",
                 "phone",
+                "password1",
+                "password2",
                 "agreement_accepted",
                 "personal_data_consent",
             )
         )
         if get_language() == "en":
             labels = {
-                "customer_type": "Customer type",
-                "username": "Username",
                 "first_name": "First name",
                 "last_name": "Last name",
                 "email": "Email",
                 "password1": "Password",
                 "password2": "Confirm password",
-                "company_name": "Company name",
                 "inn": "Tax ID",
                 "kpp": "Registration code",
-                "legal_address": "Registered address",
-                "contact_name": "Contact person",
                 "phone": "Phone",
                 "agreement_accepted": "I accept the User Agreement",
                 "personal_data_consent": "I consent to the processing of my personal data",
             }
-            self.fields["customer_type"].choices = (
-                ("individual", "Individual"),
-                ("legal_entity", "Business"),
-            )
             for field_name, label in labels.items():
                 self.fields[field_name].label = label
             self.fields["inn"].error_messages["invalid"] = "Enter 10 or 12 digits."
@@ -159,9 +143,6 @@ class RegistrationForm(UserCreationForm):
             )
             self.fields["personal_data_consent"].error_messages["required"] = (
                 "You must consent to the processing of your personal data."
-            )
-            self.fields["username"].help_text = (
-                "Up to 150 characters: letters, digits, and @ . + - _."
             )
             self.fields["password1"].help_text = (
                 "Use at least 8 characters and avoid a commonly used password."
@@ -181,38 +162,34 @@ class RegistrationForm(UserCreationForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if cleaned_data.get("customer_type") == CustomerProfile.CustomerType.LEGAL_ENTITY:
-            for field_name in (
-                "company_name",
-                "inn",
-                "kpp",
-                "legal_address",
-                "contact_name",
-                "phone",
-            ):
-                if not cleaned_data.get(field_name, "").strip():
-                    message = (
-                        "This field is required for business accounts."
-                        if get_language() == "en"
-                        else "Обязательное поле для юридического лица."
-                    )
-                    self.add_error(field_name, message)
+        for field_name in ("inn", "phone"):
+            if not cleaned_data.get(field_name, "").strip():
+                message = (
+                    "This field is required for business accounts."
+                    if get_language() == "en"
+                    else "Обязательное поле для юридического лица."
+                )
+                self.add_error(field_name, message)
         return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
+        username_base = slugify(user.email.partition("@")[0])[:140] or "customer"
+        username = username_base
+        suffix = 2
+        while User.objects.filter(username=username).exists():
+            username = f"{username_base[: 150 - len(str(suffix)) - 1]}-{suffix}"
+            suffix += 1
+        user.username = username
         if commit:
             user.save()
             self.save_m2m()
             accepted_at = timezone.now()
             CustomerProfile.objects.create(
                 user=user,
-                customer_type=self.cleaned_data["customer_type"],
-                company_name=self.cleaned_data.get("company_name", "").strip(),
+                customer_type=CustomerProfile.CustomerType.LEGAL_ENTITY,
                 inn=self.cleaned_data.get("inn", "").strip(),
                 kpp=self.cleaned_data.get("kpp", "").strip(),
-                legal_address=self.cleaned_data.get("legal_address", "").strip(),
-                contact_name=self.cleaned_data.get("contact_name", "").strip(),
                 phone=self.cleaned_data.get("phone", "").strip(),
                 terms_accepted_at=accepted_at,
                 personal_data_consent_at=accepted_at,
@@ -221,6 +198,13 @@ class RegistrationForm(UserCreationForm):
 
 
 class AccountProfileForm(forms.ModelForm):
+    phone = forms.CharField(
+        label="Телефон",
+        max_length=32,
+        required=False,
+        widget=forms.TextInput(attrs={"type": "tel", "autocomplete": "tel"}),
+    )
+
     class Meta:
         model = User
         fields = ("first_name", "last_name", "email")
@@ -236,6 +220,15 @@ class AccountProfileForm(forms.ModelForm):
             self.fields["first_name"].label = "First name"
             self.fields["last_name"].label = "Last name"
             self.fields["email"].label = "Email"
+            self.fields["phone"].label = "Phone"
+        if self.instance.pk:
+            self.initial.setdefault(
+                "phone",
+                CustomerProfile.objects.filter(user=self.instance)
+                .values_list("phone", flat=True)
+                .first()
+                or "",
+            )
         widgets = {
             "first_name": forms.TextInput(attrs={"autocomplete": "given-name"}),
             "last_name": forms.TextInput(attrs={"autocomplete": "family-name"}),
@@ -253,10 +246,42 @@ class AccountProfileForm(forms.ModelForm):
             raise forms.ValidationError(message)
         return email
 
+    def save(self, commit=True):
+        user = super().save(commit=commit)
+        if commit:
+            CustomerProfile.objects.update_or_create(
+                user=user,
+                defaults={"phone": self.cleaned_data["phone"].strip()},
+            )
+        return user
+
+
+class AccountPasswordChangeForm(PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        english = get_language() == "en"
+        labels = {
+            "old_password": "Current password" if english else "Текущий пароль",
+            "new_password1": "New password" if english else "Новый пароль",
+            "new_password2": (
+                "Confirm new password" if english else "Повторите новый пароль"
+            ),
+        }
+        autocomplete_values = {
+            "old_password": "current-password",
+            "new_password1": "new-password",
+            "new_password2": "new-password",
+        }
+        for field_name, label in labels.items():
+            self.fields[field_name].label = label
+            self.fields[field_name].widget.attrs["autocomplete"] = (
+                autocomplete_values[field_name]
+            )
+
 
 class DeliveryAddressForm(forms.ModelForm):
     class Meta:
-        model = CustomerProfile
+        model = CustomerDeliveryAddress
         fields = ("delivery_address",)
         labels = {"delivery_address": "Адрес доставки"}
         widgets = {
@@ -276,3 +301,20 @@ class DeliveryAddressForm(forms.ModelForm):
             self.fields["delivery_address"].widget.attrs["placeholder"] = (
                 "City, street, building, apartment, and preferred delivery time"
             )
+
+    def clean_delivery_address(self):
+        address = self.cleaned_data["delivery_address"].strip()
+        existing_addresses = CustomerDeliveryAddress.objects.filter(
+            profile=self.instance.profile,
+            delivery_address=address,
+        )
+        if self.instance.pk:
+            existing_addresses = existing_addresses.exclude(pk=self.instance.pk)
+        if existing_addresses.exists():
+            message = (
+                "This delivery address is already saved."
+                if get_language() == "en"
+                else "Этот адрес доставки уже сохранён."
+            )
+            raise forms.ValidationError(message)
+        return address

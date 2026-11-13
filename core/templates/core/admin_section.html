@@ -146,12 +146,9 @@
                         <p><strong>{% if LANGUAGE_CODE == 'en' %}Account{% else %}Аккаунт{% endif %}</strong>{{ object.user.get_username }}</p>
                         <p><strong>Email</strong><a href="mailto:{{ object.user.email }}">{{ object.user.email }}</a></p>
                         <p><strong>{% if LANGUAGE_CODE == 'en' %}Customer type{% else %}Тип клиента{% endif %}</strong>{{ object.get_customer_type_display }}</p>
-                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Company{% else %}Организация{% endif %}</strong>{{ object.company_name|default:"—" }}</p>
                         <p><strong>ИНН</strong>{{ object.inn|default:"—" }}</p>
                         <p><strong>КПП</strong>{{ object.kpp|default:"—" }}</p>
-                        <p><strong>{% if LANGUAGE_CODE == 'en' %}Contact{% else %}Контактное лицо{% endif %}</strong>{{ object.contact_name|default:"—" }}</p>
                         <p><strong>{% if LANGUAGE_CODE == 'en' %}Phone{% else %}Телефон{% endif %}</strong>{{ object.phone|default:"—" }}</p>
-                        <p class="site-content-record-wide"><strong>{% if LANGUAGE_CODE == 'en' %}Legal address{% else %}Юридический адрес{% endif %}</strong>{{ object.legal_address|default:"—" }}</p>
                         <p class="site-content-record-wide"><strong>{% if LANGUAGE_CODE == 'en' %}Delivery address{% else %}Адрес доставки{% endif %}</strong>{{ object.delivery_address|default:"—" }}</p>
                     </div>
                 </section>

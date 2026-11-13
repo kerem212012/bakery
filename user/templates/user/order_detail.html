@@ -127,11 +127,13 @@
                             <div><dt>{% if LANGUAGE_CODE == 'en' %}Recipient{% else %}Получатель{% endif %}</dt><dd>{{ order.name }}</dd></div>
                             <div><dt>{% if LANGUAGE_CODE == 'en' %}Phone{% else %}Телефон{% endif %}</dt><dd>{{ order.phone }}</dd></div>
                         </dl>
-                        {% if contract %}
+                        {% if contracts %}
                             <div class="account-order-contract">
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Contract{% else %}Договор{% endif %}</h3>
-                                <a href="{% url 'accounts:order_contract' order.pk %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Open PDF{% else %}Открыть PDF{% endif %}</a>
-                                <a href="{% url 'accounts:order_contract' order.pk %}?download=1">{% if LANGUAGE_CODE == 'en' %}Download{% else %}Скачать{% endif %}</a>
+                                {% for contract in contracts %}
+                                    <a href="{% url 'accounts:order_contract_file' order.pk contract.pk %}" target="_blank" rel="noopener">{% if LANGUAGE_CODE == 'en' %}Open PDF{% else %}Открыть PDF{% endif %} {{ forloop.counter }}</a>
+                                    <a href="{% url 'accounts:order_contract_file' order.pk contract.pk %}?download=1">{% if LANGUAGE_CODE == 'en' %}Download{% else %}Скачать{% endif %} {{ forloop.counter }}</a>
+                                {% endfor %}
                             </div>
                         {% endif %}
                     </section>

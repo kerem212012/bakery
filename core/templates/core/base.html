@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Prata&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=112">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=149">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -39,9 +39,21 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
                     {% if cart_item_count %}<span class="cart-header-count">{{ cart_item_count }}</span>{% endif %}
                 </a>
-                <a class="icon-link account-link" href="{% if user.is_authenticated %}{% url 'accounts:dashboard' %}{% else %}{% url 'accounts:login' %}{% endif %}" aria-label="{% if LANGUAGE_CODE == 'en' %}My account{% else %}Личный кабинет{% endif %}">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
-                </a>
+                {% if user.is_authenticated %}
+                    <a class="icon-link account-link" href="{% url 'accounts:dashboard' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}My account{% else %}Личный кабинет{% endif %}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+                    </a>
+                {% else %}
+                    <div class="account-menu-trigger">
+                        <span class="icon-link account-link" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+                        </span>
+                        <div class="account-menu-panel" role="menu" aria-label="{% if LANGUAGE_CODE == 'en' %}Account actions{% else %}Действия аккаунта{% endif %}">
+                            <a href="{% url 'accounts:login' %}">{% if LANGUAGE_CODE == 'en' %}Login{% else %}Войти{% endif %}</a>
+                            <a href="{% url 'accounts:register' %}">{% if LANGUAGE_CODE == 'en' %}Register{% else %}Регистрация{% endif %}</a>
+                        </div>
+                    </div>
+                {% endif %}
                 {% if user.is_staff %}
                     <div class="header-staff-links">
                         {% if perms.core.view_preorder or perms.core.view_feedbacksubmission %}
@@ -138,13 +150,6 @@
                     <span class="footer-brand-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
                 </a>
                 <p class="footer-tagline">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery products.{% else %}Вкусно Да Сладко — кондитерские изделия.{% endif %}</p>
-                <div class="social-links" aria-label="{% if LANGUAGE_CODE == 'en' %}Social media{% else %}Социальные сети{% endif %}">
-                    <span role="img" aria-label="Telegram">тг</span>
-                    <span role="img" aria-label="WhatsApp">wa</span>
-                    <span role="img" aria-label="VK">vk</span>
-                    <span role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Video{% else %}Видео{% endif %}">▶</span>
-                    <span role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Social network{% else %}Социальная сеть{% endif %}">◎</span>
-                </div>
                 <div class="footer-legal">
                     <span>© 2026 {% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko. All rights reserved.{% else %}Вкусно Да Сладко. Все права защищены.{% endif %}</span>
                     <span class="footer-legal-links">
@@ -157,6 +162,39 @@
             </div>
         </footer>
     </div>
+    <aside class="cookie-consent-banner" id="cookie-consent" aria-label="{% if LANGUAGE_CODE == 'en' %}Cookie notice{% else %}Уведомление о файлах cookie{% endif %}" hidden>
+        <p>
+            {% if LANGUAGE_CODE == 'en' %}
+                We use cookies needed to operate the site, including keeping your cart and sign-in session.
+                <a href="{% url 'privacy_policy' %}">Read our Privacy Policy</a>.
+            {% else %}
+                Мы используем cookie, необходимые для работы сайта, включая сохранение корзины и входа в аккаунт.
+                <a href="{% url 'privacy_policy' %}">Подробнее — в политике обработки персональных данных</a>.
+            {% endif %}
+        </p>
+        <button id="cookie-consent-accept" type="button">{% if LANGUAGE_CODE == 'en' %}Accept{% else %}Принять{% endif %}</button>
+    </aside>
+    <nav class="mobile-action-bar" aria-label="{% if LANGUAGE_CODE == 'en' %}Quick links{% else %}Быстрые ссылки{% endif %}">
+        <button class="icon-link search-link" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Open search{% else %}Открыть поиск{% endif %}" aria-controls="home-search-panel" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg>
+        </button>
+        <a class="icon-link" href="{% url 'accounts:favorites' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Favorites{% else %}Избранное{% endif %}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 8.8c0 4.2-8.4 10-8.4 10s-8.4-5.8-8.4-10a4.3 4.3 0 0 1 8.4-1.3 4.3 4.3 0 0 1 8.4 1.3Z"/></svg>
+        </a>
+        <a class="icon-link cart-header-link" href="{% url 'catalog:cart' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Cart, {{ cart_item_count }} items{% else %}Корзина, {{ cart_item_count }} товаров{% endif %}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+            {% if cart_item_count %}<span class="cart-header-count">{{ cart_item_count }}</span>{% endif %}
+        </a>
+        {% if user.is_authenticated %}
+            <a class="icon-link account-link" href="{% url 'accounts:dashboard' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}My account{% else %}Личный кабинет{% endif %}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+            </a>
+        {% else %}
+            <a class="icon-link account-link" href="{% url 'accounts:login' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Sign in{% else %}Войти в аккаунт{% endif %}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+            </a>
+        {% endif %}
+    </nav>
     <nav class="main-nav" id="navigation" aria-label="{% if LANGUAGE_CODE == 'en' %}Main navigation{% else %}Главная навигация{% endif %}" aria-hidden="true">
         <div class="desktop-nav-links">
             <a href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}Home{% else %}Главная{% endif %}</a>
@@ -213,13 +251,15 @@
     <button class="menu-backdrop" type="button" aria-label="{% if LANGUAGE_CODE == 'en' %}Close menu{% else %}Закрыть меню{% endif %}"></button>
     {% if request.path|slice:":13" != "/admin-panel/" and request.path|slice:":9" != "/manager/" %}
         <div class="contact-float" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact options{% else %}Способы связи{% endif %}">
-            <a class="contact-float-toggle calculator-float-toggle" href="{% url 'home' %}#calculator" aria-label="{% if LANGUAGE_CODE == 'en' %}Go to the price calculator{% else %}Перейти к калькулятору{% endif %}">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="5" y="3" width="14" height="18" rx="2"/>
-                    <path d="M8 7h8M8 11h2m4 0h2m-8 4h2m4 0h2m-8 3h2m4 0h2"/>
-                </svg>
-                <span>{% if LANGUAGE_CODE == 'en' %}Our products{% else %}Наша продукция{% endif %}</span>
-            </a>
+            {% if request.path != "/account/login/" and request.path != "/account/register/" %}
+                <a class="contact-float-toggle calculator-float-toggle" href="{% url 'home' %}#calculator" aria-label="{% if LANGUAGE_CODE == 'en' %}Go to the price calculator{% else %}Перейти к калькулятору{% endif %}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="5" y="3" width="14" height="18" rx="2"/>
+                        <path d="M8 7h8M8 11h2m4 0h2m-8 4h2m4 0h2m-8 3h2m4 0h2"/>
+                    </svg>
+                    <span>{% if LANGUAGE_CODE == 'en' %}Calculator here{% else %}Калькулятор тут{% endif %}</span>
+                </a>
+            {% endif %}
             <div class="contact-float-menu" id="contact-float-menu" aria-label="{% if LANGUAGE_CODE == 'en' %}Contact us via Telegram, WhatsApp, MAX, or phone{% else %}Связаться через Telegram, WhatsApp, MAX или звонок{% endif %}">
                 <div class="contact-float-options" id="contact-float-options">
                     <a class="contact-float-option contact-float-telegram" href="https://t.me/" target="_blank" rel="noopener noreferrer" aria-label="{% if LANGUAGE_CODE == 'en' %}Message us on Telegram{% else %}Написать в Telegram{% endif %}">
@@ -296,7 +336,7 @@
         const mainNavigation = document.querySelector("#navigation");
         const menuBackdrop = document.querySelector(".menu-backdrop");
         const menuClose = document.querySelector(".mobile-menu-close");
-        const searchToggle = document.querySelector(".search-link");
+        const searchToggles = document.querySelectorAll(".search-link");
         const siteSearchPanel = document.querySelector("#home-search-panel");
         const contactFloat = document.querySelector(".contact-float");
         const contactToggle = document.querySelector(".contact-float-toggle[type=\"button\"]");
@@ -323,8 +363,10 @@
         }
 
         function setSearchOpen(isOpen) {
-            searchToggle.setAttribute("aria-expanded", String(isOpen));
-            searchToggle.setAttribute("aria-label", isOpen ? interfaceText.closeSearch : interfaceText.openSearch);
+            searchToggles.forEach((searchToggle) => {
+                searchToggle.setAttribute("aria-expanded", String(isOpen));
+                searchToggle.setAttribute("aria-label", isOpen ? interfaceText.closeSearch : interfaceText.openSearch);
+            });
             siteSearchPanel.hidden = !isOpen;
             if (isOpen) siteSearchPanel.querySelector('input[type="search"]').focus();
         }
@@ -345,8 +387,10 @@
         });
         menuClose.addEventListener("click", () => setNavigationOpen(false));
         menuBackdrop.addEventListener("click", () => setNavigationOpen(false));
-        searchToggle.addEventListener("click", () => {
-            setSearchOpen(searchToggle.getAttribute("aria-expanded") !== "true");
+        searchToggles.forEach((searchToggle) => {
+            searchToggle.addEventListener("click", () => {
+                setSearchOpen(searchToggle.getAttribute("aria-expanded") !== "true");
+            });
         });
         mainNavigation.querySelectorAll("a").forEach((link) => {
             link.addEventListener("click", () => setNavigationOpen(false));
@@ -443,6 +487,24 @@
                 setContactMenuOpen(false);
             }
         });
+    </script>
+    <script>
+        const cookieConsent = document.getElementById("cookie-consent");
+        const cookieConsentAccept = document.getElementById("cookie-consent-accept");
+        const hasAcceptedCookies = document.cookie
+            .split("; ")
+            .some((cookie) => cookie === "bakery_cookie_consent=accepted");
+
+        if (cookieConsent && !hasAcceptedCookies) {
+            cookieConsent.hidden = false;
+        }
+        if (cookieConsent && cookieConsentAccept) {
+            cookieConsentAccept.addEventListener("click", () => {
+                const secureAttribute = location.protocol === "https:" ? "; Secure" : "";
+                document.cookie = `bakery_cookie_consent=accepted; Max-Age=31536000; Path=/; SameSite=Lax${secureAttribute}`;
+                cookieConsent.hidden = true;
+            });
+        }
     </script>
     {% block scripts %}{% endblock %}
 </body>

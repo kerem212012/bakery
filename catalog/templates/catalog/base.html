@@ -23,6 +23,10 @@
             });
         });
 
+        if (catalogGrid && window.matchMedia("(max-width: 760px), (pointer: coarse)").matches) {
+            document.querySelector('[data-catalog-view="list"]')?.click();
+        }
+
         const formatPrice = (amount) => new Intl.NumberFormat(document.documentElement.lang === "en" ? "en-US" : "ru-RU", {
             maximumFractionDigits: 0
         }).format(amount);

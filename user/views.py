@@ -1,11 +1,15 @@
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from catalog.cart_forms import (
@@ -19,8 +23,13 @@ from catalog.models import Product
 from core.calculator import DELIVERY_CHOICES, PAYMENT_CHOICES, localized_choices
 from core.models import Preorder, PreorderContract
 
-from .forms import AccountProfileForm, DeliveryAddressForm, RegistrationForm
-from .models import CustomerProfile
+from .forms import (
+    AccountPasswordChangeForm,
+    AccountProfileForm,
+    DeliveryAddressForm,
+    RegistrationForm,
+)
+from .models import CustomerDeliveryAddress, CustomerProfile
 
 
 def _orders_count_label(count, language_code="ru"):
@@ -125,6 +134,20 @@ def dashboard(request):
     orders = request.user.preorders.all()
     orders_count = orders.count()
     recent_orders = [_order_row(order, request.LANGUAGE_CODE) for order in orders[:3]]
+    year_orders_count = orders.filter(
+        created_at__gte=timezone.now() - timedelta(days=365)
+    ).count()
+    total_spent = orders.aggregate(total=Sum("total_price"))["total"] or Decimal("0.00")
+    next_delivery = (
+        orders.filter(
+            delivery_date__gte=timezone.localdate(),
+        )
+        .exclude(
+            status__in=(Preorder.Status.COMPLETED, Preorder.Status.CANCELLED),
+        )
+        .order_by("delivery_date", "created_at")
+        .first()
+    )
     saved_address = CustomerProfile.objects.filter(user=request.user).values_list(
         "delivery_address", flat=True
     ).first()
@@ -133,6 +156,9 @@ def dashboard(request):
         "user/dashboard.html",
         {
             "orders_count": orders_count,
+            "year_orders_count": year_orders_count,
+            "total_spent": total_spent,
+            "next_delivery": next_delivery,
             "orders_count_label": _orders_count_label(orders_count, request.LANGUAGE_CODE),
             "recent_orders": recent_orders,
             "saved_address_label": (
@@ -173,7 +199,7 @@ def orders(request):
 @login_required
 def order_detail(request, order_id):
     order = get_object_or_404(
-        Preorder.objects.select_related("contract"),
+        Preorder.objects.prefetch_related("contracts"),
         pk=order_id,
         user=request.user,
     )
@@ -302,12 +328,11 @@ def order_detail(request, order_id):
     show_order_confirmation = (
         request.session.pop("order_confirmation_id", None) == order.pk
     )
-    contract = None
-    if order.payment_status == Preorder.PaymentStatus.PAID:
-        try:
-            contract = order.contract
-        except PreorderContract.DoesNotExist:
-            pass
+    contracts = (
+        list(order.contracts.all())
+        if order.payment_status == Preorder.PaymentStatus.PAID
+        else []
+    )
 
     return render(
         request,
@@ -321,7 +346,7 @@ def order_detail(request, order_id):
             "payment_label": payment_label,
             "order_status_label": order_status_label,
             "payment_status_label": payment_status_label,
-            "contract": contract,
+            "contracts": contracts,
             "show_order_confirmation": show_order_confirmation,
             "status_stages": [
                 {
@@ -337,8 +362,8 @@ def order_detail(request, order_id):
 
 
 @login_required
-def order_contract(request, order_id):
-    orders = Preorder.objects.select_related("contract")
+def order_contract(request, order_id, contract_id=None):
+    orders = Preorder.objects.all()
     if request.user.is_staff and request.user.has_perm("core.view_preorder"):
         order = get_object_or_404(orders, pk=order_id)
     else:
@@ -348,7 +373,12 @@ def order_contract(request, order_id):
             user=request.user,
             payment_status=Preorder.PaymentStatus.PAID,
         )
-    contract = get_object_or_404(PreorderContract, preorder=order)
+    contracts = PreorderContract.objects.filter(preorder=order)
+    contract = (
+        get_object_or_404(contracts, pk=contract_id)
+        if contract_id is not None
+        else get_object_or_404(contracts.order_by("-uploaded_at"))
+    )
     return FileResponse(
         contract.file.open("rb"),
         as_attachment=request.GET.get("download") == "1",
@@ -373,23 +403,93 @@ def favorites(request):
 @login_required
 def addresses(request):
     profile, _ = CustomerProfile.objects.get_or_create(user=request.user)
-    form = DeliveryAddressForm(request.POST or None, instance=profile)
+    form = DeliveryAddressForm(
+        instance=CustomerDeliveryAddress(profile=profile),
+    )
     if request.method == "POST":
-        if form.is_valid():
-            form.save()
-            message = (
-                "Delivery address saved."
-                if request.LANGUAGE_CODE == "en"
-                else "Адрес доставки сохранён."
+        action = request.POST.get("action", "add")
+        if action == "add":
+            form = DeliveryAddressForm(
+                request.POST,
+                instance=CustomerDeliveryAddress(profile=profile),
             )
-            messages.success(request, message)
+            if form.is_valid():
+                address = form.save(commit=False)
+                address.is_default = not profile.delivery_addresses.exists()
+                address.save()
+                if address.is_default:
+                    profile.delivery_address = address.delivery_address
+                    profile.save(update_fields=("delivery_address",))
+                message = (
+                    "Delivery address added."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Адрес доставки добавлен."
+                )
+                messages.success(request, message)
+                return redirect("accounts:addresses")
+        elif action == "default":
+            address = get_object_or_404(
+                CustomerDeliveryAddress,
+                pk=request.POST.get("address_id"),
+                profile=profile,
+            )
+            with transaction.atomic():
+                CustomerDeliveryAddress.objects.filter(
+                    profile=profile,
+                    is_default=True,
+                ).exclude(pk=address.pk).update(is_default=False)
+                if not address.is_default:
+                    address.is_default = True
+                    address.save(update_fields=("is_default",))
+                profile.delivery_address = address.delivery_address
+                profile.save(update_fields=("delivery_address",))
+            messages.success(
+                request,
+                "Default delivery address updated."
+                if request.LANGUAGE_CODE == "en"
+                else "Адрес по умолчанию изменён.",
+            )
             return redirect("accounts:addresses")
-        message = (
-            "Could not save the address. Check the field and try again."
-            if request.LANGUAGE_CODE == "en"
-            else "Не удалось сохранить адрес. Проверьте поле и попробуйте снова."
-        )
-        messages.error(request, message)
+        elif action == "delete":
+            address = get_object_or_404(
+                CustomerDeliveryAddress,
+                pk=request.POST.get("address_id"),
+                profile=profile,
+            )
+            was_default = address.is_default
+            with transaction.atomic():
+                address.delete()
+                if was_default:
+                    replacement = profile.delivery_addresses.first()
+                    if replacement:
+                        replacement.is_default = True
+                        replacement.save(update_fields=("is_default",))
+                        profile.delivery_address = replacement.delivery_address
+                    else:
+                        profile.delivery_address = ""
+                    profile.save(update_fields=("delivery_address",))
+            messages.success(
+                request,
+                "Delivery address deleted."
+                if request.LANGUAGE_CODE == "en"
+                else "Адрес доставки удалён.",
+            )
+            return redirect("accounts:addresses")
+        else:
+            messages.error(
+                request,
+                "Choose a valid address action."
+                if request.LANGUAGE_CODE == "en"
+                else "Выберите допустимое действие с адресом.",
+            )
+
+        if form.errors:
+            messages.error(
+                request,
+                "Could not add the address. Check the field and try again."
+                if request.LANGUAGE_CODE == "en"
+                else "Не удалось добавить адрес. Проверьте поле и попробуйте снова.",
+            )
 
     return render(
         request,
@@ -404,19 +504,46 @@ def addresses(request):
                 else "Адреса для будущих заказов."
             ),
             "address_form": form,
+            "saved_addresses": profile.delivery_addresses.all(),
         },
     )
 
 
 @login_required
 def profile(request):
+    is_password_post = (
+        request.method == "POST"
+        and request.POST.get("action") == "change_password"
+    )
     form = AccountProfileForm(
-        request.POST or None,
+        request.POST if request.method == "POST" and not is_password_post else None,
         instance=request.user,
         prefix="profile",
     )
+    password_form = AccountPasswordChangeForm(
+        request.user,
+        request.POST if is_password_post else None,
+        prefix="password",
+    )
     if request.method == "POST":
-        if form.is_valid():
+        if is_password_post:
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                message = (
+                    "Password changed."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Пароль изменён."
+                )
+                messages.success(request, message)
+                return redirect("accounts:profile")
+            message = (
+                "Please check the password details and try again."
+                if request.LANGUAGE_CODE == "en"
+                else "Проверьте данные пароля и попробуйте ещё раз."
+            )
+            messages.error(request, message)
+        elif form.is_valid():
             form.save()
             message = (
                 "Profile details saved."
@@ -425,15 +552,20 @@ def profile(request):
             )
             messages.success(request, message)
             return redirect("accounts:profile")
-        message = (
-            "Please check your profile details and try again."
-            if request.LANGUAGE_CODE == "en"
-            else "Проверьте данные профиля и попробуйте ещё раз."
-        )
-        messages.error(request, message)
+        else:
+            message = (
+                "Please check your profile details and try again."
+                if request.LANGUAGE_CODE == "en"
+                else "Проверьте данные профиля и попробуйте ещё раз."
+            )
+            messages.error(request, message)
 
     return render(
         request,
         "user/profile.html",
-        {"account_active": "profile", "profile_form": form},
+        {
+            "account_active": "profile",
+            "profile_form": form,
+            "password_form": password_form,
+        },
     )
