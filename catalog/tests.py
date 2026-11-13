@@ -499,6 +499,14 @@ class CatalogPageTests(TestCase):
         )
         self.assertContains(response, 'aria-label="Выберите покрытие"')
         self.assertContains(response, 'aria-label="Выберите упаковку"')
+        self.assertContains(response, 'aria-controls="product-panel-description"')
+        self.assertContains(response, 'aria-controls="product-panel-ingredients"')
+        self.assertContains(response, 'id="product-panel-delivery"')
+        self.assertContains(response, 'id="product-panel-payment"')
+        self.assertContains(response, 'id="product-panel-reviews"')
+        self.assertContains(response, "Точный состав и информацию об аллергенах")
+        self.assertContains(response, "Доступные способы оплаты")
+        self.assertContains(response, "Отзывы о товарах пока не опубликованы")
 
     def test_catalog_shows_admin_descriptions_next_to_filter_options(self):
         ProductFilterOption.objects.update_or_create(

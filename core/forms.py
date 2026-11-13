@@ -3,6 +3,7 @@ from pathlib import Path
 from django import forms
 from django.forms import BaseModelFormSet
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 from django.utils.text import slugify
 from django.utils.translation import get_language
 
@@ -1939,6 +1940,28 @@ class PackagingCardForm(BusinessClientsSectionFormMixin, forms.ModelForm):
 
 
 class CatalogPromoCardForm(BusinessClientsSectionFormMixin, forms.ModelForm):
+    CUSTOM_URL_OPTION = "__custom_url__"
+
+    url = forms.ChoiceField(
+        choices=(),
+        required=False,
+        widget=forms.Select(
+            attrs={
+                "class": "site-content-form-control",
+                "data-promo-destination": "true",
+                "data-custom-value": CUSTOM_URL_OPTION,
+            }
+        ),
+    )
+    custom_url = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "site-content-form-control",
+                "autocomplete": "url",
+            }
+        ),
+    )
     display_order = forms.IntegerField(
         min_value=1,
         widget=forms.NumberInput(
@@ -1969,7 +1992,6 @@ class CatalogPromoCardForm(BusinessClientsSectionFormMixin, forms.ModelForm):
             "description_en": forms.Textarea(
                 attrs={"class": "site-content-form-control", "rows": 3}
             ),
-            "url": forms.TextInput(attrs={"class": "site-content-form-control"}),
             "image": forms.ClearableFileInput(
                 attrs={
                     "class": "site-content-form-control",
@@ -1983,12 +2005,84 @@ class CatalogPromoCardForm(BusinessClientsSectionFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        english = (get_language() or "").startswith("en")
+        page_choices = (
+            ("home", "Главная", "Home"),
+            ("about", "О нас", "About"),
+            ("business_clients", "Корпоративным клиентам", "Business clients"),
+            ("corporate", "Сотрудничество", "Partnership"),
+            ("contacts", "Контакты", "Contacts"),
+            ("delivery", "Доставка", "Delivery"),
+            ("faq", "Вопросы и ответы", "FAQ"),
+            ("feedback", "Обратная связь", "Feedback"),
+            ("packaging", "Упаковка", "Packaging"),
+            ("catalog:category_list", "Каталог", "Catalog"),
+            ("catalog:categories", "Категории", "Categories"),
+        )
+        destinations = [
+            (reverse(route_name), english_label if english else russian_label)
+            for route_name, russian_label, english_label in page_choices
+        ]
+        self.fields["url"].choices = [
+            ("", "Choose a page" if english else "Выберите страницу"),
+            *destinations,
+            (
+                self.CUSTOM_URL_OPTION,
+                "Custom or external URL" if english else "Своя или внешняя ссылка",
+            ),
+        ]
+        self.fields["url"].label = (
+            "Button destination" if english else "Куда ведёт кнопка"
+        )
+        self.fields["custom_url"].label = (
+            "Custom or external URL" if english else "Своя или внешняя ссылка"
+        )
+        self.order_fields(
+            (
+                "title",
+                "title_en",
+                "description",
+                "description_en",
+                "url",
+                "custom_url",
+                "image",
+                "display_order",
+                "is_active",
+            )
+        )
+        if self.instance.pk and not self.is_bound:
+            current_url = self.instance.url
+            page_urls = {value for value, _label in destinations}
+            if current_url in page_urls:
+                self.initial["url"] = current_url
+            elif current_url:
+                self.initial["url"] = self.CUSTOM_URL_OPTION
+                self.initial["custom_url"] = current_url
+            else:
+                self.initial["url"] = ""
         if self.instance.pk:
             self.initial["display_order"] = self.instance.display_order + 1
-        if (get_language() or "").startswith("en"):
+        if english:
             self.fields["display_order"].label = "Display order"
         else:
             self.fields["display_order"].label = "Порядок отображения"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("url") == self.CUSTOM_URL_OPTION:
+            custom_url = cleaned_data.get("custom_url", "").strip()
+            if custom_url:
+                cleaned_data["url"] = custom_url
+            else:
+                self.add_error(
+                    "custom_url",
+                    (
+                        "Enter a URL."
+                        if (get_language() or "").startswith("en")
+                        else "Введите ссылку."
+                    ),
+                )
+        return cleaned_data
 
     def save(self, commit=True):
         promo = super().save(commit=False)

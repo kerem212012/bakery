@@ -7973,6 +7973,10 @@ a.catalog-all-link:hover {
     line-height: 1.7;
 }
 
+.tab-panel[hidden] {
+    display: none;
+}
+
 .related-products {
     margin-top: 40px;
 }
@@ -9478,6 +9482,10 @@ a.catalog-all-link:hover {
 .form-field {
     display: grid;
     gap: 7px;
+}
+
+.site-content-form-field[hidden] {
+    display: none;
 }
 
 .form-field label {

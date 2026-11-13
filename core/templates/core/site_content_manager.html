@@ -180,12 +180,12 @@
                         <h2>{% if LANGUAGE_CODE == 'en' %}Catalog — promo grid{% else %}Каталог — промо-карточки{% endif %}</h2>
                         <p>{% if LANGUAGE_CODE == 'en' %}Edit, reorder, publish, or remove promo cards. The final blank form adds a card.{% else %}Редактируйте, сортируйте, публикуйте или удаляйте промо-карточки. Последняя пустая форма добавляет карточку.{% endif %}</p>
                         {% for promo_form in catalog_promo_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-promo-card>
                                 {% for hidden in promo_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if forloop.last and not promo_form.instance.pk %}{% if LANGUAGE_CODE == 'en' %}Add promo card{% else %}Добавить промо-карточку{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Promo card {{ forloop.counter }}{% else %}Промо-карточка {{ forloop.counter }}{% endif %}{% endif %}</h3>
                                 <div class="site-content-form-grid">
                                     {% for field in promo_form.visible_fields %}
-                                        <div class="site-content-form-field{% if field.name == 'is_active' or field.name == 'DELETE' %} site-content-published{% endif %}">
+                                        <div class="site-content-form-field{% if field.name == 'is_active' or field.name == 'DELETE' %} site-content-published{% endif %}"{% if field.name == 'custom_url' %} data-promo-custom-field{% if promo_form.url.value != '__custom_url__' %} hidden{% endif %}{% endif %}>
                                             {% if field.name == 'is_active' or field.name == 'DELETE' %}
                                                 <label>{{ field }}<span>{{ field.label }}</span></label>
                                             {% else %}
@@ -928,4 +928,23 @@
 
         {% endif %}
     </section>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script>
+        (() => {
+            document.querySelectorAll("[data-promo-destination]").forEach((destination) => {
+                const promoCard = destination.closest("[data-promo-card]");
+                const customUrlField = promoCard?.querySelector("[data-promo-custom-field]");
+                if (!customUrlField) return;
+
+                const syncCustomUrlVisibility = () => {
+                    customUrlField.hidden = destination.value !== destination.dataset.customValue;
+                };
+                destination.addEventListener("change", syncCustomUrlVisibility);
+                syncCustomUrlVisibility();
+            });
+        })();
+    </script>
 {% endblock %}

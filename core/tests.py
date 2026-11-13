@@ -14,6 +14,7 @@ from PIL import Image
 
 from catalog.models import Category, Product, ProductFilterOption
 from .calculator import calculate_quote
+from .forms import CatalogPromoCardForm
 from .models import (
     CalculatorSettings,
     FeedbackSubmission,
@@ -1247,6 +1248,12 @@ class AdminDashboardTests(TestCase):
         self.assertEqual(formset.initial_form_count(), 3)
         self.assertContains(editor_response, "Каталог — промо-карточки")
         self.assertContains(editor_response, "Добавить промо-карточку")
+        self.assertIsInstance(formset.forms[0].fields["url"].widget, forms.Select)
+        self.assertIn(
+            reverse("business_clients"),
+            {value for value, _label in formset.forms[0].fields["url"].choices},
+        )
+        self.assertContains(editor_response, "Своя или внешняя ссылка")
 
         post_data = {
             "page": page,
@@ -1277,14 +1284,16 @@ class AdminDashboardTests(TestCase):
                 f"{formset.prefix}-0-title_en": "Updated offer",
                 f"{formset.prefix}-0-description": "Описание предложения.",
                 f"{formset.prefix}-0-description_en": "Offer description.",
-                f"{formset.prefix}-0-url": "/updated-offer/",
+                f"{formset.prefix}-0-url": CatalogPromoCardForm.CUSTOM_URL_OPTION,
+                f"{formset.prefix}-0-custom_url": "/updated-offer/",
                 f"{formset.prefix}-0-display_order": "2",
                 f"{formset.prefix}-1-display_order": "1",
                 f"{formset.prefix}-{new_index}-title": "Новое предложение",
                 f"{formset.prefix}-{new_index}-title_en": "New offer",
                 f"{formset.prefix}-{new_index}-description": "Описание новой акции.",
                 f"{formset.prefix}-{new_index}-description_en": "New offer description.",
-                f"{formset.prefix}-{new_index}-url": "/new-offer/",
+                f"{formset.prefix}-{new_index}-url": reverse("business_clients"),
+                f"{formset.prefix}-{new_index}-custom_url": "",
                 f"{formset.prefix}-{new_index}-display_order": "3",
                 f"{formset.prefix}-{new_index}-is_active": "on",
             }
@@ -1303,7 +1312,7 @@ class AdminDashboardTests(TestCase):
             [
                 ("Мастер-классы", 0, "mailto:info@lukomorye.ru?subject=Мастер-класс"),
                 ("Обновлённое предложение", 1, "/updated-offer/"),
-                ("Новое предложение", 2, "/new-offer/"),
+                ("Новое предложение", 2, reverse("business_clients")),
             ],
         )
 
@@ -1312,7 +1321,7 @@ class AdminDashboardTests(TestCase):
         self.assertContains(public_response, "Описание предложения.")
         self.assertContains(public_response, 'href="/updated-offer/"')
         self.assertContains(public_response, "Новое предложение")
-        self.assertContains(public_response, 'href="/new-offer/"')
+        self.assertContains(public_response, 'href="/business-clients/"')
         self.assertNotContains(public_response, "Пряники с логотипом")
 
     def test_business_client_contacts_can_be_edited_from_all_pages(self):

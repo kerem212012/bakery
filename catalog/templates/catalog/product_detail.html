@@ -66,9 +66,7 @@
                 <p class="product-summary">{{ product.localized_description|default_if_none:"" }}{% if not product.localized_description %}{% if LANGUAGE_CODE == 'en' %}Delicate handmade gingerbread with exquisite decoration, perfect for special occasions.{% else %}Нежные пряники ручной работы с изысканной росписью. Идеальный подарок для особых моментов.{% endif %}{% endif %}</p>
 
                 <div class="product-rating-row">
-                    <div class="stars" aria-label="{% if LANGUAGE_CODE == 'en' %}Rating 4.9 out of 5{% else %}Рейтинг 4.9 из 5{% endif %}">★★★★★</div>
-                    <span class="rating-value">4.9</span>
-                    <span class="rating-meta">{% if LANGUAGE_CODE == 'en' %}(32 reviews){% else %}(32 отзыва){% endif %}</span>
+                    <a class="rating-meta" href="{% url 'feedback' %}">{% if LANGUAGE_CODE == 'en' %}Leave feedback{% else %}Оставить отзыв{% endif %}</a>
                     <span class="product-article">{% if LANGUAGE_CODE == 'en' %}SKU:{% else %}Артикул:{% endif %} 00123</span>
                 </div>
 
@@ -183,21 +181,27 @@
 
         <div class="product-tabs" aria-label="{% if LANGUAGE_CODE == 'en' %}Product description{% else %}Описание товара{% endif %}">
             <div class="tab-list" role="tablist" aria-label="{% if LANGUAGE_CODE == 'en' %}Product information{% else %}Информация о товаре{% endif %}">
-                <button class="tab-button is-active" type="button" role="tab" aria-selected="true">{% if LANGUAGE_CODE == 'en' %}Description{% else %}Описание{% endif %}</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false">{% if LANGUAGE_CODE == 'en' %}Ingredients{% else %}Состав{% endif %}</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false">{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false">{% if LANGUAGE_CODE == 'en' %}Payment{% else %}Оплата{% endif %}</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false">{% if LANGUAGE_CODE == 'en' %}Reviews (32){% else %}Отзывы (32){% endif %}</button>
+                <button id="product-tab-description" class="tab-button is-active" type="button" role="tab" aria-controls="product-panel-description" aria-selected="true" tabindex="0">{% if LANGUAGE_CODE == 'en' %}Description{% else %}Описание{% endif %}</button>
+                <button id="product-tab-ingredients" class="tab-button" type="button" role="tab" aria-controls="product-panel-ingredients" aria-selected="false" tabindex="-1">{% if LANGUAGE_CODE == 'en' %}Ingredients{% else %}Состав{% endif %}</button>
+                <button id="product-tab-delivery" class="tab-button" type="button" role="tab" aria-controls="product-panel-delivery" aria-selected="false" tabindex="-1">{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</button>
+                <button id="product-tab-payment" class="tab-button" type="button" role="tab" aria-controls="product-panel-payment" aria-selected="false" tabindex="-1">{% if LANGUAGE_CODE == 'en' %}Payment{% else %}Оплата{% endif %}</button>
+                <button id="product-tab-reviews" class="tab-button" type="button" role="tab" aria-controls="product-panel-reviews" aria-selected="false" tabindex="-1">{% if LANGUAGE_CODE == 'en' %}Reviews{% else %}Отзывы{% endif %}</button>
             </div>
 
-            <div class="tab-panel">
-                <p>
-                    {% if LANGUAGE_CODE == 'en' %}Handmade heart-shaped gingerbread with delicate floral icing.
-                    Made with natural ingredients and careful attention to every detail.
-                    A lovely choice for gifts, corporate sets, and special occasions.{% else %}Пряники ручной работы в форме сердца с нежной цветочной росписью.
-                    Выполнены из натуральных ингредиентов, с любовью и вниманием к деталям.
-                    Подходят для подарков, корпоративных наборов и особых событий.{% endif %}
-                </p>
+            <div id="product-panel-description" class="tab-panel" role="tabpanel" aria-labelledby="product-tab-description" tabindex="0">
+                <p>{{ product.localized_description|default_if_none:"" }}{% if not product.localized_description %}{% if LANGUAGE_CODE == 'en' %}Handmade confectionery, carefully prepared for your special occasion.{% else %}Кондитерское изделие ручной работы, созданное для особого случая.{% endif %}{% endif %}</p>
+            </div>
+            <div id="product-panel-ingredients" class="tab-panel" role="tabpanel" aria-labelledby="product-tab-ingredients" tabindex="0" hidden>
+                <p>{% if LANGUAGE_CODE == 'en' %}For exact ingredients and allergen information for this product, please contact us before ordering.{% else %}Точный состав и информацию об аллергенах уточните у нас перед оформлением заказа.{% endif %} <a href="{% url 'contacts' %}">{% if LANGUAGE_CODE == 'en' %}Contact us{% else %}Связаться с нами{% endif %}</a>.</p>
+            </div>
+            <div id="product-panel-delivery" class="tab-panel" role="tabpanel" aria-labelledby="product-tab-delivery" tabindex="0" hidden>
+                <p>{% if LANGUAGE_CODE == 'en' %}See available delivery and pickup options on our delivery page.{% else %}Варианты доставки и самовывоза смотрите на странице доставки.{% endif %} <a href="{% url 'delivery' %}">{% if LANGUAGE_CODE == 'en' %}Delivery information{% else %}Информация о доставке{% endif %}</a>.</p>
+            </div>
+            <div id="product-panel-payment" class="tab-panel" role="tabpanel" aria-labelledby="product-tab-payment" tabindex="0" hidden>
+                <p>{% if LANGUAGE_CODE == 'en' %}Available payment methods are shown during checkout after you add the product to your cart.{% else %}Доступные способы оплаты будут показаны при оформлении заказа после добавления товара в корзину.{% endif %}</p>
+            </div>
+            <div id="product-panel-reviews" class="tab-panel" role="tabpanel" aria-labelledby="product-tab-reviews" tabindex="0" hidden>
+                <p>{% if LANGUAGE_CODE == 'en' %}Product reviews are not available yet. You can send us your feedback through the feedback form.{% else %}Отзывы о товарах пока не опубликованы. Вы можете написать нам через форму обратной связи.{% endif %} <a href="{% url 'feedback' %}">{% if LANGUAGE_CODE == 'en' %}Send feedback{% else %}Оставить отзыв{% endif %}</a>.</p>
             </div>
         </div>
 
@@ -225,4 +229,49 @@
             </div>
         {% endif %}
     </section>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script>
+        (() => {
+            const tabList = document.querySelector(".product-tabs [role='tablist']");
+            if (!tabList) return;
+
+            const tabs = Array.from(tabList.querySelectorAll("[role='tab']"));
+            const activateTab = (selectedTab, focus = false) => {
+                tabs.forEach((tab) => {
+                    const selected = tab === selectedTab;
+                    tab.classList.toggle("is-active", selected);
+                    tab.setAttribute("aria-selected", String(selected));
+                    tab.tabIndex = selected ? 0 : -1;
+                    const panel = document.getElementById(tab.getAttribute("aria-controls"));
+                    if (panel) panel.hidden = !selected;
+                });
+                if (focus) selectedTab.focus();
+            };
+
+            tabs.forEach((tab) => {
+                tab.addEventListener("click", () => activateTab(tab));
+            });
+            tabList.addEventListener("keydown", (event) => {
+                const currentIndex = tabs.indexOf(document.activeElement);
+                if (currentIndex < 0) return;
+                let nextIndex;
+                if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                    nextIndex = (currentIndex + 1) % tabs.length;
+                } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                    nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+                } else if (event.key === "Home") {
+                    nextIndex = 0;
+                } else if (event.key === "End") {
+                    nextIndex = tabs.length - 1;
+                } else {
+                    return;
+                }
+                event.preventDefault();
+                activateTab(tabs[nextIndex], true);
+            });
+        })();
+    </script>
 {% endblock %}
