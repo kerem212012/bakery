@@ -185,6 +185,13 @@ LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'accounts:dashboard'
 LOGOUT_REDIRECT_URL = 'home'
 
+REGISTRATION_EMAIL_VERIFICATION_REQUIRED = (
+    os.environ.get("REGISTRATION_EMAIL_VERIFICATION_REQUIRED", "False")
+    .strip()
+    .lower()
+    in {"1", "true", "yes", "on"}
+)
+
 EMAIL_BACKEND = os.environ.get(
     "EMAIL_BACKEND",
     "django.core.mail.backends.console.EmailBackend",

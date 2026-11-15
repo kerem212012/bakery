@@ -1,9 +1,15 @@
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model, login, update_session_auth_hash
+from django.contrib.auth import (
+    authenticate,
+    get_user_model,
+    login,
+    update_session_auth_hash,
+)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.db import transaction
@@ -149,16 +155,43 @@ def register(request):
     form = RegistrationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         user = form.save()
-        user.is_active = False
-        user.save(update_fields=("is_active",))
-        _send_verification_email(request, user)
-        message = (
-            "We sent a verification link to your email. Please confirm it to finish registration."
-            if request.LANGUAGE_CODE == "en"
-            else "Мы отправили ссылку для подтверждения на вашу почту. Подтвердите её, чтобы завершить регистрацию."
+        if settings.REGISTRATION_EMAIL_VERIFICATION_REQUIRED:
+            user.is_active = False
+            user.save(update_fields=("is_active",))
+            _send_verification_email(request, user)
+            message = (
+                "We sent a verification link to your email. Please confirm it to finish registration."
+                if request.LANGUAGE_CODE == "en"
+                else "Мы отправили ссылку для подтверждения на вашу почту. Подтвердите её, чтобы завершить регистрацию."
+            )
+            messages.info(request, message)
+            return redirect(reverse("accounts:email_verification_sent"))
+
+        authenticated_user = authenticate(
+            request,
+            username=user.username,
+            password=form.cleaned_data["password1"],
         )
-        messages.info(request, message)
-        return redirect(reverse("accounts:email_verification_sent"))
+        if authenticated_user is not None:
+            login(request, authenticated_user)
+            messages.success(
+                request,
+                "Your account has been created."
+                if request.LANGUAGE_CODE == "en"
+                else "Аккаунт успешно создан.",
+            )
+            return redirect(next_url or reverse("accounts:dashboard"))
+
+        messages.success(
+            request,
+            "Your account has been created. Please sign in."
+            if request.LANGUAGE_CODE == "en"
+            else "Аккаунт создан. Теперь войдите в него.",
+        )
+        login_url = reverse("accounts:login")
+        if next_url:
+            login_url = f"{login_url}?{urlencode({'next': next_url})}"
+        return redirect(login_url)
 
     return render(request, "user/register.html", {"form": form, "next": next_url})
 

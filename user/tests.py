@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes
@@ -424,7 +424,7 @@ class AccountTests(TestCase):
                 self.assertContains(response, title)
                 self.assertContains(response, "Проект документа")
 
-    def test_registration_creates_unverified_user_and_sends_email(self):
+    def test_registration_creates_active_user_without_sending_verification_email(self):
         response = self.client.post(
             "/account/register/",
             {
@@ -442,9 +442,9 @@ class AccountTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
+        self.assertRedirects(response, reverse("accounts:dashboard"))
         user = User.objects.get(email="anna@example.com")
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
         self.assertEqual(user.username, "anna")
         self.assertEqual(user.email, "anna@example.com")
         self.assertEqual(
@@ -457,8 +457,26 @@ class AccountTests(TestCase):
             user.customer_profile.terms_accepted_at,
             user.customer_profile.personal_data_consent_at,
         )
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(str(self.client.session["_auth_user_id"]), str(user.pk))
+
+    @override_settings(REGISTRATION_EMAIL_VERIFICATION_REQUIRED=True)
+    def test_registration_can_require_email_verification_when_enabled(self):
+        response = self.client.post(
+            reverse("accounts:register"),
+            {
+                "email": "verification-enabled@example.com",
+                "password1": "A-long-password-482!",
+                "password2": "A-long-password-482!",
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
+            },
+        )
+
+        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
+        user = User.objects.get(email="verification-enabled@example.com")
+        self.assertFalse(user.is_active)
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn("Подтвердите адрес электронной почты", mail.outbox[0].subject)
         self.assertIn("/verify-email/", mail.outbox[0].body)
 
     def test_email_verification_activates_the_account(self):
@@ -530,10 +548,11 @@ class AccountTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
+        self.assertRedirects(response, cart_url)
         self.assertEqual(self.client.session["cart"][item_id]["quantity"], 1)
-        self.assertFalse(User.objects.get(email="returning-cart@example.com").is_active)
-        self.assertNotIn("_auth_user_id", self.client.session)
+        user = User.objects.get(email="returning-cart@example.com")
+        self.assertTrue(user.is_active)
+        self.assertEqual(str(self.client.session["_auth_user_id"]), str(user.pk))
 
     def test_only_order_owner_and_order_managers_can_access_contract(self):
         user = User.objects.create_user(
@@ -692,9 +711,9 @@ class AccountTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
+        self.assertRedirects(response, reverse("accounts:dashboard"))
         user = User.objects.get(email="legal@example.com")
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
         profile = CustomerProfile.objects.get(user=user)
         self.assertEqual(profile.customer_type, CustomerProfile.CustomerType.LEGAL_ENTITY)
         self.assertEqual(profile.inn, "1234567890")
@@ -717,7 +736,7 @@ class AccountTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
+        self.assertRedirects(response, reverse("accounts:dashboard"))
         user = User.objects.get(email="legal-kpp@example.com")
         profile = CustomerProfile.objects.get(user=user)
         self.assertEqual(profile.inn, "")
