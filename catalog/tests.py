@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -717,8 +718,15 @@ class CartTests(TestCase):
                 "personal_data_consent": "on",
             },
         )
-        self.assertRedirects(response, self.cart_url)
+        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
         self.assertTrue(self.client.session["cart"])
+        user = get_user_model().objects.get(email="guest-cart@example.com")
+        self.assertFalse(user.is_active)
+        self.assertEqual(len(mail.outbox), 1)
+
+        self.client.force_login(user)
+        user.is_active = True
+        user.save(update_fields=("is_active",))
 
         response = self.client.post(
             self.cart_url,
@@ -737,6 +745,8 @@ class CartTests(TestCase):
             reverse("accounts:order_detail", args=[order.pk]),
         )
         self.assertEqual(order.user.username, "guest_cart_customer")
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertIn("Заказ №", mail.outbox[1].subject)
         self.assertNotIn("cart", self.client.session)
 
     def test_guest_catalog_buttons_add_products_to_cart(self):

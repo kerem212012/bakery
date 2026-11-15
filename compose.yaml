@@ -17,5 +17,37 @@ services:
       retries: 10
       start_period: 10s
 
+  web:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ""
+      POSTGRES_HOST: postgres
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+    volumes:
+      - bakery_media:/app/media
+      - bakery_private_media:/app/private_media
+      - bakery_static:/app/staticfiles
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "${NGINX_BIND_ADDRESS:-127.0.0.1}:80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - bakery_media:/media:ro
+      - bakery_static:/static:ro
+    depends_on:
+      - web
+
 volumes:
   bakery_postgres_data:
+  bakery_media:
+  bakery_private_media:
+  bakery_static:

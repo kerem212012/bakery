@@ -54,7 +54,7 @@ def load_default_sections(apps, schema_editor):
                     "description_en": "Payment by bank transfer or online.",
                     "value": "Посмотреть реквизиты",
                     "value_en": "Check payment terms",
-                    "url": "mailto:hello@lukomorye.example?subject=Оплата%20заказа",
+                    "url": "mailto:n.a.demidov@vkusnodasladko.ru?subject=Оплата%20заказа",
                 },
                 ("Счёт", "Счёт и документы для юридических клиентов.", "Invoice", "We provide documentation for corporate orders."),
                 ("Индивидуальные условия", "Гибкие условия оплаты для больших объёмов.", "Individual terms", "We offer flexible payment options for large orders."),
@@ -94,11 +94,11 @@ def load_default_sections(apps, schema_editor):
                 {
                     "title": "E-mail",
                     "title_en": "E-mail",
-                    "value": "info@lukomorye.ru",
-                    "value_en": "info@lukomorye.ru",
+                    "value": "n.a.demidov@vkusnodasladko.ru",
+                    "value_en": "n.a.demidov@vkusnodasladko.ru",
                     "description": "Ответ в течение рабочего дня",
                     "description_en": "Response within one business day",
-                    "url": "mailto:info@lukomorye.ru",
+                    "url": "mailto:n.a.demidov@vkusnodasladko.ru",
                 },
                 {
                     "title": "Адрес",
@@ -129,7 +129,7 @@ def load_default_sections(apps, schema_editor):
         "contacts": {
             "details": [
                 ("Телефон", "+7 495 123-45-67", "Ежедневно с 9:00 до 21:00", "Phone", "+7 495 123-45-67", "Daily, 9:00 am–9:00 pm", "tel:+74951234567"),
-                ("E-mail", "hello@lukomorye.example", "Ответим в течение дня", "E-mail", "hello@lukomorye.example", "We reply within one business day", "mailto:hello@lukomorye.example"),
+                ("E-mail", "n.a.demidov@vkusnodasladko.ru", "Ответим в течение дня", "E-mail", "n.a.demidov@vkusnodasladko.ru", "We reply within one business day", "mailto:n.a.demidov@vkusnodasladko.ru"),
                 ("Адрес", "г. Москва, ул. Пряничная, д. 12, стр. 1 (Бизнес-центр «Пример»)", "Открыть карту", "Address", "12 Pryanichnaya St., building 1, Moscow (Primer Business Center)", "Open map", "https://yandex.ru/maps/?text=Москва%2C%20ул.%20Пряничная%2C%20д.%2012%2C%20стр.%201"),
             ],
             "requisites": [
@@ -140,7 +140,7 @@ def load_default_sections(apps, schema_editor):
                     "description_en": "Please email us to request company details and documents.",
                     "value": "Запросить реквизиты",
                     "value_en": "Request company details",
-                    "url": "mailto:hello@lukomorye.example?subject=Запрос%20реквизитов",
+                    "url": "mailto:n.a.demidov@vkusnodasladko.ru?subject=Запрос%20реквизитов",
                 }
             ],
         },
@@ -162,7 +162,7 @@ def load_default_sections(apps, schema_editor):
                     "description_en": "We are happy to help with any delivery questions.",
                     "value": "Написать нам",
                     "value_en": "Email us",
-                    "url": "mailto:hello@lukomorye.example",
+                    "url": "mailto:n.a.demidov@vkusnodasladko.ru",
                 },
             ],
             "pickup": [
@@ -206,7 +206,7 @@ def load_default_sections(apps, schema_editor):
         },
         "feedback": {
             "contacts": [
-                ("Предпочитаете написать напрямую?", "Свяжитесь с нами по электронной почте, и мы ответим в течение рабочего дня.", "hello@lukomorye.example", "Prefer to email us directly?", "Email us and we will reply within one business day.", "hello@lukomorye.example", "mailto:hello@lukomorye.example"),
+                ("Предпочитаете написать напрямую?", "Свяжитесь с нами по электронной почте, и мы ответим в течение рабочего дня.", "n.a.demidov@vkusnodasladko.ru", "Prefer to email us directly?", "Email us and we will reply within one business day.", "n.a.demidov@vkusnodasladko.ru", "mailto:n.a.demidov@vkusnodasladko.ru"),
                 ("Телефон", "Ежедневно с 9:00 до 21:00", "+7 495 123-45-67", "Phone", "Daily, 9:00 am–9:00 pm", "+7 495 123-45-67", "tel:+74951234567"),
             ],
         },
@@ -242,7 +242,7 @@ def load_default_sections(apps, schema_editor):
                     "title_en": "Masterclasses",
                     "description": "Творческие занятия\nдля детей и взрослых",
                     "description_en": "Creative sessions for children and adults",
-                    "url": "mailto:info@lukomorye.ru?subject=Мастер-класс",
+                    "url": "mailto:n.a.demidov@vkusnodasladko.ru?subject=Мастер-класс",
                 },
                 {
                     "title": "Пряники с логотипом",

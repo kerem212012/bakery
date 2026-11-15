@@ -3,10 +3,14 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from openpyxl import load_workbook
 
 from catalog.models import Category, Product
@@ -376,7 +380,10 @@ class AccountTests(TestCase):
         self.assertNotContains(response, "Физическое лицо")
         self.assertNotContains(response, "Тип клиента")
         self.assertNotIn("customer_type", response.context["form"].fields)
+        self.assertIn("tax_identifier_type", response.context["form"].fields)
         self.assertContains(response, 'id="registration-business-fields"')
+        self.assertContains(response, 'name="tax_identifier_type"')
+        self.assertContains(response, 'src="/static/user/registration.js"')
         self.assertNotContains(response, 'id="registration-business-fields" hidden')
         self.assertNotContains(response, "Название организации")
         self.assertNotContains(response, "Контактное лицо")
@@ -417,7 +424,7 @@ class AccountTests(TestCase):
                 self.assertContains(response, title)
                 self.assertContains(response, "Проект документа")
 
-    def test_registration_creates_user_and_logs_them_in(self):
+    def test_registration_creates_unverified_user_and_sends_email(self):
         response = self.client.post(
             "/account/register/",
             {
@@ -427,6 +434,7 @@ class AccountTests(TestCase):
                 "password1": "A-long-password-482!",
                 "password2": "A-long-password-482!",
                 "phone": "+7 900 000-00-00",
+                "tax_identifier_type": "inn",
                 "inn": "1234567890",
                 "customer_type": CustomerProfile.CustomerType.LEGAL_ENTITY,
                 "agreement_accepted": "on",
@@ -434,8 +442,9 @@ class AccountTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, "/account/")
+        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
         user = User.objects.get(email="anna@example.com")
+        self.assertFalse(user.is_active)
         self.assertEqual(user.username, "anna")
         self.assertEqual(user.email, "anna@example.com")
         self.assertEqual(
@@ -448,7 +457,44 @@ class AccountTests(TestCase):
             user.customer_profile.terms_accepted_at,
             user.customer_profile.personal_data_consent_at,
         )
-        self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Подтвердите адрес электронной почты", mail.outbox[0].subject)
+        self.assertIn("/verify-email/", mail.outbox[0].body)
+
+    def test_email_verification_activates_the_account(self):
+        user = User.objects.create_user(
+            username="verify_me",
+            email="verify-me@example.com",
+            password="A-long-password-482!",
+            is_active=False,
+        )
+        token = PasswordResetTokenGenerator().make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        response = self.client.get(
+            reverse("accounts:verify_email", kwargs={"uidb64": uid, "token": token})
+        )
+
+        self.assertRedirects(response, reverse("accounts:login"))
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+
+    def test_password_reset_sends_a_reset_email(self):
+        user = User.objects.create_user(
+            username="reset_customer",
+            email="reset@example.com",
+            password="A-long-password-482!",
+        )
+
+        response = self.client.post(
+            reverse("accounts:password_reset"),
+            {"email": user.email},
+        )
+
+        self.assertRedirects(response, reverse("accounts:password_reset_done"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Сброс пароля", mail.outbox[0].subject)
+        self.assertIn("/reset/", mail.outbox[0].body)
 
     def test_registration_returns_to_next_and_preserves_cart_session(self):
         category = Category.objects.create(name="Подарки")
@@ -476,6 +522,7 @@ class AccountTests(TestCase):
                 "password1": "A-long-password-482!",
                 "password2": "A-long-password-482!",
                 "customer_type": CustomerProfile.CustomerType.LEGAL_ENTITY,
+                "tax_identifier_type": "inn",
                 "inn": "1234567890",
                 "phone": "+7 900 000-00-00",
                 "agreement_accepted": "on",
@@ -483,12 +530,10 @@ class AccountTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, cart_url)
+        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
         self.assertEqual(self.client.session["cart"][item_id]["quantity"], 1)
-        self.assertEqual(
-            int(self.client.session["_auth_user_id"]),
-            User.objects.get(email="returning-cart@example.com").pk,
-        )
+        self.assertFalse(User.objects.get(email="returning-cart@example.com").is_active)
+        self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_only_order_owner_and_order_managers_can_access_contract(self):
         user = User.objects.create_user(
@@ -622,10 +667,14 @@ class AccountTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(email="legal@example.com").exists())
-        for field in ("inn", "phone"):
-            with self.subTest(field=field):
-                self.assertIn("Обязательное поле для юридического лица.", response.context["form"][field].errors)
-        self.assertFalse(response.context["form"]["kpp"].errors)
+        self.assertIn(
+            "Выберите ИНН или КПП.",
+            response.context["form"]["tax_identifier_type"].errors,
+        )
+        self.assertIn(
+            "Обязательное поле для юридического лица.",
+            response.context["form"]["phone"].errors,
+        )
 
     def test_legal_entity_registration_saves_remaining_details(self):
         response = self.client.post(
@@ -637,17 +686,66 @@ class AccountTests(TestCase):
                 "customer_type": CustomerProfile.CustomerType.LEGAL_ENTITY,
                 "agreement_accepted": "on",
                 "personal_data_consent": "on",
+                "tax_identifier_type": "inn",
                 "inn": "1234567890",
                 "phone": "+7 900 123-45-67",
             },
         )
 
-        self.assertRedirects(response, "/account/")
-        profile = CustomerProfile.objects.get(user__email="legal@example.com")
+        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
+        user = User.objects.get(email="legal@example.com")
+        self.assertFalse(user.is_active)
+        profile = CustomerProfile.objects.get(user=user)
         self.assertEqual(profile.customer_type, CustomerProfile.CustomerType.LEGAL_ENTITY)
         self.assertEqual(profile.inn, "1234567890")
         self.assertEqual(profile.kpp, "")
         self.assertEqual(profile.phone, "+7 900 123-45-67")
+
+    def test_legal_entity_registration_accepts_kpp_without_inn(self):
+        response = self.client.post(
+            "/account/register/",
+            {
+                "email": "legal-kpp@example.com",
+                "password1": "A-long-password-482!",
+                "password2": "A-long-password-482!",
+                "customer_type": CustomerProfile.CustomerType.LEGAL_ENTITY,
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
+                "tax_identifier_type": "kpp",
+                "kpp": "123456789",
+                "phone": "+7 900 123-45-67",
+            },
+        )
+
+        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
+        user = User.objects.get(email="legal-kpp@example.com")
+        profile = CustomerProfile.objects.get(user=user)
+        self.assertEqual(profile.inn, "")
+        self.assertEqual(profile.kpp, "123456789")
+
+    def test_legal_entity_registration_rejects_both_tax_identifiers(self):
+        response = self.client.post(
+            "/account/register/",
+            {
+                "email": "legal-both@example.com",
+                "password1": "A-long-password-482!",
+                "password2": "A-long-password-482!",
+                "customer_type": CustomerProfile.CustomerType.LEGAL_ENTITY,
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
+                "tax_identifier_type": "inn",
+                "inn": "1234567890",
+                "kpp": "123456789",
+                "phone": "+7 900 123-45-67",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(email="legal-both@example.com").exists())
+        self.assertIn(
+            "Заполните только выбранное поле.",
+            response.context["form"]["kpp"].errors,
+        )
 
     def test_legal_entity_registration_validates_tax_identifier_formats(self):
         response = self.client.post(
@@ -657,8 +755,8 @@ class AccountTests(TestCase):
                 "password1": "A-long-password-482!",
                 "password2": "A-long-password-482!",
                 "customer_type": CustomerProfile.CustomerType.LEGAL_ENTITY,
+                "tax_identifier_type": "inn",
                 "inn": "123",
-                "kpp": "12",
                 "phone": "+7 900 123-45-67",
             },
         )
@@ -666,6 +764,22 @@ class AccountTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(User.objects.filter(email="invalid-legal@example.com").exists())
         self.assertContains(response, "Введите 10 или 12 цифр.")
+
+        response = self.client.post(
+            "/account/register/",
+            {
+                "email": "invalid-kpp@example.com",
+                "password1": "A-long-password-482!",
+                "password2": "A-long-password-482!",
+                "customer_type": CustomerProfile.CustomerType.LEGAL_ENTITY,
+                "tax_identifier_type": "kpp",
+                "kpp": "12",
+                "phone": "+7 900 123-45-67",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(email="invalid-kpp@example.com").exists())
         self.assertContains(response, "Введите 9 цифр.")
 
     def test_admin_can_export_selected_legal_entities_as_xlsx(self):

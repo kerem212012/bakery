@@ -1,0 +1,20 @@
+{% extends "catalog/base.html" %}
+
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Check your email — Vkusno Da Sladko{% else %}Проверьте почту — Вкусно Да Сладко{% endif %}{% endblock %}
+
+{% block content %}
+    <section class="auth-layout">
+        <div class="auth-card">
+            <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Almost there{% else %}Почти готово{% endif %}</p>
+            <h1>{% if LANGUAGE_CODE == 'en' %}Check your email{% else %}Проверьте почту{% endif %}</h1>
+            <p class="auth-intro">
+                {% if LANGUAGE_CODE == 'en' %}
+                    We sent a confirmation link to your email address. Please click it to confirm your account and start shopping.
+                {% else %}
+                    Мы отправили ссылку для подтверждения на вашу электронную почту. Нажмите на неё, чтобы активировать аккаунт и продолжить покупки.
+                {% endif %}
+            </p>
+            <a class="button button-dark auth-submit" href="{% url 'accounts:login' %}">{% if LANGUAGE_CODE == 'en' %}Back to sign in{% else %}Вернуться ко входу{% endif %}</a>
+        </div>
+    </section>
+{% endblock %}

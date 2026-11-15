@@ -9505,6 +9505,35 @@ a.catalog-all-link:hover {
     font: inherit;
 }
 
+.registration-business-fields select[data-tax-identifier-type] {
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 42px 11px 13px;
+    border: 1px solid rgba(71, 49, 37, 0.2);
+    border-radius: 2px;
+    appearance: none;
+    background-color: #fffefa;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3 6 5 5 5-5' fill='none' stroke='%23684532' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-position: right 14px center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    color: var(--ink);
+    font: inherit;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    cursor: pointer;
+}
+
+.registration-business-fields select[data-tax-identifier-type]:hover {
+    border-color: rgba(71, 49, 37, 0.45);
+    background-color: #fff;
+}
+
+.registration-business-fields select[data-tax-identifier-type]:focus-visible {
+    border-color: var(--cocoa);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(104, 69, 50, 0.14);
+}
+
 .form-field textarea {
     width: 100%;
     min-height: 80px;
@@ -9522,7 +9551,8 @@ a.catalog-all-link:hover {
     gap: 17px;
 }
 
-.registration-business-fields[hidden] {
+.registration-business-fields[hidden],
+.registration-business-fields .tax-identifier-field[hidden] {
     display: none;
 }
 

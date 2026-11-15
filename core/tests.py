@@ -1310,7 +1310,7 @@ class AdminDashboardTests(TestCase):
         self.assertEqual(
             list(promos.values_list("title", "display_order", "url")),
             [
-                ("Мастер-классы", 0, "mailto:info@lukomorye.ru?subject=Мастер-класс"),
+                ("Мастер-классы", 0, "mailto:n.a.demidov@vkusnodasladko.ru?subject=Мастер-класс"),
                 ("Обновлённое предложение", 1, "/updated-offer/"),
                 ("Новое предложение", 2, reverse("business_clients")),
             ],
@@ -3788,7 +3788,7 @@ class HomePageCatalogTests(TestCase):
         self.assertNotContains(response, "Лукоморье родилось")
         self.assertContains(response, "Наши ценности")
         self.assertContains(response, "5000+")
-        self.assertContains(response, 'href="mailto:hello@lukomorye.example"')
+        self.assertContains(response, 'href="mailto:n.a.demidov@vkusnodasladko.ru"')
         self.assertContains(response, f'href="{reverse("about")}">О нас</a>')
 
     def test_partnership_page_renders_directions_metrics_and_navigation(self):

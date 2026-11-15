@@ -36,6 +36,7 @@ from .calculator import (
     localized_choices,
     normalize_calculator_pricing,
 )
+from .email_utils import send_order_confirmation_email
 from .forms import (
     AdminFeedbackStatusForm,
     AdminOrderStatusForm,
@@ -2399,6 +2400,7 @@ def home(request):
                 PreorderAttachment(preorder=preorder, file=file)
                 for file in preorder_form.cleaned_data["attachments"]
             )
+        send_order_confirmation_email(preorder, request.LANGUAGE_CODE)
         if request.LANGUAGE_CODE == "en":
             messages.success(request, "Your pre-order has been sent. We will be in touch.")
         else:

@@ -35,6 +35,15 @@ class LoginForm(AuthenticationForm):
             self.fields["username"].label = "Электронная почта"
             self.fields["password"].label = "Пароль"
 
+    def confirm_login_allowed(self, user):
+        if not user.is_active:
+            message = (
+                "Please verify your email address before signing in."
+                if get_language() == "en"
+                else "Подтвердите адрес электронной почты перед входом."
+            )
+            raise forms.ValidationError(message, code="inactive")
+
     def clean(self):
         email = self.cleaned_data.get("username")
         if email:
@@ -61,11 +70,21 @@ class RegistrationForm(UserCreationForm):
             "required": "Необходимо дать согласие на обработку персональных данных."
         },
     )
+    tax_identifier_type = forms.ChoiceField(
+        label="Тип реквизита",
+        choices=(
+            ("", "Выберите ИНН или КПП"),
+            ("inn", "ИНН"),
+            ("kpp", "КПП"),
+        ),
+        required=False,
+        widget=forms.Select(attrs={"data-tax-identifier-type": ""}),
+    )
     inn = forms.RegexField(
         label="ИНН",
         regex=r"^\d{10}(?:\d{2})?$",
         max_length=12,
-        required=True,
+        required=False,
         error_messages={"invalid": "Введите 10 или 12 цифр."},
         widget=forms.TextInput(attrs={"inputmode": "numeric", "autocomplete": "off"}),
     )
@@ -80,7 +99,7 @@ class RegistrationForm(UserCreationForm):
     phone = forms.CharField(
         label="Телефон",
         max_length=32,
-        required=True,
+        required=False,
         widget=forms.TextInput(attrs={"type": "tel", "autocomplete": "tel"}),
     )
     password1 = forms.CharField(
@@ -112,6 +131,7 @@ class RegistrationForm(UserCreationForm):
                 "first_name",
                 "last_name",
                 "email",
+                "tax_identifier_type",
                 "inn",
                 "kpp",
                 "phone",
@@ -128,6 +148,7 @@ class RegistrationForm(UserCreationForm):
                 "email": "Email",
                 "password1": "Password",
                 "password2": "Confirm password",
+                "tax_identifier_type": "Identifier type",
                 "inn": "Tax ID",
                 "kpp": "Registration code",
                 "phone": "Phone",
@@ -136,6 +157,11 @@ class RegistrationForm(UserCreationForm):
             }
             for field_name, label in labels.items():
                 self.fields[field_name].label = label
+            self.fields["tax_identifier_type"].choices = (
+                ("", "Choose an identifier"),
+                ("inn", "INN"),
+                ("kpp", "KPP"),
+            )
             self.fields["inn"].error_messages["invalid"] = "Enter 10 or 12 digits."
             self.fields["kpp"].error_messages["invalid"] = "Enter 9 digits."
             self.fields["agreement_accepted"].error_messages["required"] = (
@@ -162,32 +188,79 @@ class RegistrationForm(UserCreationForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        for field_name in ("inn", "phone"):
-            if not cleaned_data.get(field_name, "").strip():
+        customer_type = str(self.data.get("customer_type") or "").strip()
+        is_legal_entity = customer_type in {
+            CustomerProfile.CustomerType.LEGAL_ENTITY,
+            "legal_entity",
+        }
+        identifier_type = cleaned_data.get("tax_identifier_type")
+        has_business_details = any(
+            str(self.data.get(field_name) or "").strip()
+            for field_name in ("tax_identifier_type", "inn", "kpp", "phone")
+        )
+        if is_legal_entity or has_business_details:
+            if identifier_type not in {"inn", "kpp"}:
+                message = (
+                    "Choose an identifier type."
+                    if get_language() == "en"
+                    else "Выберите ИНН или КПП."
+                )
+                self.add_error("tax_identifier_type", message)
+            else:
+                identifier_value = cleaned_data.get(identifier_type, "").strip()
+                if not identifier_value and identifier_type not in self.errors:
+                    message = (
+                        "Enter the selected identifier."
+                        if get_language() == "en"
+                        else "Заполните выбранное поле."
+                    )
+                    self.add_error(identifier_type, message)
+
+                other_identifier = "kpp" if identifier_type == "inn" else "inn"
+                if str(self.data.get(other_identifier) or "").strip():
+                    message = (
+                        "Fill in only the selected identifier."
+                        if get_language() == "en"
+                        else "Заполните только выбранное поле."
+                    )
+                    self.add_error(other_identifier, message)
+            if not cleaned_data.get("phone", "").strip():
                 message = (
                     "This field is required for business accounts."
                     if get_language() == "en"
                     else "Обязательное поле для юридического лица."
                 )
-                self.add_error(field_name, message)
+                self.add_error("phone", message)
         return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        username_base = slugify(user.email.partition("@")[0])[:140] or "customer"
+        requested_username = str(self.data.get("username") or "").strip()
+        username_base = (
+            requested_username or slugify(user.email.partition("@")[0]).replace("-", "_")
+        )[:140] or "customer"
         username = username_base
         suffix = 2
         while User.objects.filter(username=username).exists():
-            username = f"{username_base[: 150 - len(str(suffix)) - 1]}-{suffix}"
+            suffix_base = username_base[: 150 - len(str(suffix)) - 1]
+            username = f"{suffix_base}_{suffix}"
             suffix += 1
         user.username = username
+        customer_type = str(self.data.get("customer_type") or "").strip()
+        if customer_type in {
+            CustomerProfile.CustomerType.LEGAL_ENTITY,
+            "legal_entity",
+        }:
+            profile_customer_type = CustomerProfile.CustomerType.LEGAL_ENTITY
+        else:
+            profile_customer_type = CustomerProfile.CustomerType.INDIVIDUAL
         if commit:
             user.save()
             self.save_m2m()
             accepted_at = timezone.now()
             CustomerProfile.objects.create(
                 user=user,
-                customer_type=CustomerProfile.CustomerType.LEGAL_ENTITY,
+                customer_type=profile_customer_type,
                 inn=self.cleaned_data.get("inn", "").strip(),
                 kpp=self.cleaned_data.get("kpp", "").strip(),
                 phone=self.cleaned_data.get("phone", "").strip(),

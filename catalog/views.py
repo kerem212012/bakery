@@ -12,6 +12,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from core.calculator import DELIVERY_COSTS
+from core.email_utils import send_order_confirmation_email
 from core.models import Preorder, PreorderAttachment
 from user.models import CustomerDeliveryAddress, CustomerProfile
 
@@ -231,6 +232,7 @@ def cart(request):
                     if profile.delivery_address != address.delivery_address:
                         profile.delivery_address = address.delivery_address
                         profile.save(update_fields=("delivery_address",))
+            send_order_confirmation_email(preorder, request.LANGUAGE_CODE)
             request.session.pop(CART_SESSION_KEY, None)
             request.session["order_confirmation_id"] = preorder.pk
             if request.user.is_authenticated:

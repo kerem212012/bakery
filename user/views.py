@@ -1,16 +1,20 @@
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth import get_user_model, login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.db import transaction
 from django.db.models import Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode, url_has_allowed_host_and_scheme
 
 from catalog.cart_forms import (
     COATING_OPTIONS,
@@ -30,6 +34,34 @@ from .forms import (
     RegistrationForm,
 )
 from .models import CustomerDeliveryAddress, CustomerProfile
+
+
+token_generator = PasswordResetTokenGenerator()
+
+
+def _send_verification_email(request, user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = token_generator.make_token(user)
+    verification_url = request.build_absolute_uri(
+        reverse("accounts:verify_email", kwargs={"uidb64": uid, "token": token})
+    )
+    if request.LANGUAGE_CODE == "en":
+        subject = "Verify your email address"
+        message = (
+            f"Hello {user.get_full_name() or user.email},\n\n"
+            "Thank you for registering with Vkusno Da Sladko.\n"
+            f"To complete registration, please confirm your email: {verification_url}\n\n"
+            "If you did not create this account, you can ignore this message."
+        )
+    else:
+        subject = "Подтвердите адрес электронной почты"
+        message = (
+            f"Здравствуйте, {user.get_full_name() or user.email},\n\n"
+            "Спасибо за регистрацию на сайте «Вкусно Да Сладко».\n"
+            f"Чтобы завершить регистрацию, подтвердите адрес электронной почты: {verification_url}\n\n"
+            "Если вы не создавали аккаунт, просто проигнорируйте это сообщение."
+        )
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
 
 
 def _orders_count_label(count, language_code="ru"):
@@ -117,16 +149,52 @@ def register(request):
     form = RegistrationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         user = form.save()
-        login(request, user)
+        user.is_active = False
+        user.save(update_fields=("is_active",))
+        _send_verification_email(request, user)
         message = (
-            "Your account has been created. Welcome!"
+            "We sent a verification link to your email. Please confirm it to finish registration."
             if request.LANGUAGE_CODE == "en"
-            else "Аккаунт создан. Добро пожаловать!"
+            else "Мы отправили ссылку для подтверждения на вашу почту. Подтвердите её, чтобы завершить регистрацию."
         )
-        messages.success(request, message)
-        return redirect(next_url or reverse("accounts:dashboard"))
+        messages.info(request, message)
+        return redirect(reverse("accounts:email_verification_sent"))
 
     return render(request, "user/register.html", {"form": form, "next": next_url})
+
+
+def email_verification_sent(request):
+    return render(request, "user/email_verification_sent.html")
+
+
+User = get_user_model()
+
+
+def verify_email(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = get_object_or_404(User, pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and token_generator.check_token(user, token):
+        user.is_active = True
+        user.save(update_fields=("is_active",))
+        messages.success(
+            request,
+            "Your email has been verified. You can now sign in."
+            if request.LANGUAGE_CODE == "en"
+            else "Электронная почта подтверждена. Теперь можно войти в аккаунт.",
+        )
+        return redirect(reverse("accounts:login"))
+
+    messages.error(
+        request,
+        "This verification link is invalid or expired."
+        if request.LANGUAGE_CODE == "en"
+        else "Ссылка для подтверждения недействительна или устарела.",
+    )
+    return redirect(reverse("accounts:login"))
 
 
 @login_required

@@ -113,7 +113,7 @@
                         <p>{% if LANGUAGE_CODE == 'en' %}We offer flexible payment options for large orders.{% else %}Гибкие условия оплаты для больших объёмов.{% endif %}</p>
                     </div>
                     {% endif %}
-                    <a class="button button-dark business-clients-payment-button" href="{% if site_page_sections.payment and site_page_sections.payment.0.url %}{{ site_page_sections.payment.0.url }}{% else %}mailto:hello@lukomorye.example?subject=Оплата%20заказа{% endif %}">
+                    <a class="button button-dark business-clients-payment-button" href="{% if site_page_sections.payment and site_page_sections.payment.0.url %}{{ site_page_sections.payment.0.url }}{% else %}mailto:n.a.demidov@vkusnodasladko.ru?subject=Оплата%20заказа{% endif %}">
                         {% if site_page_sections.payment and site_page_sections.payment.0.localized_value %}{{ site_page_sections.payment.0.localized_value }}{% else %}{% if LANGUAGE_CODE == 'en' %}Check payment terms{% else %}Посмотреть реквизиты{% endif %}{% endif %} <span aria-hidden="true">→</span>
                     </a>
                 </div>
@@ -185,7 +185,7 @@
                 <div class="business-clients-contact-item">
                     <span class="business-clients-contact-icon" aria-hidden="true">✉</span>
                     <div>
-                        <a href="mailto:info@lukomorye.ru">info@lukomorye.ru</a>
+                        <a href="mailto:n.a.demidov@vkusnodasladko.ru">n.a.demidov@vkusnodasladko.ru</a>
                         <small>{% if LANGUAGE_CODE == 'en' %}Response within one business day{% else %}Ответ в течение рабочего дня{% endif %}</small>
                     </div>
                 </div>

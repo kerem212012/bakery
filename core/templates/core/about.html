@@ -16,7 +16,7 @@
                 <h1 id="about-heading">{% if site_page_content %}{{ site_page_content.localized_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}About us{% else %}О нас{% endif %}{% endif %}</h1>
                 <p class="about-hero-lead">{% if site_page_content %}{{ site_page_content.localized_subtitle|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery made with care in every detail.{% else %}Вкусно Да Сладко — кондитерские изделия, созданные с вниманием к деталям.{% endif %}{% endif %}</p>
                 <p>{% if site_page_content %}{{ site_page_content.localized_description|linebreaksbr }}{% else %}{% if LANGUAGE_CODE == 'en' %}We create confectionery that turns ideas into sweet stories. For us, it is about more than baking gingerbread: every piece carries meaning, beauty, and care in every detail.{% else %}Мы создаём кондитерские изделия, которые превращают идеи в сладкие истории. Для нас важно не просто испечь пряник, а вложить в него смысл, эстетику и внимание к каждой детали.{% endif %}{% endif %}</p>
-                <a class="button button-dark" href="{% if site_page_content and site_page_content.button_url %}{{ site_page_content.button_url }}{% else %}mailto:hello@lukomorye.example{% endif %}">
+                <a class="button button-dark" href="{% if site_page_content and site_page_content.button_url %}{{ site_page_content.button_url }}{% else %}mailto:n.a.demidov@vkusnodasladko.ru{% endif %}">
                     {% if site_page_content %}{{ site_page_content.localized_button_text }}{% else %}{% if LANGUAGE_CODE == 'en' %}Discuss an order{% else %}Обсудить заказ{% endif %}{% endif %} <span aria-hidden="true">→</span>
                 </a>
             </div>

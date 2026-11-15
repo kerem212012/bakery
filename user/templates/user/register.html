@@ -1,4 +1,5 @@
 {% extends "catalog/base.html" %}
+{% load static %}
 
 {% block title %}{% if LANGUAGE_CODE == 'en' %}Create an account — Vkusno Da Sladko{% else %}Регистрация — Вкусно Да Сладко{% endif %}{% endblock %}
 
@@ -15,8 +16,15 @@
                     <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
                 {% endif %}
                 {% for field in form %}
-                    {% if field.name == "inn" %}<div class="registration-business-fields" id="registration-business-fields">{% endif %}
-                    {% if field.name == "agreement_accepted" %}
+                    {% if field.name == "tax_identifier_type" %}<div class="registration-business-fields" id="registration-business-fields"><p class="field-help">{% if LANGUAGE_CODE == 'en' %}Choose which identifier to enter; only its field will be shown.{% else %}Выберите, какой реквизит указать: ИНН или КПП.{% endif %}</p>{% endif %}
+                    {% if field.name == "inn" or field.name == "kpp" %}
+                        <div class="form-field tax-identifier-field" data-tax-identifier-field="{{ field.name }}">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<small class="field-help">{{ field.help_text|safe }}</small>{% endif %}
+                            {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
+                        </div>
+                    {% elif field.name == "agreement_accepted" %}
                         <div class="form-field consent-field">
                             <label for="{{ field.id_for_label }}">{{ field }}
                                 <span>{% if LANGUAGE_CODE == 'en' %}I accept the User Agreement.{% else %}Принимаю Пользовательское соглашение.{% endif %}</span>
@@ -52,4 +60,9 @@
             <p class="auth-switch">{% if LANGUAGE_CODE == 'en' %}Already have an account?{% else %}Уже есть аккаунт?{% endif %} <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">{% if LANGUAGE_CODE == 'en' %}Sign in{% else %}Войти{% endif %}</a></p>
         </div>
     </section>
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script src="{% static 'user/registration.js' %}" defer></script>
 {% endblock %}
