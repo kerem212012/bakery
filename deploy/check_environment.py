@@ -8,6 +8,14 @@ for name in ("SECRET_KEY", "POSTGRES_PASSWORD"):
     if not value or value.lower().startswith("replace-with"):
         errors.append(f"{name} is missing or still has the example value")
 
+certbot_email = os.environ.get("CERTBOT_EMAIL", "").strip()
+if (
+    not certbot_email
+    or certbot_email.lower().startswith("replace-with")
+    or "@" not in certbot_email
+):
+    errors.append("CERTBOT_EMAIL is missing or still has the example value")
+
 secret_key = os.environ.get("SECRET_KEY", "")
 if len(secret_key) < 50:
     errors.append("SECRET_KEY must be at least 50 characters")

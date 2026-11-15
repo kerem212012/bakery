@@ -1,0 +1,11 @@
+[Unit]
+Description=Renew Bakery Let's Encrypt certificates
+Requires=docker.service bakery-compose.service
+After=docker.service bakery-compose.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/bakery
+ExecStart=/usr/bin/docker compose run --rm --no-deps certbot renew --webroot --webroot-path /var/www/certbot --quiet
+ExecStartPost=/usr/bin/docker compose exec -T nginx nginx -t
+ExecStartPost=/usr/bin/docker compose exec -T nginx nginx -s reload

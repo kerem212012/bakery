@@ -192,6 +192,16 @@ REGISTRATION_EMAIL_VERIFICATION_REQUIRED = (
     in {"1", "true", "yes", "on"}
 )
 
+HTTPS_ENABLED = (
+    os.environ.get("HTTPS_ENABLED", "False").strip().lower()
+    in {"1", "true", "yes", "on"}
+)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = HTTPS_ENABLED
+SESSION_COOKIE_SECURE = HTTPS_ENABLED
+CSRF_COOKIE_SECURE = HTTPS_ENABLED
+SECURE_HSTS_SECONDS = 31536000 if HTTPS_ENABLED else 0
+
 EMAIL_BACKEND = os.environ.get(
     "EMAIL_BACKEND",
     "django.core.mail.backends.console.EmailBackend",

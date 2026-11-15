@@ -45,7 +45,7 @@ docker compose run --rm --no-deps --entrypoint python web manage.py check --depl
 docker compose run --rm --no-deps --entrypoint python web manage.py makemigrations --check --dry-run
 
 echo "Checking Nginx configuration..."
-docker compose run --rm --no-deps nginx nginx -t
+docker compose run --rm --no-deps --entrypoint /bin/sh nginx /etc/nginx/start-nginx.sh -t
 
-echo "WARNING: HTTP-only mode is temporary; configure HTTPS before real user sign-in."
+echo "After the HTTP service is publicly reachable, run bash deploy/enable-https.sh."
 echo "Pre-deployment checks passed."
