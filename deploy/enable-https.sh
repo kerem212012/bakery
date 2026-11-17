@@ -12,6 +12,29 @@ test -f .env || {
 echo "Starting the HTTP service for the ACME challenge..."
 docker compose up -d nginx
 
+published_http_port="$(docker compose port nginx 80)"
+case "$published_http_port" in
+    0.0.0.0:80)
+        ;;
+    127.*|localhost:*)
+        echo "ERROR: Nginx is bound only to localhost ($published_http_port)." >&2
+        echo "Set NGINX_BIND_ADDRESS=0.0.0.0 in .env." >&2
+        exit 1
+        ;;
+    *)
+        echo "ERROR: Nginx port 80 is published as '${published_http_port:-unavailable}'." >&2
+        echo "Expected 0.0.0.0:80." >&2
+        exit 1
+        ;;
+esac
+
+if ! docker compose exec -T nginx nginx -t; then
+    echo "ERROR: Nginx is not running with a valid HTTP configuration. Recent logs:" >&2
+    docker compose logs --tail=80 nginx
+    exit 1
+fi
+
+echo "Confirm TCP port 80 is allowed by both the server and provider firewalls."
 echo "Requesting the Let's Encrypt certificate..."
 docker compose run --rm --no-deps --entrypoint /bin/sh certbot -ec '
     : "${CERTBOT_EMAIL:?Set CERTBOT_EMAIL in .env}"

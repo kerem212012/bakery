@@ -3761,6 +3761,44 @@ class CalculatorTests(TestCase):
 
 
 class HomePageCatalogTests(TestCase):
+    def test_homepage_renders_faq_after_about_and_uses_faq_page_content(self):
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.FAQ,
+            group="questions",
+        ).update(is_active=False)
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Частые вопросы")
+        self.assertContains(response, "Какие изделия вы изготавливаете на заказ?")
+        self.assertContains(response, "Можно ли заказать образец?")
+        self.assertContains(response, f'href="{reverse("faq")}"')
+        self.assertLess(
+            response.content.index(b'id="about"'),
+            response.content.index(b'id="faq"'),
+        )
+
+        SitePageSection.objects.create(
+            page=SitePageSection.Page.FAQ,
+            group="questions",
+            title="Как оформить индивидуальный заказ?",
+            title_en="How do I place a custom order?",
+            description="Свяжитесь с нами, чтобы обсудить заказ.",
+            description_en="Contact us to discuss your order.",
+        )
+        for index in range(2, 6):
+            SitePageSection.objects.create(
+                page=SitePageSection.Page.FAQ,
+                group="questions",
+                title=f"Дополнительный вопрос {index}",
+                description=f"Ответ на вопрос {index}.",
+            )
+        customized_response = self.client.get(reverse("home"))
+
+        self.assertContains(customized_response, "Как оформить индивидуальный заказ?")
+        self.assertContains(customized_response, "Свяжитесь с нами, чтобы обсудить заказ.")
+        self.assertContains(customized_response, "Дополнительный вопрос 5")
+
     def test_cookie_notice_is_rendered_in_the_shared_layout(self):
         response = self.client.get(reverse("home"))
 

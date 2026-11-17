@@ -2424,6 +2424,12 @@ def home(request):
         "calculator_options": calculator_options,
         "calculator_pricing": calculator_pricing,
         "calculator_initial_quote": initial_quote,
+        "home_faq_sections": SitePageSection.objects.filter(
+            page=SitePageSection.Page.FAQ,
+            group="questions",
+            is_active=True,
+        ),
+        "faq_items": _get_faq_items(request),
     }
     return render(request, "core/home.html", context)
 
@@ -2552,7 +2558,7 @@ def packaging(request):
     return render(request, "core/packaging.html")
 
 
-def faq(request):
+def _get_faq_items(request):
     faq_items = [
         {
             "number": "01",
@@ -2636,4 +2642,12 @@ def faq(request):
             "answer": "Да. Для крупных и корпоративных заказов мы можем подготовить образец или пробный набор, чтобы вы могли оценить качество, вкус и оформление до запуска тиража.",
         },
     ]
-    return render(request, "core/faq.html", {"faq_items": faq_items})
+    return faq_items
+
+
+def faq(request):
+    return render(
+        request,
+        "core/faq.html",
+        {"faq_items": _get_faq_items(request)},
+    )

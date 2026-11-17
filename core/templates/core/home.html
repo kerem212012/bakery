@@ -355,6 +355,41 @@
                 <div class="about-photo" role="img" aria-label="{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_image_alt }}{% elif LANGUAGE_CODE == 'en' %}A baker decorates handmade cookies{% else %}Мастер украшает авторское печенье{% endif %}"{% if site_page_sections.home_about.0.image %} style="background-image:url('{{ site_page_sections.home_about.0.image.url }}')"{% endif %}></div>
             </section>
 
+            <section class="section home-faq-section" id="faq">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Need to know{% else %}Полезная информация{% endif %}</p>
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Frequently asked questions{% else %}Частые вопросы{% endif %}</h2>
+                    </div>
+                    <a class="text-link" href="{% url 'faq' %}">{% if LANGUAGE_CODE == 'en' %}All questions{% else %}Все вопросы{% endif %} <span aria-hidden="true">→</span></a>
+                </div>
+                <div class="faq-grid" aria-label="{% if LANGUAGE_CODE == 'en' %}Frequently asked questions{% else %}Частые вопросы{% endif %}">
+                    {% if home_faq_sections %}
+                        {% for item in home_faq_sections %}
+                            <article class="faq-item">
+                                <button class="faq-question home-faq-question" type="button" aria-expanded="false">
+                                    <span class="faq-number">{{ forloop.counter|stringformat:"02d" }}</span>
+                                    <span class="faq-text">{{ item.localized_title }}</span>
+                                    <span class="faq-toggle" aria-hidden="true">+</span>
+                                </button>
+                                <div class="faq-answer"><p>{{ item.localized_description }}</p></div>
+                            </article>
+                        {% endfor %}
+                    {% else %}
+                        {% for item in faq_items %}
+                            <article class="faq-item">
+                                <button class="faq-question home-faq-question" type="button" aria-expanded="false">
+                                    <span class="faq-number">{{ item.number }}</span>
+                                    <span class="faq-text">{{ item.question }}</span>
+                                    <span class="faq-toggle" aria-hidden="true">+</span>
+                                </button>
+                                <div class="faq-answer"><p>{{ item.answer }}</p></div>
+                            </article>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </section>
+
 
 {% endblock %}
 
@@ -714,5 +749,19 @@
             }
         });
         startPopularAutoplay();
+
+        document.querySelectorAll(".home-faq-question").forEach((button) => {
+            const item = button.closest(".faq-item");
+            const answer = item.querySelector(".faq-answer");
+            const toggle = button.querySelector(".faq-toggle");
+
+            button.addEventListener("click", () => {
+                const isOpen = item.classList.contains("is-open");
+                item.classList.toggle("is-open", !isOpen);
+                button.setAttribute("aria-expanded", String(!isOpen));
+                toggle.textContent = isOpen ? "+" : "−";
+                answer.style.maxHeight = isOpen ? "0px" : `${answer.scrollHeight}px`;
+            });
+        });
     </script>
 {% endblock %}
