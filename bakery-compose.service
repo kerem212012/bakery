@@ -1,0 +1,19 @@
+[Unit]
+Description=Bakery Docker Compose service
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/bakery
+ExecStartPre=/usr/bin/docker compose -f compose.yaml config --quiet
+ExecStart=/usr/bin/docker compose -f compose.yaml up --detach --remove-orphans
+ExecReload=/usr/bin/docker compose -f compose.yaml up --detach --remove-orphans
+ExecStop=/usr/bin/docker compose -f compose.yaml down
+TimeoutStartSec=0
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

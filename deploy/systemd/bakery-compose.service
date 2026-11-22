@@ -8,9 +8,10 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/bakery
-ExecStartPre=/usr/bin/docker compose config --quiet
-ExecStart=/usr/bin/docker compose up --detach --remove-orphans
-ExecStop=/usr/bin/docker compose down
+ExecStartPre=/usr/bin/docker compose -f compose.yaml config --quiet
+ExecStart=/usr/bin/docker compose -f compose.yaml up --detach --remove-orphans
+ExecReload=/usr/bin/docker compose -f compose.yaml up --detach --remove-orphans
+ExecStop=/usr/bin/docker compose -f compose.yaml down
 TimeoutStartSec=0
 TimeoutStopSec=120
 

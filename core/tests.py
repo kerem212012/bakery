@@ -258,6 +258,11 @@ class AdminDashboardTests(TestCase):
             reverse("manager_dashboard"),
             fetch_redirect_response=False,
         )
+        self.assertRedirects(
+            self.client.get(reverse("site_favicon_settings")),
+            reverse("manager_dashboard"),
+            fetch_redirect_response=False,
+        )
 
         permissions = Permission.objects.filter(
             content_type__app_label="core",
