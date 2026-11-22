@@ -25,6 +25,7 @@ from .models import (
     HomeHeroSlide,
     Preorder,
     SiteContentBlock,
+    SiteFavicon,
     SitePageContent,
     SitePageSection,
 )
@@ -388,6 +389,30 @@ class FeedbackForm(forms.Form):
             self.fields["consent_given"].error_messages["required"] = (
                 "You must agree to the processing of your personal data."
             )
+
+
+class SiteFaviconForm(forms.ModelForm):
+    class Meta:
+        model = SiteFavicon
+        fields = ("image",)
+        widgets = {
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        english = (get_language() or "").startswith("en")
+        self.fields["image"].label = "Favicon image" if english else "Файл фавикона"
+        self.fields["image"].help_text = (
+            "Upload a square PNG, JPG, or WebP image. Clear it to use the default favicon."
+            if english
+            else "Загрузите квадратное изображение PNG, JPG или WebP. Очистите файл, чтобы вернуть стандартный фавикон."
+        )
 
 
 class SiteContentBlockForm(forms.ModelForm):

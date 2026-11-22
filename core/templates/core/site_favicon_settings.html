@@ -1,0 +1,60 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Favicon settings — Vkusno Da Sladko{% else %}Настройка фавикона — Вкусно Да Сладко{% endif %}{% endblock %}
+{% block shell_class %} admin-dashboard-shell{% endblock %}
+
+{% block content %}
+    <section class="site-content-manager">
+        <header class="admin-dashboard-heading">
+            <div>
+                <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Website editor{% else %}Редактор сайта{% endif %}</p>
+                <h1>{% if LANGUAGE_CODE == 'en' %}Favicon{% else %}Фавикон сайта{% endif %}</h1>
+                <p>{% if LANGUAGE_CODE == 'en' %}Upload a new favicon or clear the image to restore the default one.{% else %}Загрузите новый фавикон или очистите изображение, чтобы вернуть стандартный.{% endif %}</p>
+            </div>
+            <div class="admin-dashboard-heading-actions">
+                <a class="admin-dashboard-site-link" href="{% url 'site_content_manager' %}">{% if LANGUAGE_CODE == 'en' %}Edit page content{% else %}Контент страниц{% endif %}</a>
+                <a class="admin-dashboard-site-link" href="{% url 'manager_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Back to dashboard{% else %}Назад в кабинет{% endif %}</a>
+            </div>
+        </header>
+
+        {% if messages %}
+            <div class="site-content-notices">
+                {% for message in messages %}
+                    <p class="site-content-notice">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <section class="site-content-form-section">
+            <h2>{% if LANGUAGE_CODE == 'en' %}Current favicon{% else %}Текущий фавикон{% endif %}</h2>
+            {% if site_favicon.image %}
+                <img
+                    class="site-favicon-preview"
+                    src="{{ site_favicon.image.url }}?v={{ site_favicon.updated_at|date:'U' }}"
+                    alt="{% if LANGUAGE_CODE == 'en' %}Current website favicon{% else %}Текущий фавикон сайта{% endif %}"
+                >
+            {% else %}
+                <img
+                    class="site-favicon-preview"
+                    src="{% static 'core/favicon.svg' %}"
+                    alt="{% if LANGUAGE_CODE == 'en' %}Default website favicon{% else %}Стандартный фавикон сайта{% endif %}"
+                >
+            {% endif %}
+            <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% for field in favicon_form %}
+                    <div class="site-content-form-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+                <div class="site-content-form-actions">
+                    <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save favicon{% else %}Сохранить фавикон{% endif %}</button>
+                </div>
+            </form>
+        </section>
+    </section>
+{% endblock %}

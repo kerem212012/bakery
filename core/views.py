@@ -75,6 +75,7 @@ from .forms import (
     PartnershipSuccessForm,
     PreorderForm,
     SiteContentBlockForm,
+    SiteFaviconForm,
     SitePageContentForm,
 )
 from .models import (
@@ -87,6 +88,7 @@ from .models import (
     PreorderAttachment,
     PreorderContract,
     SiteContentBlock,
+    SiteFavicon,
     SitePageContent,
     SitePageSection,
 )
@@ -487,6 +489,46 @@ def _save_calculator_option_images(settings_record, form, existing_images):
         option_image.label = label
         option_image.label_en = label_en
         option_image.save()
+
+
+@_staff_or_superuser_required
+def site_favicon_settings(request):
+    if not _can_manage_site_content(request.user):
+        return redirect("manager_dashboard")
+
+    favicon = SiteFavicon.objects.filter(pk=1).first() or SiteFavicon(pk=1)
+    form = SiteFaviconForm(
+        request.POST if request.method == "POST" else None,
+        request.FILES if request.method == "POST" else None,
+        instance=favicon,
+    )
+    if request.method == "POST":
+        if form.is_valid():
+            previous_image = favicon.image
+            favicon = form.save(commit=False)
+            favicon.pk = 1
+            favicon.save()
+            if previous_image and previous_image.name != favicon.image.name:
+                previous_image.delete(save=False)
+            messages.success(
+                request,
+                "Favicon updated."
+                if request.LANGUAGE_CODE == "en"
+                else "Фавикон обновлён.",
+            )
+            return redirect("site_favicon_settings")
+        messages.error(
+            request,
+            "Please choose a valid image."
+            if request.LANGUAGE_CODE == "en"
+            else "Выберите корректное изображение.",
+        )
+
+    return render(
+        request,
+        "core/site_favicon_settings.html",
+        {"favicon_form": form, "site_favicon": favicon},
+    )
 
 
 @_staff_or_superuser_required

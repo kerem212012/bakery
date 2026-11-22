@@ -1028,9 +1028,15 @@ class AccountTests(TestCase):
         self.assertContains(profile_response, "Телефон")
         self.assertContains(profile_response, 'name="profile-phone"')
         self.assertContains(profile_response, 'value="+7 900 000-00-00"')
+        self.assertContains(profile_response, 'rel="icon" type="image/svg+xml"')
+        self.assertContains(profile_response, 'href="/static/core/favicon.svg"')
         self.assertContains(profile_response, 'name="password-old_password"')
         self.assertContains(profile_response, 'name="password-new_password1"')
         self.assertContains(profile_response, 'name="password-new_password2"')
+        self.assertContains(
+            profile_response,
+            'class="account-form profile-form password-change-form"',
+        )
 
     def test_profile_password_can_be_changed_without_signing_out(self):
         user = User.objects.create_user(

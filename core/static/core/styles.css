@@ -10240,6 +10240,11 @@ a.account-order:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.password-change-form {
+    max-width: 680px;
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .saved-address-form {
     max-width: 680px;
     margin-top: 24px;
@@ -10740,6 +10745,17 @@ input[type="file"].site-content-form-control {
     max-height: 180px;
     margin-top: 8px;
     object-fit: cover;
+}
+
+.site-favicon-preview {
+    width: 96px;
+    height: 96px;
+    margin-bottom: 16px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fffefa;
+    object-fit: contain;
 }
 
 .site-content-search {

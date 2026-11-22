@@ -16,6 +16,7 @@
 
         {% if can_manage_site_content %}
             <a class="manager-dashboard-site-link" href="{% url 'site_content_manager' %}?page=delivery">{% if LANGUAGE_CODE == 'en' %}Edit website content{% else %}Редактировать контент сайта{% endif %}</a>
+            <a class="manager-dashboard-site-link" href="{% url 'site_favicon_settings' %}">{% if LANGUAGE_CODE == 'en' %}Change favicon{% else %}Изменить фавикон{% endif %}</a>
         {% endif %}
 
         {% include "user/_account_messages.html" %}

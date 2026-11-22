@@ -24,6 +24,7 @@ from .models import (
     Preorder,
     PreorderContract,
     SiteContentBlock,
+    SiteFavicon,
     SitePageContent,
     SitePageSection,
 )
@@ -87,6 +88,46 @@ class SiteContentDjangoAdminTests(TestCase):
         self.assertEqual(response.status_code, 302)
         page_content.refresh_from_db()
         self.assertEqual(page_content.title, "Updated title")
+
+    def test_favicon_can_be_changed_from_admin_panel(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="favicon_admin",
+            email="favicon-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        url = reverse("site_favicon_settings")
+        editor_response = self.client.get(url)
+        self.assertEqual(editor_response.status_code, 200)
+        self.assertContains(editor_response, "Файл фавикона")
+
+        image_buffer = BytesIO()
+        Image.new("RGBA", (32, 32), color=(100, 60, 40, 255)).save(
+            image_buffer,
+            format="PNG",
+        )
+        with TemporaryDirectory() as media_root, override_settings(
+            MEDIA_ROOT=media_root
+        ):
+            response = self.client.post(
+                url,
+                {
+                    "image": SimpleUploadedFile(
+                        "custom-favicon.png",
+                        image_buffer.getvalue(),
+                        content_type="image/png",
+                    )
+                },
+            )
+            self.assertRedirects(response, url)
+            favicon = SiteFavicon.objects.get(pk=1)
+            self.assertTrue(favicon.image)
+
+            homepage_response = self.client.get(reverse("home"))
+            self.assertContains(
+                homepage_response,
+                f'href="{favicon.image.url}?v=',
+            )
 
 
 class AdminDashboardTests(TestCase):
@@ -238,6 +279,14 @@ class AdminDashboardTests(TestCase):
         self.assertContains(
             manager_dashboard,
             reverse("site_content_manager"),
+        )
+        self.assertContains(
+            manager_dashboard,
+            reverse("site_favicon_settings"),
+        )
+        self.assertEqual(
+            self.client.get(reverse("site_favicon_settings")).status_code,
+            200,
         )
 
         admin_user = get_user_model().objects.create_superuser(

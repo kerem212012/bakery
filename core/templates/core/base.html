@@ -6,10 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f8f3ed" />
     <title>{% block title %}{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — confectionery products{% else %}Вкусно Да Сладко — кондитерские изделия{% endif %}{% endblock %}</title>
+    {% if site_favicon and site_favicon.image %}
+        <link rel="icon" href="{{ site_favicon.image.url }}?v={{ site_favicon.updated_at|date:'U' }}">
+    {% else %}
+        <link rel="icon" type="image/svg+xml" href="{% static 'core/favicon.svg' %}">
+    {% endif %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Prata&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=159">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=161">
     {% block head_extra %}{% endblock %}
 </head>
 <body>

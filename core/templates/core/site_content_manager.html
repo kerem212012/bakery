@@ -11,7 +11,10 @@
                 <h1>{% if editing_block %}{% if LANGUAGE_CODE == 'en' %}Edit extra content{% else %}Редактировать дополнительный блок{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Edit page content{% else %}Редактировать страницы сайта{% endif %}{% endif %}</h1>
                 <p>{% if LANGUAGE_CODE == 'en' %}Choose a page to edit its introduction. Home includes its banner slides.{% else %}Выберите страницу, чтобы изменить вступление. Для главной страницы доступны слайды баннера.{% endif %}</p>
             </div>
-            <a class="admin-dashboard-site-link" href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Back to dashboard{% else %}Назад в панель{% endif %}</a>
+            <div class="admin-dashboard-heading-actions">
+                <a class="admin-dashboard-site-link" href="{% url 'site_favicon_settings' %}">{% if LANGUAGE_CODE == 'en' %}Change favicon{% else %}Изменить фавикон{% endif %}</a>
+                <a class="admin-dashboard-site-link" href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Back to dashboard{% else %}Назад в панель{% endif %}</a>
+            </div>
         </header>
 
         {% if messages %}

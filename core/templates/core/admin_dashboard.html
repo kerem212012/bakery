@@ -17,6 +17,7 @@
                 {% endif %}
                 {% if can_manage_site_content %}
                     <a class="admin-dashboard-site-link admin-dashboard-primary-link" href="{% url 'site_content_manager' %}">{% if LANGUAGE_CODE == 'en' %}Edit page content{% else %}Редактировать контент страниц{% endif %}</a>
+                    <a class="admin-dashboard-site-link" href="{% url 'site_favicon_settings' %}">{% if LANGUAGE_CODE == 'en' %}Change favicon{% else %}Изменить фавикон{% endif %}</a>
                 {% endif %}
                 {% if can_view_orders or can_view_feedback %}
                     <a class="admin-dashboard-site-link" href="{% url 'manager_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Manager workspace{% else %}Кабинет менеджера{% endif %}</a>

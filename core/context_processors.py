@@ -1,6 +1,7 @@
 from .models import (
     HomeHeroSlide,
     SiteContentBlock,
+    SiteFavicon,
     SitePageContent,
     SitePageSection,
 )
@@ -27,6 +28,7 @@ PRIVATE_VIEW_NAMES = {
     "admin_dashboard",
     "site_content_manager",
     "site_content_edit",
+    "site_favicon_settings",
     "manager_dashboard",
     "manager_update_order_status",
 }
@@ -34,8 +36,10 @@ PRIVATE_VIEW_NAMES = {
 
 def site_content_blocks(request):
     match = getattr(request, "resolver_match", None)
+    site_favicon = SiteFavicon.objects.filter(pk=1).first()
     if not match or match.view_name in PRIVATE_VIEW_NAMES:
         return {
+            "site_favicon": site_favicon,
             "site_content_blocks": (),
             "site_page_content": None,
             "site_home_hero_slides": (),
@@ -76,6 +80,7 @@ def site_content_blocks(request):
         else False
     )
     return {
+        "site_favicon": site_favicon,
         "site_content_blocks": SiteContentBlock.objects.filter(
             is_active=True,
             page__in=pages,

@@ -11,6 +11,11 @@ urlpatterns = [
         name="calculator_settings",
     ),
     path(
+        "admin-panel/site-content/favicon/",
+        views.site_favicon_settings,
+        name="site_favicon_settings",
+    ),
+    path(
         "admin-panel/site-content/",
         views.site_content_manager,
         name="site_content_manager",

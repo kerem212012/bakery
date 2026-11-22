@@ -313,6 +313,23 @@ class SitePageContent(models.Model):
         return localized_content(self, "button_text")
 
 
+class SiteFavicon(models.Model):
+    image = models.ImageField(
+        "Фавикон",
+        upload_to="site-settings/favicon/",
+        blank=True,
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
+    )
+    updated_at = models.DateTimeField("Обновлено", auto_now=True)
+
+    class Meta:
+        verbose_name = "фавикон сайта"
+        verbose_name_plural = "фавикон сайта"
+
+    def __str__(self):
+        return "Фавикон сайта"
+
+
 class SitePageSection(models.Model):
     class Page(models.TextChoices):
         HOME = "home", "Главная"

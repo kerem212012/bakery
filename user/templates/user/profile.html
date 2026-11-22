@@ -36,7 +36,7 @@
                     <div class="account-panel-heading">
                         <div><p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Security{% else %}Безопасность{% endif %}</p><h2>{% if LANGUAGE_CODE == 'en' %}Change password{% else %}Изменить пароль{% endif %}</h2></div>
                     </div>
-                    <form method="post" class="account-form profile-form">
+                    <form method="post" class="account-form profile-form password-change-form">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="change_password">
                         {% for field in password_form %}
