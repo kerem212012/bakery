@@ -23,7 +23,7 @@
             </div>
         {% endif %}
 
-        <form class="site-content-editor" method="post">
+        <form class="site-content-editor" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {% if form.non_field_errors %}<div class="site-content-form-errors">{{ form.non_field_errors }}</div>{% endif %}
             <section class="site-content-form-section">
@@ -41,6 +41,8 @@
                                     {{ field.errors }}
                                 </div>
                             {% endfor %}
+                            {{ group.original_value }}
+                            {% if group.image_url %}<img class="calculator-product-admin-preview" src="{{ group.image_url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current product photo{% else %}Текущее фото товара{% endif %}">{% endif %}
                             <button class="admin-dashboard-site-link" type="button" data-remove-product{% if group.index == 0 %} hidden{% endif %}>{% if LANGUAGE_CODE == 'en' %}Remove{% else %}Удалить{% endif %}</button>
                         </div>
                     {% endfor %}
@@ -62,6 +64,33 @@
                     </div>
                 </section>
             {% endfor %}
+            {% for group in option_image_groups %}
+                <section class="site-content-form-section calculator-option-image-section">
+                    <h2>{{ group.title }}</h2>
+                    {{ group.count_field }}
+                    <div class="calculator-option-image-grid" data-option-editor data-option-group="{{ group.key }}">
+                        {% for item in group.items %}
+                            <article class="calculator-option-image-card" data-option-row>
+                                <h3>{{ item.title }}</h3>
+                                {{ item.value_field }}
+                                {{ item.value_field.errors }}
+                                <div class="site-content-form-grid">
+                                    {% for field in item.fields %}
+                                        <div class="site-content-form-field calculator-option-image-field">
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if item.image_url %}<img class="calculator-option-admin-preview" src="{{ item.image_url }}" alt="{{ item.title }}">{% endif %}
+                                <button class="admin-dashboard-site-link" type="button" data-remove-option>{% if LANGUAGE_CODE == 'en' %}Delete option{% else %}Удалить опцию{% endif %}</button>
+                            </article>
+                        {% endfor %}
+                    </div>
+                    <button class="admin-dashboard-site-link" type="button" data-add-option>{% if LANGUAGE_CODE == 'en' %}Add option{% else %}Добавить опцию{% endif %}</button>
+                </section>
+            {% endfor %}
             <div class="site-content-form-actions">
                 <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save calculator settings{% else %}Сохранить настройки{% endif %}</button>
             </div>
@@ -80,8 +109,38 @@
                     <label for="id_product___prefix___base_price">{% if LANGUAGE_CODE == 'en' %}Base price per item{% else %}Базовая цена за штуку{% endif %}</label>
                     <input class="site-content-form-control" id="id_product___prefix___base_price" name="product___prefix___base_price" type="number" min="0" step="0.01" required data-product-price>
                 </div>
+                <div class="site-content-form-field">
+                    <label for="id_product___prefix___image">{% if LANGUAGE_CODE == 'en' %}Product photo{% else %}Фото товара{% endif %}</label>
+                    <input class="site-content-form-control" id="id_product___prefix___image" name="product___prefix___image" type="file" accept="image/jpeg,image/png,image/webp" data-product-image>
+                </div>
+                <input id="id_product___prefix___original_value" name="product___prefix___original_value" type="hidden" value="" data-product-original-value>
                 <button class="admin-dashboard-site-link" type="button" data-remove-product>{% if LANGUAGE_CODE == 'en' %}Remove{% else %}Удалить{% endif %}</button>
             </div>
+        </template>
+        <template id="calculator-option-row-template">
+            <article class="calculator-option-image-card" data-option-row>
+                <h3>{% if LANGUAGE_CODE == 'en' %}New option{% else %}Новая опция{% endif %}</h3>
+                <input id="id_option___group_____prefix___value" name="option___group_____prefix___value" type="hidden" data-option-input="value">
+                <div class="site-content-form-grid">
+                    <div class="site-content-form-field">
+                        <label for="id_option___group_____prefix___label">{% if LANGUAGE_CODE == 'en' %}Name (Russian){% else %}Название (русский){% endif %}</label>
+                        <input class="site-content-form-control" id="id_option___group_____prefix___label" name="option___group_____prefix___label" type="text" maxlength="100" data-option-input="label">
+                    </div>
+                    <div class="site-content-form-field">
+                        <label for="id_option___group_____prefix___label_en">{% if LANGUAGE_CODE == 'en' %}Name (English){% else %}Название (английский){% endif %}</label>
+                        <input class="site-content-form-control" id="id_option___group_____prefix___label_en" name="option___group_____prefix___label_en" type="text" maxlength="100" data-option-input="label-en">
+                    </div>
+                    <div class="site-content-form-field" data-option-extra-field>
+                        <label for="id_option___group_____prefix___extra">{% if LANGUAGE_CODE == 'en' %}Additional price (RUB){% else %}Доплата (₽){% endif %}</label>
+                        <input class="site-content-form-control" id="id_option___group_____prefix___extra" name="option___group_____prefix___extra" type="number" step="0.01" value="0" data-option-input="extra">
+                    </div>
+                    <div class="site-content-form-field">
+                        <label for="id_option_image___group_____prefix__">{% if LANGUAGE_CODE == 'en' %}Photo{% else %}Фото{% endif %}</label>
+                        <input class="site-content-form-control" id="id_option_image___group_____prefix__" name="option_image___group_____prefix__" type="file" accept="image/jpeg,image/png,image/webp" data-option-input="image">
+                    </div>
+                </div>
+                <button class="admin-dashboard-site-link" type="button" data-remove-option>{% if LANGUAGE_CODE == 'en' %}Delete option{% else %}Удалить опцию{% endif %}</button>
+            </article>
         </template>
         <script src="{% static 'core/calculator-product-editor.js' %}" defer></script>
     </section>

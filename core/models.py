@@ -17,6 +17,26 @@ def preorder_contract_path(instance, filename):
     return f"order-contracts/{instance.preorder_id}/{uuid.uuid4().hex}.pdf"
 
 
+def calculator_product_image_path(instance, filename):
+    import uuid
+
+    extension = filename.rsplit(".", 1)[-1].lower()
+    return (
+        f"calculator-products/{instance.calculator_settings_id}/"
+        f"{uuid.uuid4().hex}.{extension}"
+    )
+
+
+def calculator_option_image_path(instance, filename):
+    import uuid
+
+    extension = filename.rsplit(".", 1)[-1].lower()
+    return (
+        f"calculator-options/{instance.calculator_settings_id}/"
+        f"{uuid.uuid4().hex}.{extension}"
+    )
+
+
 def localized_content(instance, field_name):
     language = (get_language() or "").startswith("en")
     field = f"{field_name}_en" if language else field_name
@@ -435,3 +455,74 @@ class CalculatorSettings(models.Model):
 
     def __str__(self):
         return "Настройки калькулятора"
+
+
+class CalculatorProductImage(models.Model):
+    calculator_settings = models.ForeignKey(
+        CalculatorSettings,
+        on_delete=models.CASCADE,
+        related_name="product_images",
+        verbose_name="Настройки калькулятора",
+    )
+    product_value = models.CharField("Товар", max_length=100)
+    image = models.ImageField(
+        "Фото товара",
+        upload_to=calculator_product_image_path,
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("calculator_settings", "product_value"),
+                name="unique_calculator_product_image",
+            )
+        ]
+        verbose_name = "фото товара калькулятора"
+        verbose_name_plural = "фотографии товаров калькулятора"
+
+    def __str__(self):
+        return self.product_value
+
+
+class CalculatorOptionImage(models.Model):
+    class Group(models.TextChoices):
+        FLAVORS = "flavors", "Вкус"
+        SHAPES = "shapes", "Форма"
+        COATINGS = "coatings", "Покрытие"
+        PACKAGING = "packaging", "Упаковка"
+
+    calculator_settings = models.ForeignKey(
+        CalculatorSettings,
+        on_delete=models.CASCADE,
+        related_name="option_images",
+        verbose_name="Настройки калькулятора",
+    )
+    option_group = models.CharField("Группа опций", max_length=16, choices=Group.choices)
+    option_value = models.CharField("Значение опции", max_length=32)
+    label = models.CharField("Название опции", max_length=100, blank=True, default="")
+    label_en = models.CharField(
+        "Название опции на английском",
+        max_length=100,
+        blank=True,
+        default="",
+    )
+    image = models.ImageField(
+        "Фото опции",
+        upload_to=calculator_option_image_path,
+        blank=True,
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("calculator_settings", "option_group", "option_value"),
+                name="unique_calculator_option_image",
+            )
+        ]
+        verbose_name = "фото опции калькулятора"
+        verbose_name_plural = "фотографии опций калькулятора"
+
+    def __str__(self):
+        return f"{self.get_option_group_display()}: {self.option_value}"

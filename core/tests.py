@@ -16,6 +16,8 @@ from catalog.models import Category, Product, ProductFilterOption
 from .calculator import calculate_quote
 from .forms import CatalogPromoCardForm
 from .models import (
+    CalculatorOptionImage,
+    CalculatorProductImage,
     CalculatorSettings,
     FeedbackSubmission,
     HomeHeroSlide,
@@ -201,7 +203,7 @@ class AdminDashboardTests(TestCase):
         self.assertContains(public_response, "calculator-float-toggle")
         self.assertContains(public_response, 'class="contact-float"')
 
-    def test_site_content_editor_requires_site_content_permissions(self):
+    def test_site_content_editor_allows_staff_with_content_permissions(self):
         manager = get_user_model().objects.create_user(
             username="content_manager",
             password="test-password",
@@ -210,7 +212,33 @@ class AdminDashboardTests(TestCase):
         self.client.force_login(manager)
 
         response = self.client.get(reverse("site_content_manager"))
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(
+            response,
+            reverse("manager_dashboard"),
+            fetch_redirect_response=False,
+        )
+
+        permissions = Permission.objects.filter(
+            content_type__app_label="core",
+            codename__in=(
+                "add_sitepagecontent",
+                "change_sitepagecontent",
+                "add_homeheroslide",
+                "change_homeheroslide",
+                "add_sitecontentblock",
+                "change_sitecontentblock",
+                "add_sitepagesection",
+                "change_sitepagesection",
+            ),
+        )
+        manager.user_permissions.add(*permissions)
+        response = self.client.get(reverse("site_content_manager"))
+        self.assertEqual(response.status_code, 200)
+        manager_dashboard = self.client.get(reverse("manager_dashboard"))
+        self.assertContains(
+            manager_dashboard,
+            reverse("site_content_manager"),
+        )
 
         admin_user = get_user_model().objects.create_superuser(
             username="content_admin",
@@ -225,7 +253,7 @@ class AdminDashboardTests(TestCase):
         self.assertContains(response, 'option value="catalog" selected')
         self.assertNotContains(response, 'option value="home" selected')
 
-    def test_staff_with_site_content_permissions_can_edit_page_content(self):
+    def test_staff_with_admin_permissions_only_gets_manager_workspace(self):
         manager = get_user_model().objects.create_user(
             username="permitted_content_manager",
             password="test-password",
@@ -249,18 +277,33 @@ class AdminDashboardTests(TestCase):
             ),
         )
         manager.user_permissions.add(*permissions)
+        manager.user_permissions.add(
+            Permission.objects.get(
+                content_type__app_label="core",
+                codename="change_calculatorsettings",
+            ),
+            Permission.objects.get(
+                content_type__app_label="catalog",
+                codename="view_product",
+            ),
+        )
         self.client.force_login(manager)
 
-        dashboard_response = self.client.get(reverse("admin_dashboard"))
-        editor_response = self.client.get(
-            reverse("site_content_manager"),
-            {"page": SitePageContent.Page.ABOUT},
-        )
+        for url in (
+            reverse("admin_dashboard"),
+            reverse("calculator_settings"),
+            reverse("admin_section", args=("products",)),
+        ):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertRedirects(
+                    response,
+                    reverse("manager_dashboard"),
+                    fetch_redirect_response=False,
+                )
 
-        self.assertEqual(dashboard_response.status_code, 200)
-        self.assertContains(dashboard_response, "Редактировать контент страниц")
+        editor_response = self.client.get(reverse("site_content_manager"))
         self.assertEqual(editor_response.status_code, 200)
-        self.assertContains(editor_response, "Редактировать страницы сайта")
 
         save_response = self.client.post(
             reverse("site_content_manager"),
@@ -603,6 +646,77 @@ class AdminDashboardTests(TestCase):
         self.assertContains(about_response, "Новая история")
         self.assertContains(about_response, "Обновлённый рассказ о компании.")
 
+    def test_about_statistics_can_be_edited_and_hidden_without_fallback(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="about_stats_editor",
+            email="about-stats-editor@example.com",
+            password="test-password",
+        )
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.ABOUT,
+            group="stats",
+        ).delete()
+        statistic = SitePageSection.objects.create(
+            page=SitePageSection.Page.ABOUT,
+            group="stats",
+            value="5+ лет",
+            value_en="5+ years",
+            description="Создаём сладкие истории",
+            description_en="Creating sweet stories",
+            display_order=0,
+            is_active=True,
+        )
+        self.client.force_login(admin_user)
+
+        editor_response = self.client.get(
+            reverse("site_content_manager"),
+            {"page": SitePageSection.Page.ABOUT},
+        )
+        formset = editor_response.context["about_stats_formset"]
+        self.assertEqual(len(formset.forms), 1)
+
+        def post_statistic(is_active, value, description):
+            return self.client.post(
+                reverse("site_content_manager"),
+                {
+                    "action": "save_about_stats",
+                    "page": SitePageSection.Page.ABOUT,
+                    "about-stats-TOTAL_FORMS": "1",
+                    "about-stats-INITIAL_FORMS": "1",
+                    "about-stats-MIN_NUM_FORMS": "0",
+                    "about-stats-MAX_NUM_FORMS": "1000",
+                    "about-stats-0-id": str(statistic.pk),
+                    "about-stats-0-value": value,
+                    "about-stats-0-value_en": "5+ years",
+                    "about-stats-0-description": description,
+                    "about-stats-0-description_en": "Creating sweet stories",
+                    "about-stats-0-display_order": "1",
+                    **({"about-stats-0-is_active": "on"} if is_active else {}),
+                },
+            )
+
+        response = post_statistic(True, "8+ лет", "Создаём новую историю")
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=about",
+        )
+        statistic.refresh_from_db()
+        self.assertEqual(statistic.value, "8+ лет")
+        self.assertEqual(statistic.description, "Создаём новую историю")
+        self.assertContains(self.client.get(reverse("about")), "8+ лет")
+
+        response = post_statistic(False, "", "")
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=about",
+        )
+        statistic.refresh_from_db()
+        self.assertFalse(statistic.is_active)
+        about_response = self.client.get(reverse("about"))
+        self.assertNotContains(about_response, "about-stats")
+        self.assertNotContains(about_response, "5000+")
+        self.assertNotContains(about_response, "100+")
+
     def test_about_promises_form_updates_principle_cards(self):
         admin_user = get_user_model().objects.create_superuser(
             username="about_promises_saver",
@@ -896,11 +1010,25 @@ class AdminDashboardTests(TestCase):
         self.assertContains(public_response, 'href="mailto:accounts@example.com"')
 
     def test_delivery_sections_are_editable_and_rendered(self):
-        admin_user = get_user_model().objects.create_superuser(
+        admin_user = get_user_model().objects.create_user(
             username="delivery_sections_admin",
-            email="delivery-sections-admin@example.com",
             password="test-password",
+            is_staff=True,
         )
+        permissions = Permission.objects.filter(
+            content_type__app_label="core",
+            codename__in=(
+                "add_sitepagecontent",
+                "change_sitepagecontent",
+                "add_homeheroslide",
+                "change_homeheroslide",
+                "add_sitecontentblock",
+                "change_sitecontentblock",
+                "add_sitepagesection",
+                "change_sitepagesection",
+            ),
+        )
+        admin_user.user_permissions.add(*permissions)
         self.client.force_login(admin_user)
         editor_url = reverse("site_content_manager")
         page = SitePageSection.Page.DELIVERY
@@ -920,6 +1048,7 @@ class AdminDashboardTests(TestCase):
         self.assertIsNotNone(methods_formset)
         self.assertIsNotNone(pickup_formset)
         self.assertIsNotNone(help_formset)
+        self.assertNotIn("image", methods_formset.forms[0].fields)
         self.assertContains(editor_response, "Доставка — способы доставки")
         self.assertContains(editor_response, "Доставка — самовывоз")
         self.assertContains(editor_response, "Доставка — полезная информация")
@@ -987,6 +1116,8 @@ class AdminDashboardTests(TestCase):
         response = self.client.post(editor_url, pickup_data)
         self.assertRedirects(response, f"{editor_url}?page={page}")
 
+        icon_buffer = BytesIO()
+        Image.new("RGB", (2, 2), color="white").save(icon_buffer, format="PNG")
         help_data = {
             "page": page,
             "action": "save_delivery_help",
@@ -996,11 +1127,27 @@ class AdminDashboardTests(TestCase):
             "delivery-help-0-title_en": "New delivery cost",
             "delivery-help-0-description": "Описание новой стоимости доставки.",
             "delivery-help-0-description_en": "Description of new delivery cost.",
+            "delivery-help-1-image": SimpleUploadedFile(
+                "delivery-icon.png",
+                icon_buffer.getvalue(),
+                content_type="image/png",
+            ),
             "delivery-help-heading-section_title": "Новая полезная информация",
             "delivery-help-heading-section_title_en": "New useful information",
         }
-        response = self.client.post(editor_url, help_data)
-        self.assertRedirects(response, f"{editor_url}?page={page}")
+        with TemporaryDirectory() as media_root, override_settings(
+            MEDIA_ROOT=media_root
+        ):
+            response = self.client.post(editor_url, help_data)
+            self.assertRedirects(response, f"{editor_url}?page={page}")
+            delivery_icon = SitePageSection.objects.get(
+                page=page,
+                group="notes",
+                display_order=1,
+            )
+            self.assertTrue(delivery_icon.image)
+            public_response = self.client.get(reverse("delivery"))
+            self.assertContains(public_response, delivery_icon.image.url)
 
         methods = SitePageSection.objects.get(
             page=page,
@@ -1031,6 +1178,7 @@ class AdminDashboardTests(TestCase):
         self.assertEqual(delivery_cost.section_title, "Новая полезная информация")
 
         public_response = self.client.get(reverse("delivery"))
+        self.assertNotContains(public_response, "delivery-feature-image")
         for rendered_text in (
             "Новые способы доставки",
             "Обновлённое описание доставки.",
@@ -1047,6 +1195,7 @@ class AdminDashboardTests(TestCase):
             with self.subTest(text=rendered_text):
                 self.assertContains(public_response, rendered_text)
         self.assertContains(public_response, 'href="https://maps.example/pickup"')
+        self.assertContains(public_response, delivery_icon.image.url)
 
     def test_faq_questions_can_be_added_edited_ordered_and_deleted(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -1615,7 +1764,8 @@ class AdminDashboardTests(TestCase):
                 for field_name in form.fields:
                     name = f"{form.prefix}-{field_name}"
                     if field_name == "id":
-                        data[name] = str(form.instance.pk)
+                        if form.instance.pk:
+                            data[name] = str(form.instance.pk)
                     else:
                         data[name] = form[field_name].value() or ""
             return data
@@ -1685,6 +1835,120 @@ class AdminDashboardTests(TestCase):
             with self.subTest(text=rendered_text):
                 self.assertContains(public_response, rendered_text)
 
+    def test_partnership_directions_can_be_added_and_deleted(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="partnership_direction_editor",
+            email="partnership-direction-editor@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        editor_url = reverse("site_content_manager")
+        page = SitePageSection.Page.PARTNERSHIP
+        editor_response = self.client.get(editor_url, {"page": page})
+        formset = editor_response.context["partnership_directions_formset"]
+        initial_count = formset.initial_form_count()
+        self.assertEqual(len(formset.forms), initial_count)
+        self.assertIn("DELETE", formset.forms[0].fields)
+        self.assertContains(editor_response, "Добавить направление")
+        previous_orders = list(
+            SitePageSection.objects.filter(
+                page=page,
+                group="directions",
+            ).values_list("display_order", flat=True)
+        )
+
+        def formset_data(formset, total_forms=None):
+            data = {
+                f"{formset.prefix}-TOTAL_FORMS": str(
+                    total_forms if total_forms is not None else len(formset.forms)
+                ),
+                f"{formset.prefix}-INITIAL_FORMS": str(
+                    formset.initial_form_count()
+                ),
+                f"{formset.prefix}-MIN_NUM_FORMS": "0",
+                f"{formset.prefix}-MAX_NUM_FORMS": "1000",
+            }
+            for form in formset.forms:
+                for field_name in (
+                    "title",
+                    "title_en",
+                    "description",
+                    "description_en",
+                ):
+                    data[f"{form.prefix}-{field_name}"] = (
+                        form[field_name].value() or ""
+                    )
+                if form.instance.pk:
+                    data[f"{form.prefix}-id"] = str(form.instance.pk)
+            return data
+
+        def heading_data(form):
+            return {
+                f"{form.prefix}-{field_name}": form[field_name].value() or ""
+                for field_name in form.fields
+            }
+
+        post_data = {
+            "page": page,
+            "action": "save_partnership_directions",
+            **formset_data(formset, total_forms=initial_count + 1),
+            **heading_data(
+                editor_response.context["partnership_directions_heading_form"]
+            ),
+        }
+        added_form_index = initial_count
+        post_data[f"partnership-directions-{added_form_index}-title"] = (
+            "Новое направление"
+        )
+        post_data[f"partnership-directions-{added_form_index}-title_en"] = (
+            "New direction"
+        )
+        post_data[f"partnership-directions-{added_form_index}-description"] = (
+            "Описание нового направления."
+        )
+        post_data[f"partnership-directions-{added_form_index}-description_en"] = (
+            "Description of the new direction."
+        )
+
+        response = self.client.post(editor_url, post_data)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+        added_direction = SitePageSection.objects.get(
+            page=page,
+            group="directions",
+            title="Новое направление",
+        )
+        if previous_orders:
+            self.assertGreater(added_direction.display_order, max(previous_orders))
+        else:
+            self.assertEqual(added_direction.display_order, 0)
+
+        editor_response = self.client.get(editor_url, {"page": page})
+        formset = editor_response.context["partnership_directions_formset"]
+        post_data = {
+            "page": page,
+            "action": "save_partnership_directions",
+            **formset_data(formset),
+            **heading_data(
+                editor_response.context["partnership_directions_heading_form"]
+            ),
+        }
+        added_form_index = next(
+            index
+            for index, form in enumerate(formset.forms)
+            if form.instance.pk == added_direction.pk
+        )
+        post_data[f"partnership-directions-{added_form_index}-DELETE"] = "on"
+
+        response = self.client.post(editor_url, post_data)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+        self.assertFalse(
+            SitePageSection.objects.filter(pk=added_direction.pk).exists()
+        )
+        self.assertNotContains(
+            self.client.get(reverse("corporate")),
+            "Новое направление",
+        )
+
     def test_home_about_form_updates_the_section_and_both_paragraphs(self):
         admin_user = get_user_model().objects.create_superuser(
             username="home_about_saver",
@@ -1731,6 +1995,32 @@ class AdminDashboardTests(TestCase):
         self.assertContains(home_response, "Новый заголовок о компании")
         self.assertContains(home_response, "Первый обновлённый абзац.")
         self.assertContains(home_response, "Второй обновлённый абзац.")
+
+    def test_home_about_form_can_hide_the_section(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="home_about_hider",
+            email="home-about-hider@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.post(
+            reverse("site_content_manager"),
+            {
+                "action": "save_home_about",
+                "page": SitePageSection.Page.HOME,
+                "section_title": "О компании",
+                "description": "Первый абзац.",
+                "description_2": "Второй абзац.",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            f"{reverse('site_content_manager')}?page=home",
+        )
+        home_response = self.client.get(reverse("home"))
+        self.assertNotContains(home_response, 'id="about"')
 
     def test_home_about_form_creates_section_when_it_does_not_exist(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -1847,6 +2137,33 @@ class AdminDashboardTests(TestCase):
                 self.assertContains(
                     response,
                     f"background-image:url('{page_content.image.url}')",
+                )
+
+    def test_delivery_feature_image_falls_back_to_page_hero_photo(self):
+        image_buffer = BytesIO()
+        Image.new("RGB", (1, 1), color="white").save(image_buffer, format="PNG")
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.DELIVERY,
+            group="methods",
+        ).delete()
+
+        with TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                page_content = SitePageContent.objects.create(
+                    page=SitePageContent.Page.DELIVERY,
+                    image=SimpleUploadedFile(
+                        "delivery-hero.png",
+                        image_buffer.getvalue(),
+                        content_type="image/png",
+                    ),
+                )
+
+                response = self.client.get(reverse("delivery"))
+
+                self.assertContains(
+                    response,
+                    f"background-image:url('{page_content.image.url}')",
+                    count=2,
                 )
 
     def test_home_banner_save_updates_homepage_carousel(self):
@@ -1996,7 +2313,7 @@ class AdminDashboardTests(TestCase):
         self.assertContains(partnership_response, "Move this block")
         self.assertNotContains(about_response, "Move this block")
 
-    def test_custom_admin_section_requires_view_permission(self):
+    def test_custom_admin_section_is_reserved_for_superusers(self):
         manager = get_user_model().objects.create_user(
             username="section_manager",
             is_staff=True,
@@ -2005,7 +2322,11 @@ class AdminDashboardTests(TestCase):
 
         response = self.client.get(reverse("admin_section", args=("products",)))
 
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(
+            response,
+            reverse("manager_dashboard"),
+            fetch_redirect_response=False,
+        )
 
         manager.user_permissions.add(
             Permission.objects.get(
@@ -2014,8 +2335,11 @@ class AdminDashboardTests(TestCase):
             )
         )
         response = self.client.get(reverse("admin_section", args=("products",)))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Товары")
+        self.assertRedirects(
+            response,
+            reverse("manager_dashboard"),
+            fetch_redirect_response=False,
+        )
 
     def test_all_admin_section_pages_render_for_superuser(self):
         admin_user = get_user_model().objects.create_user(
@@ -2502,7 +2826,7 @@ class AdminDashboardTests(TestCase):
         self.assertRedirects(response, reverse("admin_section", args=("messages",)))
         self.assertFalse(FeedbackSubmission.objects.filter(pk=feedback.pk).exists())
 
-    def test_feedback_delete_requires_delete_permission(self):
+    def test_feedback_delete_is_reserved_for_superusers(self):
         manager = get_user_model().objects.create_user(
             username="feedback_delete_manager",
             is_staff=True,
@@ -2527,7 +2851,11 @@ class AdminDashboardTests(TestCase):
 
         response = self.client.post(delete_url)
 
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(
+            response,
+            reverse("manager_dashboard"),
+            fetch_redirect_response=False,
+        )
         self.assertTrue(FeedbackSubmission.objects.filter(pk=feedback.pk).exists())
 
     def test_feedback_can_be_hidden_and_restored_from_admin(self):
@@ -2584,7 +2912,7 @@ class AdminDashboardTests(TestCase):
         self.assertFalse(feedback.is_hidden)
         self.assertContains(self.client.get(list_url), "Visibility toggle feedback")
 
-    def test_feedback_visibility_requires_change_permission(self):
+    def test_feedback_visibility_is_reserved_for_superusers(self):
         manager = get_user_model().objects.create_user(
             username="feedback_visibility_manager",
             is_staff=True,
@@ -2610,7 +2938,11 @@ class AdminDashboardTests(TestCase):
 
         response = self.client.post(hide_url)
 
-        self.assertEqual(response.status_code, 403)
+        self.assertRedirects(
+            response,
+            reverse("manager_dashboard"),
+            fetch_redirect_response=False,
+        )
         feedback.refresh_from_db()
         self.assertFalse(feedback.is_hidden)
 
@@ -2756,7 +3088,7 @@ class AdminDashboardTests(TestCase):
 
                 self.assertContains(response, f'src="{block.image.url}"')
 
-    def test_staff_header_links_to_admin_and_permitted_manager_pages(self):
+    def test_staff_header_links_only_to_manager_pages(self):
         manager = get_user_model().objects.create_user(
             username="header_manager",
             password="Secure-manager-password-482!",
@@ -2772,9 +3104,26 @@ class AdminDashboardTests(TestCase):
 
         response = self.client.get(reverse("home"))
 
+        self.assertContains(response, reverse("manager_dashboard"))
+        self.assertNotContains(response, reverse("admin_dashboard"))
+        self.assertContains(response, "mobile-staff-links")
+
+    def test_superuser_header_links_to_admin_and_manager_pages(self):
+        admin_user = get_user_model().objects.create_user(
+            username="header_superuser",
+            email="header-superuser@example.com",
+            password="test-password",
+            is_staff=False,
+            is_superuser=True,
+        )
+        self.client.force_login(admin_user)
+
+        response = self.client.get(reverse("home"))
+
         self.assertContains(response, reverse("admin_dashboard"))
         self.assertContains(response, reverse("manager_dashboard"))
-        self.assertContains(response, "mobile-staff-links")
+        self.assertEqual(self.client.get(reverse("admin_dashboard")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("manager_dashboard")).status_code, 200)
 
     def test_non_staff_header_does_not_show_management_links(self):
         customer = get_user_model().objects.create_user(
@@ -2789,7 +3138,7 @@ class AdminDashboardTests(TestCase):
         self.assertNotContains(response, reverse("manager_dashboard"))
 
 
-    def test_calculator_settings_require_permission_and_can_be_saved(self):
+    def test_calculator_settings_are_reserved_for_superusers(self):
         manager = get_user_model().objects.create_user(
             username="calculator_manager",
             password="test-password",
@@ -2804,7 +3153,11 @@ class AdminDashboardTests(TestCase):
             reverse("manager_dashboard"),
             fetch_redirect_response=False,
         )
-        self.assertEqual(self.client.get(calculator_url).status_code, 403)
+        self.assertRedirects(
+            self.client.get(calculator_url),
+            reverse("manager_dashboard"),
+            fetch_redirect_response=False,
+        )
 
         admin_user = get_user_model().objects.create_superuser(
             username="calculator_admin",
@@ -2864,6 +3217,285 @@ class AdminDashboardTests(TestCase):
         self.assertContains(home, 'data-base-price="110"')
         self.assertContains(home, 'data-base-price="45"')
         self.assertContains(home, "Печенье")
+
+    def test_calculator_product_photo_can_be_uploaded_and_replaced(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="calculator_photo_admin",
+            email="calculator-photo-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        calculator_url = reverse("calculator_settings")
+        form = self.client.get(calculator_url).context["form"]
+        data = {
+            name: form[name].value() if form[name].value() is not None else ""
+            for name in form.fields
+            if not name.endswith("_image")
+        }
+
+        def image_upload(filename, color):
+            image_buffer = BytesIO()
+            Image.new("RGB", (1, 1), color=color).save(image_buffer, format="PNG")
+            return SimpleUploadedFile(
+                filename,
+                image_buffer.getvalue(),
+                content_type="image/png",
+            )
+
+        with TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                response = self.client.post(
+                    calculator_url,
+                    {**data, "product_0_image": image_upload("first.png", "red")},
+                )
+
+                self.assertRedirects(response, calculator_url)
+                product_image = CalculatorProductImage.objects.get()
+                old_image_name = product_image.image.name
+                self.assertTrue(product_image.image.storage.exists(old_image_name))
+
+                home = self.client.get(reverse("home"))
+                self.assertContains(home, f'data-image-url="{product_image.image.url}"')
+
+                form = self.client.get(calculator_url).context["form"]
+                data = {
+                    name: form[name].value() if form[name].value() is not None else ""
+                    for name in form.fields
+                    if not name.endswith("_image")
+                }
+                response = self.client.post(
+                    calculator_url,
+                    {**data, "product_0_image": image_upload("second.png", "blue")},
+                )
+
+                self.assertRedirects(response, calculator_url)
+                self.assertEqual(
+                    list(
+                        CalculatorProductImage.objects.values_list(
+                            "pk",
+                            "product_value",
+                        )
+                    ),
+                    [(product_image.pk, "пряник")],
+                )
+                product_image.refresh_from_db()
+                self.assertNotEqual(product_image.image.name, old_image_name)
+                self.assertFalse(product_image.image.storage.exists(old_image_name))
+                self.assertTrue(product_image.image.storage.exists(product_image.image.name))
+
+    def test_calculator_option_photo_can_be_uploaded_and_shown(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="calculator_option_photo_admin",
+            email="calculator-option-photo-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        calculator_url = reverse("calculator_settings")
+        form = self.client.get(calculator_url).context["form"]
+        data = {
+            name: form[name].value() if form[name].value() is not None else ""
+            for name in form.fields
+            if not isinstance(form.fields[name], forms.ImageField)
+        }
+        image_buffer = BytesIO()
+        Image.new("RGB", (1, 1), color="purple").save(image_buffer, format="PNG")
+        upload = SimpleUploadedFile(
+            "classic-flavor.png",
+            image_buffer.getvalue(),
+            content_type="image/png",
+        )
+
+        with TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                response = self.client.post(
+                    calculator_url,
+                    {**data, "option_image_flavors_0": upload},
+                )
+
+                self.assertRedirects(response, calculator_url)
+                option_image = CalculatorOptionImage.objects.get(
+                    option_group=CalculatorOptionImage.Group.FLAVORS,
+                    option_value="classic",
+                )
+                self.assertTrue(
+                    option_image.image.storage.exists(option_image.image.name)
+                )
+
+                home = self.client.get(reverse("home"))
+                self.assertContains(home, f'src="{option_image.image.url}"')
+
+                settings_page = self.client.get(calculator_url)
+                self.assertContains(settings_page, f'src="{option_image.image.url}"')
+
+    def test_calculator_option_names_can_be_changed_in_both_languages(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="calculator_option_name_admin",
+            email="calculator-option-name-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        calculator_url = reverse("calculator_settings")
+        form = self.client.get(calculator_url).context["form"]
+        data = {
+            name: form[name].value() if form[name].value() is not None else ""
+            for name in form.fields
+            if not isinstance(form.fields[name], forms.ImageField)
+        }
+        data["option_flavors_0_label"] = "Авторский пряник"
+        data["option_flavors_0_label_en"] = "Signature gingerbread"
+
+        response = self.client.post(calculator_url, data)
+
+        self.assertRedirects(response, calculator_url)
+        option_setting = next(
+            option
+            for option in CalculatorSettings.objects.get(pk=1).pricing[
+                "option_catalog"
+            ]["flavors"]
+            if option["value"] == "classic"
+        )
+        self.assertEqual(option_setting["label"], "Авторский пряник")
+        self.assertEqual(option_setting["label_en"], "Signature gingerbread")
+        self.assertContains(self.client.get(reverse("home")), "Авторский пряник")
+        self.assertContains(
+            self.client.get(reverse("home"), HTTP_ACCEPT_LANGUAGE="en"),
+            "Signature gingerbread",
+        )
+
+    def test_calculator_options_can_be_added_and_deleted_without_losing_saved_pricing(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="calculator_option_manage_admin",
+            email="calculator-option-manage-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        calculator_url = reverse("calculator_settings")
+        form = self.client.get(calculator_url).context["form"]
+        data = {
+            name: form[name].value() if form[name].value() is not None else ""
+            for name in form.fields
+            if not isinstance(form.fields[name], forms.ImageField)
+        }
+        data.update(
+            {
+                "option_flavors_count": "5",
+                "option_flavors_4_value": "",
+                "option_flavors_4_label": "Ванильный",
+                "option_flavors_4_label_en": "Vanilla",
+                "option_flavors_4_extra": "0",
+                "option_shapes_count": "7",
+                "option_shapes_6_value": "",
+                "option_shapes_6_label": "Бублик",
+                "option_shapes_6_label_en": "Ring",
+            }
+        )
+
+        response = self.client.post(calculator_url, data)
+
+        self.assertRedirects(response, calculator_url)
+        settings = CalculatorSettings.objects.get(pk=1)
+        added_option = next(
+            option
+            for option in settings.pricing["option_catalog"]["flavors"]
+            if option["value"] == "ванильный"
+        )
+        self.assertTrue(added_option["active"])
+        self.assertEqual(added_option["extra"], "0")
+        added_shape = next(
+            option
+            for option in settings.pricing["option_catalog"]["shapes"]
+            if option["value"] == "бублик"
+        )
+        self.assertTrue(added_shape["active"])
+        home = self.client.get(reverse("home"))
+        self.assertContains(home, "Ванильный")
+        self.assertContains(home, "Бублик")
+        self.assertIn(
+            ("ванильный", "Ванильный"),
+            home.context["preorder_form"].fields["flavor"].choices,
+        )
+        form = self.client.get(calculator_url).context["form"]
+        data = {
+            name: form[name].value() if form[name].value() is not None else ""
+            for name in form.fields
+            if not isinstance(form.fields[name], forms.ImageField)
+        }
+        data["option_flavors_4_extra"] = "5.00"
+        response = self.client.post(calculator_url, data)
+        self.assertRedirects(response, calculator_url)
+
+        home = self.client.get(reverse("home"))
+        product_value = home.context["preorder_form"].fields["product"].choices[0][0]
+        response = self.client.post(
+            reverse("preorder"),
+            {
+                "product": product_value,
+                "flavor": "ванильный",
+                "quantity": "10",
+                "size": "5",
+                "shape": "heart",
+                "coating": "icing",
+                "packaging": "ribbon",
+                "delivery": "pickup",
+                "payment": "organization",
+                "name": "Иван",
+                "email": "ivan@example.com",
+                "phone": "+74951234567",
+                "consent_given": "on",
+            },
+        )
+        self.assertRedirects(response, "/#calculator")
+        preorder = Preorder.objects.get()
+        self.assertEqual(preorder.configuration["flavor_label"], "Ванильный")
+        self.assertEqual(preorder.unit_price, Decimal("103"))
+
+        form = self.client.get(calculator_url).context["form"]
+        data = {
+            name: form[name].value() if form[name].value() is not None else ""
+            for name in form.fields
+            if not isinstance(form.fields[name], forms.ImageField)
+        }
+        data["option_flavors_count"] = "4"
+        for name in tuple(data):
+            if name.startswith("option_flavors_4_"):
+                del data[name]
+
+        response = self.client.post(calculator_url, data)
+
+        self.assertRedirects(response, calculator_url)
+        settings.refresh_from_db()
+        archived_option = next(
+            option
+            for option in settings.pricing["option_catalog"]["flavors"]
+            if option["value"] == "ванильный"
+        )
+        self.assertFalse(archived_option["active"])
+        self.assertEqual(
+            settings.pricing["flavor_additions"]["ванильный"],
+            "5.00",
+        )
+        preorder.refresh_from_db()
+        self.assertEqual(preorder.configuration["flavor"], "ванильный")
+        self.assertEqual(preorder.configuration["flavor_label"], "Ванильный")
+        quote = calculate_quote(
+            {
+                "product": product_value,
+                "quantity": 10,
+                "size": "5",
+                "flavor": "ванильный",
+                "coating": "icing",
+                "packaging": "ribbon",
+                "delivery": "pickup",
+            },
+            settings.pricing,
+        )
+        self.assertEqual(quote["unit_price"], Decimal("103"))
+        home = self.client.get(reverse("home"))
+        self.assertNotContains(home, "Ванильный")
+        self.assertNotIn(
+            "ванильный",
+            dict(home.context["preorder_form"].fields["flavor"].choices),
+        )
 
 
 class ManagerDashboardTests(TestCase):
@@ -3611,11 +4243,11 @@ class CalculatorTests(TestCase):
             'class="site-intro-name">Vkusno Da Sladko</span>',
         )
         self.assertContains(english_response, '<span class="site-intro-mark">V</span>')
-        self.assertContains(
+        self.assertNotContains(
             self.client.get(reverse("business_clients")),
             'data-brand="Vkusno Da Sladko"',
         )
-        self.assertContains(
+        self.assertNotContains(
             self.client.get(reverse("corporate")),
             'data-brand="Vkusno Da Sladko"',
         )
@@ -3835,6 +4467,7 @@ class HomePageCatalogTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "<title>Партнёрство с «Вкусно Да Сладко» — Вкусно Да Сладко</title>")
         self.assertContains(response, 'class="about-breadcrumbs"', count=1)
+        self.assertNotContains(response, 'data-brand="Vkusno Da Sladko"')
         self.assertNotContains(response, 'class="partnership-kicker"')
         self.assertNotContains(response, 'class="partnership-card-arrow"')
         self.assertContains(response, "Направления сотрудничества")
@@ -3860,6 +4493,7 @@ class HomePageCatalogTests(TestCase):
         self.assertContains(response, "Индивидуальные решения")
         self.assertContains(response, "Взаимодействие")
         self.assertContains(response, "Калькулятор заказа")
+        self.assertNotContains(response, 'data-brand="Vkusno Da Sladko"')
 
     def test_business_clients_breadcrumb_is_not_repeated_as_the_eyebrow(self):
         SitePageContent.objects.create(

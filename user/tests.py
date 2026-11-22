@@ -1,7 +1,10 @@
 from io import BytesIO
 from datetime import timedelta
 from decimal import Decimal
+from smtplib import SMTPException
+from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core import mail
@@ -424,6 +427,7 @@ class AccountTests(TestCase):
                 self.assertContains(response, title)
                 self.assertContains(response, "Проект документа")
 
+    @override_settings(REGISTRATION_EMAIL_VERIFICATION_REQUIRED=False)
     def test_registration_creates_active_user_without_sending_verification_email(self):
         response = self.client.post(
             "/account/register/",
@@ -477,7 +481,56 @@ class AccountTests(TestCase):
         user = User.objects.get(email="verification-enabled@example.com")
         self.assertFalse(user.is_active)
         self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["verification-enabled@example.com"])
+        self.assertEqual(mail.outbox[0].from_email, settings.DEFAULT_FROM_EMAIL)
+        self.assertEqual(mail.outbox[0].subject, "Подтвердите адрес электронной почты")
         self.assertIn("/verify-email/", mail.outbox[0].body)
+        self.assertIn(user.email, mail.outbox[0].body)
+
+    @override_settings(REGISTRATION_EMAIL_VERIFICATION_REQUIRED=True)
+    def test_registration_verification_email_is_english_when_locale_is_english(self):
+        response = self.client.post(
+            reverse("accounts:register"),
+            {
+                "email": "english-verification@example.com",
+                "password1": "A-long-password-482!",
+                "password2": "A-long-password-482!",
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
+            },
+            HTTP_ACCEPT_LANGUAGE="en",
+        )
+
+        self.assertRedirects(response, reverse("accounts:email_verification_sent"))
+        user = User.objects.get(email="english-verification@example.com")
+        self.assertFalse(user.is_active)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "Verify your email address")
+        self.assertIn("/verify-email/", mail.outbox[0].body)
+        self.assertIn("Thank you for registering", mail.outbox[0].body)
+        self.assertIn(user.email, mail.outbox[0].body)
+
+    @override_settings(REGISTRATION_EMAIL_VERIFICATION_REQUIRED=True)
+    @patch("user.views.send_mail", side_effect=SMTPException("SMTP unavailable"))
+    def test_registration_rolls_back_when_verification_email_cannot_be_sent(
+        self, send_mail
+    ):
+        response = self.client.post(
+            reverse("accounts:register"),
+            {
+                "email": "email-failure@example.com",
+                "password1": "A-long-password-482!",
+                "password2": "A-long-password-482!",
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Не удалось отправить письмо для подтверждения.")
+        self.assertFalse(User.objects.filter(email="email-failure@example.com").exists())
+        self.assertEqual(CustomerProfile.objects.count(), 0)
+        send_mail.assert_called_once()
 
     def test_email_verification_activates_the_account(self):
         user = User.objects.create_user(
@@ -497,6 +550,57 @@ class AccountTests(TestCase):
         user.refresh_from_db()
         self.assertTrue(user.is_active)
 
+    def test_invalid_email_verification_token_does_not_activate_the_account(self):
+        user = User.objects.create_user(
+            username="invalid_verify",
+            email="invalid-verify@example.com",
+            password="A-long-password-482!",
+            is_active=False,
+        )
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        response = self.client.get(
+            reverse(
+                "accounts:verify_email",
+                kwargs={"uidb64": uid, "token": "invalid-token"},
+            )
+        )
+
+        self.assertRedirects(response, reverse("accounts:login"))
+        user.refresh_from_db()
+        self.assertFalse(user.is_active)
+
+    @override_settings(REGISTRATION_EMAIL_VERIFICATION_REQUIRED=True)
+    @patch("user.views.send_mail")
+    def test_duplicate_registration_does_not_send_verification_email(self, send_mail):
+        User.objects.create_user(
+            username="taken_verification",
+            email="taken-verification@example.com",
+            password="A-long-password-482!",
+        )
+
+        response = self.client.post(
+            reverse("accounts:register"),
+            {
+                "email": "TAKEN-VERIFICATION@EXAMPLE.COM",
+                "password1": "A-long-password-482!",
+                "password2": "A-long-password-482!",
+                "agreement_accepted": "on",
+                "personal_data_consent": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Аккаунт с такой почтой уже существует.",
+        )
+        send_mail.assert_not_called()
+        self.assertEqual(
+            User.objects.filter(email__iexact="taken-verification@example.com").count(),
+            1,
+        )
+
     def test_password_reset_sends_a_reset_email(self):
         user = User.objects.create_user(
             username="reset_customer",
@@ -514,6 +618,7 @@ class AccountTests(TestCase):
         self.assertIn("Сброс пароля", mail.outbox[0].subject)
         self.assertIn("/reset/", mail.outbox[0].body)
 
+    @override_settings(REGISTRATION_EMAIL_VERIFICATION_REQUIRED=False)
     def test_registration_returns_to_next_and_preserves_cart_session(self):
         category = Category.objects.create(name="Подарки")
         product = Product.objects.create(name="Пряник", category=category)
@@ -695,6 +800,7 @@ class AccountTests(TestCase):
             response.context["form"]["phone"].errors,
         )
 
+    @override_settings(REGISTRATION_EMAIL_VERIFICATION_REQUIRED=False)
     def test_legal_entity_registration_saves_remaining_details(self):
         response = self.client.post(
             "/account/register/",
@@ -720,6 +826,7 @@ class AccountTests(TestCase):
         self.assertEqual(profile.kpp, "")
         self.assertEqual(profile.phone, "+7 900 123-45-67")
 
+    @override_settings(REGISTRATION_EMAIL_VERIFICATION_REQUIRED=False)
     def test_legal_entity_registration_accepts_kpp_without_inn(self):
         response = self.client.post(
             "/account/register/",

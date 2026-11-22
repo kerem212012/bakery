@@ -1,5 +1,7 @@
+import logging
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
+from smtplib import SMTPException
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -12,6 +14,7 @@ from django.contrib.auth import (
 )
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core.mail import BadHeaderError
 from django.db import transaction
 from django.db.models import Sum
 from django.http import FileResponse
@@ -43,6 +46,7 @@ from .models import CustomerDeliveryAddress, CustomerProfile
 
 
 token_generator = PasswordResetTokenGenerator()
+logger = logging.getLogger(__name__)
 
 
 def _send_verification_email(request, user):
@@ -154,11 +158,27 @@ def register(request):
 
     form = RegistrationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        user = form.save()
         if settings.REGISTRATION_EMAIL_VERIFICATION_REQUIRED:
-            user.is_active = False
-            user.save(update_fields=("is_active",))
-            _send_verification_email(request, user)
+            try:
+                with transaction.atomic():
+                    user = form.save()
+                    user.is_active = False
+                    user.save(update_fields=("is_active",))
+                    _send_verification_email(request, user)
+            except (BadHeaderError, OSError, SMTPException):
+                logger.exception("Could not send registration verification email.")
+                message = (
+                    "We couldn't send a verification email. Please try again."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Не удалось отправить письмо для подтверждения. Попробуйте ещё раз."
+                )
+                form.add_error(None, message)
+                return render(
+                    request,
+                    "user/register.html",
+                    {"form": form, "next": next_url},
+                )
+
             message = (
                 "We sent a verification link to your email. Please confirm it to finish registration."
                 if request.LANGUAGE_CODE == "en"
@@ -167,6 +187,7 @@ def register(request):
             messages.info(request, message)
             return redirect(reverse("accounts:email_verification_sent"))
 
+        user = form.save()
         authenticated_user = authenticate(
             request,
             username=user.username,
@@ -182,12 +203,12 @@ def register(request):
             )
             return redirect(next_url or reverse("accounts:dashboard"))
 
-        messages.success(
-            request,
+        message = (
             "Your account has been created. Please sign in."
             if request.LANGUAGE_CODE == "en"
-            else "Аккаунт создан. Теперь войдите в него.",
+            else "Аккаунт создан. Теперь войдите в него."
         )
+        messages.success(request, message)
         login_url = reverse("accounts:login")
         if next_url:
             login_url = f"{login_url}?{urlencode({'next': next_url})}"

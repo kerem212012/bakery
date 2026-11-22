@@ -1,6 +1,9 @@
-from django.contrib.admin.views.decorators import staff_member_required
+from functools import wraps
+
+from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import FileExtensionValidator
 from django.db import transaction
 from django.forms import DateField
@@ -41,6 +44,7 @@ from .forms import (
     AdminFeedbackStatusForm,
     AdminOrderStatusForm,
     AboutPromiseForm,
+    AboutStatForm,
     AboutStorySectionForm,
     AboutValueCardForm,
     AboutValuesHeadingForm,
@@ -75,6 +79,8 @@ from .forms import (
 )
 from .models import (
     CalculatorSettings,
+    CalculatorProductImage,
+    CalculatorOptionImage,
     FeedbackSubmission,
     HomeHeroSlide,
     Preorder,
@@ -200,7 +206,10 @@ def _format_order_configuration(configuration, language_code):
         field[0] for field in ORDER_CONFIGURATION_FIELDS if field[0] in configuration
     ]
     ordered_keys.extend(
-        field_name for field_name in configuration if field_name not in fields
+        field_name
+        for field_name in configuration
+        if field_name not in fields
+        and not field_name.endswith(("_label", "_label_en"))
     )
     formatted = []
     for field_name in ordered_keys:
@@ -212,7 +221,12 @@ def _format_order_configuration(configuration, language_code):
             labels, choices = field
             label = labels[1 if english else 0]
             value = configuration[field_name]
-            if choices:
+            snapshot_label = configuration.get(
+                f"{field_name}_label_en" if english else f"{field_name}_label"
+            )
+            if snapshot_label:
+                value = snapshot_label
+            elif choices:
                 localized_options = dict(choices)
                 if english:
                     localized_options.update(ENGLISH_CHOICES.get(field_name, {}))
@@ -230,11 +244,27 @@ def _can_manage_site_content(user):
     return user.is_superuser or user.has_perms(SITE_CONTENT_PERMISSIONS)
 
 
-@staff_member_required(login_url="accounts:login")
+def _staff_or_superuser_required(view):
+    return user_passes_test(
+        lambda user: user.is_active and (user.is_staff or user.is_superuser),
+        login_url="accounts:login",
+    )(view)
+
+
+def _superuser_admin_required(view):
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if not request.user.is_superuser:
+            return redirect("manager_dashboard")
+        return view(request, *args, **kwargs)
+
+    return wrapped
+
+
+@_staff_or_superuser_required
+@_superuser_admin_required
 def admin_dashboard(request):
     user = request.user
-    if not user.is_superuser and not user.get_all_permissions():
-        return redirect("manager_dashboard")
 
     can_view_products = user.has_perm("catalog.view_product")
     can_view_categories = user.has_perm("catalog.view_category")
@@ -289,17 +319,35 @@ def admin_dashboard(request):
     )
 
 
-@staff_member_required(login_url="accounts:login")
+@_staff_or_superuser_required
+@_superuser_admin_required
 def calculator_settings(request):
     if not request.user.has_perm("core.change_calculatorsettings"):
         raise PermissionDenied
 
     settings_record, _ = CalculatorSettings.objects.get_or_create(pk=1)
+    product_images = {
+        product_image.product_value: product_image
+        for product_image in settings_record.product_images.all()
+    }
+    option_images = {
+        (option_image.option_group, option_image.option_value): option_image
+        for option_image in settings_record.option_images.all()
+    }
     if request.method == "POST":
-        form = CalculatorPricingForm(request.POST, pricing=settings_record.pricing)
+        form = CalculatorPricingForm(
+            request.POST,
+            request.FILES,
+            pricing=settings_record.pricing,
+            product_images=product_images,
+            option_images=option_images,
+        )
         if form.is_valid():
-            settings_record.pricing = form.cleaned_data["pricing"]
-            settings_record.save(update_fields=("pricing", "updated_at"))
+            with transaction.atomic():
+                settings_record.pricing = form.cleaned_data["pricing"]
+                settings_record.save(update_fields=("pricing", "updated_at"))
+                _save_calculator_product_images(settings_record, form, product_images)
+                _save_calculator_option_images(settings_record, form, option_images)
             messages.success(
                 request,
                 "Calculator pricing saved."
@@ -308,7 +356,11 @@ def calculator_settings(request):
             )
             return redirect("calculator_settings")
     else:
-        form = CalculatorPricingForm(pricing=settings_record.pricing)
+        form = CalculatorPricingForm(
+            pricing=settings_record.pricing,
+            product_images=product_images,
+            option_images=option_images,
+        )
 
     return render(
         request,
@@ -323,17 +375,124 @@ def calculator_settings(request):
                 {
                     "index": group["index"],
                     "fields": [form[name] for name in group["fields"]],
+                    "original_value": group["original_value"],
+                    "image_url": group["image_url"],
                 }
                 for group in form.product_groups
+            ],
+            "option_image_groups": [
+                {
+                    "key": group["key"],
+                    "title": group["title"],
+                    "count_field": form[f'option_{group["key"]}_count'],
+                    "items": [
+                        {
+                            "title": item["title"],
+                            "value_field": form[item["value_field_name"]],
+                            "fields": [
+                                form[field_name]
+                                for field_name in item["field_names"]
+                            ],
+                            "image_url": item["image_url"],
+                        }
+                        for item in group["items"]
+                    ],
+                }
+                for group in form.option_image_groups
             ],
         },
     )
 
 
-@staff_member_required(login_url="accounts:login")
+def _save_calculator_product_images(settings_record, form, existing_images):
+    products = form.cleaned_data["pricing"]["products"]
+    original_values = [
+        form.cleaned_data.get(f"product_{index}_original_value", "")
+        for index in range(len(products))
+    ]
+    retained_values = {
+        value for value in original_values if value in existing_images
+    }
+
+    for value, product_image in existing_images.items():
+        if value not in retained_values:
+            product_image.image.delete(save=False)
+            product_image.delete()
+        else:
+            product_image.product_value = f"pending-{product_image.pk}"
+            product_image.save(update_fields=("product_value",))
+
+    used_values = set()
+    for index, product in enumerate(products):
+        original_value = original_values[index]
+        product_image = None
+        if original_value in retained_values and original_value not in used_values:
+            product_image = existing_images[original_value]
+            used_values.add(original_value)
+
+        uploaded_image = form.cleaned_data.get(f"product_{index}_image")
+        if uploaded_image is False:
+            if product_image:
+                product_image.image.delete(save=False)
+                product_image.delete()
+        elif isinstance(uploaded_image, UploadedFile):
+            if product_image:
+                previous_image = product_image.image
+                product_image.product_value = product["value"]
+                product_image.image = uploaded_image
+                product_image.save()
+                previous_image.delete(save=False)
+            else:
+                CalculatorProductImage.objects.create(
+                    calculator_settings=settings_record,
+                    product_value=product["value"],
+                    image=uploaded_image,
+                )
+        elif product_image:
+            product_image.product_value = product["value"]
+            product_image.save(update_fields=("product_value",))
+
+
+def _save_calculator_option_images(settings_record, form, existing_images):
+    for (group, value), image_input in form.cleaned_data[
+        "option_image_inputs"
+    ].items():
+        option_image = existing_images.get((group, value))
+        uploaded_image = form.cleaned_data.get(image_input["image_name"])
+        label = image_input["label"]
+        label_en = image_input["label_en"]
+
+        if option_image is None:
+            if isinstance(uploaded_image, UploadedFile):
+                option_image = CalculatorOptionImage(
+                    calculator_settings=settings_record,
+                    option_group=group,
+                    option_value=value,
+                    image=uploaded_image,
+                )
+            else:
+                continue
+        elif uploaded_image is False and option_image.image:
+            option_image.image.delete(save=False)
+        elif isinstance(uploaded_image, UploadedFile):
+            previous_image = option_image.image
+            option_image.image = uploaded_image
+            option_image.label = label
+            option_image.label_en = label_en
+            option_image.save()
+            if previous_image:
+                previous_image.delete(save=False)
+            continue
+
+        option_image.label = label
+        option_image.label_en = label_en
+        option_image.save()
+
+
+@_staff_or_superuser_required
 def site_content_manager(request, block_id=None):
     if not _can_manage_site_content(request.user):
-        raise PermissionDenied
+        return redirect("manager_dashboard")
 
     block = get_object_or_404(SiteContentBlock, pk=block_id) if block_id else None
     page_choices = dict(SiteContentBlock.Page.choices)
@@ -350,6 +509,7 @@ def site_content_manager(request, block_id=None):
     slide_formset = None
     home_about_form = None
     about_story_form = None
+    about_stats_formset = None
     about_promises_formset = None
     about_values_formset = None
     about_values_heading_form = None
@@ -407,6 +567,14 @@ def site_content_manager(request, block_id=None):
         SitePageSection.objects.filter(
             page=SitePageSection.Page.ABOUT,
             group="promises",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.ABOUT
+        else SitePageSection.objects.none()
+    )
+    about_stats_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.ABOUT,
+            group="stats",
         ).order_by("display_order", "pk")
         if selected_page == SitePageSection.Page.ABOUT
         else SitePageSection.objects.none()
@@ -789,6 +957,34 @@ def site_content_manager(request, block_id=None):
                 return redirect(f"{request.path}?page={SitePageSection.Page.ABOUT}")
         elif (
             request.method == "POST"
+            and request.POST.get("action") == "save_about_stats"
+            and selected_page == SitePageSection.Page.ABOUT
+        ):
+            AboutStatsFormSet = modelformset_factory(
+                SitePageSection,
+                form=AboutStatForm,
+                extra=0,
+            )
+            about_stats_formset = AboutStatsFormSet(
+                request.POST,
+                queryset=about_stats_queryset,
+                prefix="about-stats",
+            )
+            if about_stats_formset.is_valid():
+                with transaction.atomic():
+                    for statistic in about_stats_formset.save(commit=False):
+                        statistic.page = SitePageSection.Page.ABOUT
+                        statistic.group = "stats"
+                        statistic.save()
+                messages.success(
+                    request,
+                    "About statistics saved."
+                    if request.LANGUAGE_CODE == "en"
+                    else "Показатели раздела «О нас» сохранены.",
+                )
+                return redirect(f"{request.path}?page={SitePageSection.Page.ABOUT}")
+        elif (
+            request.method == "POST"
             and request.POST.get("action") == "save_about_promises"
             and selected_page == SitePageSection.Page.ABOUT
         ):
@@ -1024,7 +1220,6 @@ def site_content_manager(request, block_id=None):
             )
             delivery_methods_formset = DeliveryMethodsFormSet(
                 request.POST,
-                request.FILES,
                 queryset=delivery_methods_queryset,
                 prefix="delivery-methods",
             )
@@ -1132,6 +1327,7 @@ def site_content_manager(request, block_id=None):
             )
             delivery_help_formset = DeliveryHelpFormSet(
                 request.POST,
+                request.FILES,
                 queryset=delivery_help_queryset,
                 prefix="delivery-help",
             )
@@ -1176,6 +1372,7 @@ def site_content_manager(request, block_id=None):
                 SitePageSection,
                 form=PartnershipDirectionForm,
                 extra=0,
+                can_delete=True,
             )
             partnership_directions_heading_form = (
                 BusinessClientsSectionHeadingForm(
@@ -1195,11 +1392,22 @@ def site_content_manager(request, block_id=None):
                 and partnership_directions_formset.is_valid()
             ):
                 with transaction.atomic():
-                    for direction in partnership_directions_formset.save(
-                        commit=False
-                    ):
+                    directions = partnership_directions_formset.save(commit=False)
+                    for deleted_direction in partnership_directions_formset.deleted_objects:
+                        deleted_direction.delete()
+                    next_display_order = max(
+                        (
+                            direction.display_order
+                            for direction in partnership_directions_queryset
+                        ),
+                        default=-1,
+                    ) + 1
+                    for direction in directions:
                         direction.page = SitePageSection.Page.PARTNERSHIP
                         direction.group = "directions"
+                        if not direction.pk:
+                            direction.display_order = next_display_order
+                            next_display_order += 1
                         direction.save()
                     heading = partnership_directions_heading_form.save(
                         commit=False
@@ -1654,6 +1862,7 @@ def site_content_manager(request, block_id=None):
                 SitePageSection,
                 form=PartnershipDirectionForm,
                 extra=0,
+                can_delete=True,
             )
             partnership_directions_formset = PartnershipDirectionsFormSet(
                 queryset=partnership_directions_queryset,
@@ -1729,6 +1938,16 @@ def site_content_manager(request, block_id=None):
             )
 
     if selected_page == SitePageSection.Page.ABOUT:
+        if about_stats_formset is None:
+            AboutStatsFormSet = modelformset_factory(
+                SitePageSection,
+                form=AboutStatForm,
+                extra=0,
+            )
+            about_stats_formset = AboutStatsFormSet(
+                queryset=about_stats_queryset,
+                prefix="about-stats",
+            )
         if about_promises_formset is None:
             AboutPromisesFormSet = modelformset_factory(
                 SitePageSection,
@@ -1796,6 +2015,7 @@ def site_content_manager(request, block_id=None):
             "slide_formset": slide_formset,
             "home_about_form": home_about_form,
             "about_story_form": about_story_form,
+            "about_stats_formset": about_stats_formset,
             "about_promises_formset": about_promises_formset,
             "about_values_formset": about_values_formset,
             "about_values_heading_form": about_values_heading_form,
@@ -1907,7 +2127,8 @@ ADMIN_SECTION_CONFIG = {
 }
 
 
-@staff_member_required(login_url="accounts:login")
+@_staff_or_superuser_required
+@_superuser_admin_required
 def admin_section(request, section, object_id=None, new=False):
     config = ADMIN_SECTION_CONFIG.get(section)
     if config is None:
@@ -2041,7 +2262,8 @@ def admin_section(request, section, object_id=None, new=False):
     )
 
 
-@staff_member_required(login_url="accounts:login")
+@_staff_or_superuser_required
+@_superuser_admin_required
 @require_POST
 def admin_section_delete(request, section, object_id):
     config = ADMIN_SECTION_CONFIG.get(section)
@@ -2061,7 +2283,8 @@ def admin_section_delete(request, section, object_id):
     return redirect("admin_section", section=section)
 
 
-@staff_member_required(login_url="accounts:login")
+@_staff_or_superuser_required
+@_superuser_admin_required
 @require_POST
 def admin_section_visibility(request, section, object_id, action):
     config = ADMIN_SECTION_CONFIG.get(section)
@@ -2087,9 +2310,10 @@ def admin_section_visibility(request, section, object_id, action):
     return redirect("admin_section", section=section)
 
 
-@staff_member_required(login_url="accounts:login")
+@_staff_or_superuser_required
 def manager_dashboard(request):
     user = request.user
+    can_manage_site_content = _can_manage_site_content(user)
     can_view_orders = user.has_perm("core.view_preorder")
     can_change_orders = user.has_perm("core.change_preorder")
     can_view_feedback = user.has_perm("core.view_feedbacksubmission")
@@ -2161,6 +2385,7 @@ def manager_dashboard(request):
         "core/manager_dashboard.html",
         {
             "can_view_orders": can_view_orders,
+            "can_manage_site_content": can_manage_site_content,
             "can_change_orders": can_change_orders,
             "can_view_feedback": can_view_feedback,
             "can_change_feedback": can_change_feedback,
@@ -2193,7 +2418,7 @@ def manager_dashboard(request):
     )
 
 
-@staff_member_required(login_url="accounts:login")
+@_staff_or_superuser_required
 def manager_order_contract_draft(request, order_id):
     if not request.user.has_perm("core.view_preorder"):
         raise PermissionDenied
@@ -2227,7 +2452,7 @@ def manager_order_contract_draft(request, order_id):
     )
 
 
-@staff_member_required(login_url="accounts:login")
+@_staff_or_superuser_required
 @require_POST
 def manager_update_order_status(request, order_id):
     if not request.user.has_perms(("core.view_preorder", "core.change_preorder")):
@@ -2338,14 +2563,61 @@ def home(request):
         calculator_settings.pricing if calculator_settings else None
     )
     calculator_options = localized_calculator_options(calculator_pricing)
+    option_settings = {
+        (option_setting.option_group, option_setting.option_value): option_setting
+        for option_setting in (
+            calculator_settings.option_images.all()
+            if calculator_settings
+            else ()
+        )
+    }
+    english = request.LANGUAGE_CODE.startswith("en")
+    for group in ("flavors", "shapes", "coatings", "packaging"):
+        localized_options = []
+        for option in calculator_options[group]:
+            option_setting = option_settings.get((group, option["value"]))
+            label_ru = option["label_ru"]
+            label_en = option["label_en"]
+            if option_setting:
+                label_ru = option_setting.label or label_ru
+                label_en = option_setting.label_en or label_en
+            localized_options.append(
+                {
+                    **option,
+                    "label": label_en if english else label_ru,
+                    "label_ru": label_ru,
+                    "label_en": label_en,
+                    "image_url": (
+                        option_setting.image.url
+                        if option_setting and option_setting.image
+                        else ""
+                    ),
+                }
+            )
+        calculator_options[group] = tuple(localized_options)
+    product_image_urls = {
+        product_image.product_value: product_image.image.url
+        for product_image in (
+            calculator_settings.product_images.all()
+            if calculator_settings
+            else ()
+        )
+    }
+    calculator_options["products"] = tuple(
+        {
+            **product,
+            "image_url": product_image_urls.get(product["value"], ""),
+        }
+        for product in calculator_options["products"]
+    )
     initial_quote = calculate_quote(
         {
             "product": calculator_options["products"][0]["value"],
-            "flavor": "classic",
+            "flavor": calculator_options["flavors"][0]["value"],
             "quantity": 100,
             "size": "5",
-            "coating": "icing",
-            "packaging": "ribbon",
+            "coating": calculator_options["coatings"][0]["value"],
+            "packaging": calculator_options["packaging"][0]["value"],
             "delivery": "moscow",
         },
         calculator_pricing,
@@ -2357,6 +2629,13 @@ def home(request):
             (option["value"], option["label"])
             for option in calculator_options["products"]
         ),
+        option_choices={
+            group: tuple(
+                (option["value"], option["label"])
+                for option in calculator_options[group]
+            )
+            for group in ("flavors", "shapes", "coatings", "packaging")
+        },
     )
     if request.method == "POST" and preorder_form.is_valid():
         configuration = {
@@ -2379,6 +2658,19 @@ def home(request):
             if option["value"] == configuration["product"]
         )
         configuration["product_name"] = selected_product["label"]
+        for field, group in (
+            ("flavor", "flavors"),
+            ("shape", "shapes"),
+            ("coating", "coatings"),
+            ("packaging", "packaging"),
+        ):
+            selected_option = next(
+                option
+                for option in calculator_options[group]
+                if option["value"] == configuration[field]
+            )
+            configuration[f"{field}_label"] = selected_option["label_ru"]
+            configuration[f"{field}_label_en"] = selected_option["label_en"]
         quote = calculate_quote(configuration, calculator_pricing)
         with transaction.atomic():
             preorder = Preorder.objects.create(

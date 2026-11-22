@@ -3,6 +3,7 @@ from pathlib import Path
 from django import forms
 from django.forms import BaseModelFormSet
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.urls import reverse
 from django.utils.text import slugify
 from django.utils.translation import get_language
@@ -255,8 +256,15 @@ class PreorderForm(forms.Form):
         error_messages={"required": "Необходимо дать согласие на обработку данных."},
     )
 
-    def __init__(self, *args, product_choices=None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        product_choices=None,
+        option_choices=None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
+        option_choices = option_choices or {}
         if product_choices is not None:
             self.fields["product"].choices = product_choices
         self.fields["product"].initial = (
@@ -264,27 +272,36 @@ class PreorderForm(forms.Form):
             if self.fields["product"].choices
             else ""
         )
-        for field_name, group in (
-            ("flavor", "flavor"),
-            ("shape", "shape"),
-            ("coating", "coating"),
-            ("packaging", "packaging"),
-            ("delivery", "delivery"),
-            ("payment", "payment"),
+        for field_name, group, option_group in (
+            ("flavor", "flavor", "flavors"),
+            ("shape", "shape", "shapes"),
+            ("coating", "coating", "coatings"),
+            ("packaging", "packaging", "packaging"),
+            ("delivery", "delivery", None),
+            ("payment", "payment", None),
         ):
-            self.fields[field_name].choices = localized_choices(
-                self.fields[field_name].choices,
-                group,
-            )
+            if option_group in option_choices:
+                self.fields[field_name].choices = option_choices[option_group]
+                if self.fields[field_name].choices:
+                    self.fields[field_name].initial = self.fields[field_name].choices[0][0]
+            else:
+                self.fields[field_name].choices = localized_choices(
+                    self.fields[field_name].choices,
+                    group,
+                )
         self.fields["name"].widget.attrs["placeholder"] = "Как к вам обращаться"
-        self.fields["flavor"].initial = "classic"
         self.fields["quantity"].initial = 100
         self.fields["size"].initial = "5"
-        self.fields["shape"].initial = "heart"
-        self.fields["coating"].initial = "icing"
-        self.fields["packaging"].initial = "ribbon"
-        self.fields["delivery"].initial = "moscow"
-        self.fields["payment"].initial = "organization"
+        for field_name, default, option_group in (
+            ("flavor", "classic", "flavors"),
+            ("shape", "heart", "shapes"),
+            ("coating", "icing", "coatings"),
+            ("packaging", "ribbon", "packaging"),
+            ("delivery", "moscow", None),
+            ("payment", "organization", None),
+        ):
+            if option_group not in option_choices:
+                self.fields[field_name].initial = default
         if get_language() == "en":
             self.fields["consent_given"].error_messages["required"] = (
                 "You must agree to the processing of your personal data."
@@ -766,6 +783,86 @@ class AboutPromiseForm(forms.ModelForm):
         return promise
 
 
+class AboutStatForm(forms.ModelForm):
+    display_order = forms.IntegerField(
+        min_value=1,
+        widget=forms.NumberInput(
+            attrs={"class": "site-content-form-control", "min": 1}
+        ),
+    )
+
+    class Meta:
+        model = SitePageSection
+        fields = (
+            "value",
+            "value_en",
+            "description",
+            "description_en",
+            "display_order",
+            "is_active",
+        )
+        widgets = {
+            "value": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "value_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "description_en": forms.TextInput(
+                attrs={"class": "site-content-form-control"}
+            ),
+            "is_active": forms.CheckboxInput(
+                attrs={"class": "site-content-form-checkbox"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and self.instance.pk:
+            self.initial["display_order"] = self.instance.display_order + 1
+        if (get_language() or "").startswith("en"):
+            labels = {
+                "value": "Metric (Russian)",
+                "value_en": "Metric (English)",
+                "description": "Description (Russian)",
+                "description_en": "Description (English)",
+                "display_order": "Display order",
+                "is_active": "Published",
+            }
+        else:
+            labels = {
+                "value": "Показатель (русский)",
+                "value_en": "Показатель (английский)",
+                "description": "Описание (русский)",
+                "description_en": "Описание (английский)",
+                "display_order": "Порядок",
+                "is_active": "Показывать",
+            }
+        for field_name, label in labels.items():
+            self.fields[field_name].label = label
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("is_active") and not (
+            cleaned_data.get("value") or cleaned_data.get("value_en")
+        ):
+            self.add_error(
+                "value",
+                "Enter a metric in at least one language."
+                if (get_language() or "").startswith("en")
+                else "Укажите показатель хотя бы на одном языке.",
+            )
+        return cleaned_data
+
+    def save(self, commit=True):
+        statistic = super().save(commit=False)
+        statistic.display_order -= 1
+        if commit:
+            statistic.save()
+        return statistic
+
+
 class AboutValueCardForm(forms.ModelForm):
     display_order = forms.IntegerField(
         min_value=1,
@@ -1143,9 +1240,6 @@ class DeliveryMethodsCardForm(DeliveryPageFormMixin, forms.ModelForm):
             "description_en",
             "value",
             "value_en",
-            "image",
-            "image_alt",
-            "image_alt_en",
         )
         widgets = {
             "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
@@ -1163,18 +1257,6 @@ class DeliveryMethodsCardForm(DeliveryPageFormMixin, forms.ModelForm):
             ),
             "value_en": forms.Textarea(
                 attrs={"class": "site-content-form-control", "rows": 2}
-            ),
-            "image": forms.ClearableFileInput(
-                attrs={
-                    "class": "site-content-form-control",
-                    "accept": "image/jpeg,image/png,image/webp",
-                }
-            ),
-            "image_alt": forms.TextInput(
-                attrs={"class": "site-content-form-control"}
-            ),
-            "image_alt_en": forms.TextInput(
-                attrs={"class": "site-content-form-control"}
             ),
         }
 
@@ -1261,6 +1343,7 @@ class DeliveryHelpCardForm(DeliveryPageFormMixin, forms.ModelForm):
             "value",
             "value_en",
             "url",
+            "image",
         )
         widgets = {
             "title": forms.TextInput(attrs={"class": "site-content-form-control"}),
@@ -1278,7 +1361,23 @@ class DeliveryHelpCardForm(DeliveryPageFormMixin, forms.ModelForm):
                 attrs={"class": "site-content-form-control"}
             ),
             "url": forms.TextInput(attrs={"class": "site-content-form-control"}),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "site-content-form-control",
+                    "accept": "image/jpeg,image/png,image/webp",
+                }
+            ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        english = (get_language() or "").startswith("en")
+        self.fields["image"].label = "Icon image" if english else "Иконка"
+        self.fields["image"].help_text = (
+            "Leave empty to keep the current icon."
+            if english
+            else "Оставьте поле пустым, чтобы сохранить текущий значок."
+        )
 
 
 class FAQQuestionForm(forms.ModelForm):
@@ -2111,10 +2210,21 @@ class AdminFeedbackStatusForm(forms.Form):
 
 class CalculatorPricingForm(forms.Form):
     MAX_PRODUCTS = 30
+    MAX_OPTIONS = 30
 
-    def __init__(self, *args, pricing=None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        pricing=None,
+        product_images=None,
+        option_images=None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         pricing = normalize_calculator_pricing(pricing)
+        product_images = product_images or {}
+        option_images = option_images or {}
+        self.option_catalog = pricing["option_catalog"]
         options = localized_calculator_options(pricing)
         english = (get_language() or "").startswith("en")
         currency = "RUB" if english else "₽"
@@ -2137,6 +2247,10 @@ class CalculatorPricingForm(forms.Form):
             name = f"product_{index}_name"
             name_en = f"product_{index}_name_en"
             price_name = "base_unit_price" if index == 0 else f"product_{index}_base_price"
+            original_value_name = f"product_{index}_original_value"
+            image_name = f"product_{index}_image"
+            original_value = product.get("value", "")
+            product_image = product_images.get(original_value)
             self.fields[name] = forms.CharField(
                 max_length=80,
                 label="Product name" if english else "Название товара",
@@ -2164,17 +2278,36 @@ class CalculatorPricingForm(forms.Form):
                 decimal_places=2,
             )
             self.fields[price_name].widget.attrs["data-product-price"] = ""
+            self.fields[original_value_name] = forms.CharField(
+                required=False,
+                initial=original_value,
+                widget=forms.HiddenInput(attrs={"data-product-original-value": ""}),
+            )
+            self.fields[image_name] = forms.ImageField(
+                required=False,
+                label="Product photo" if english else "Фото товара",
+                initial=product_image.image if product_image else None,
+                validators=[
+                    FileExtensionValidator(["jpg", "jpeg", "png", "webp"])
+                ],
+                widget=forms.ClearableFileInput(
+                    attrs={
+                        "class": "site-content-form-control",
+                        "accept": "image/jpeg,image/png,image/webp",
+                        "data-product-image": "",
+                    }
+                ),
+            )
             self.product_groups.append(
                 {
                     "index": index,
-                    "fields": (name, name_en, price_name),
+                    "fields": (name, name_en, price_name, image_name),
+                    "original_value": self[original_value_name],
+                    "image_url": product_image.image.url if product_image else "",
                 }
             )
         for group_key, pricing_key in (
             ("sizes", "size_multipliers"),
-            ("flavors", "flavor_additions"),
-            ("coatings", "coating_additions"),
-            ("packaging", "packaging_additions"),
             ("deliveries", "delivery_costs"),
         ):
             field_names = []
@@ -2190,17 +2323,9 @@ class CalculatorPricingForm(forms.Form):
                     decimal_places = 3
                     name = f"size_multiplier_{value}"
                 else:
-                    suffix = "cost" if group_key == "deliveries" else "addition"
-                    if group_key == "flavors":
-                        name = f"flavor_addition_{value}"
-                    elif group_key == "coatings":
-                        name = f"coating_addition_{value}"
-                    elif group_key == "packaging":
-                        name = f"packaging_addition_{value}"
-                    else:
-                        name = f"delivery_cost_{value}"
-                    label = f'{option["label"]} — {suffix} ({currency})'
-                    minimum = 0 if group_key == "deliveries" else None
+                    name = f"delivery_cost_{value}"
+                    label = f'{option["label"]} — cost ({currency})'
+                    minimum = 0
                     decimal_places = 2
                 self._add_price_field(
                     name,
@@ -2212,13 +2337,153 @@ class CalculatorPricingForm(forms.Form):
                 field_names.append(name)
             group_labels = {
                 "sizes": ("Size multipliers", "Множители размера"),
-                "flavors": ("Flavor additions", "Доплата за вкус"),
-                "coatings": ("Coating additions", "Доплата за покрытие"),
-                "packaging": ("Packaging additions", "Доплата за упаковку"),
                 "deliveries": ("Delivery costs", "Стоимость доставки"),
             }
             self.field_groups.append(
                 (group_labels[group_key][0 if english else 1], tuple(field_names))
+            )
+
+        image_group_titles = {
+            "flavors": ("Flavor options", "Названия и фото вкусов"),
+            "shapes": ("Shape options", "Названия и фото форм"),
+            "coatings": ("Coating options", "Названия и фото покрытий"),
+            "packaging": ("Packaging options", "Названия и фото упаковки"),
+        }
+        self.option_image_groups = []
+        self.option_group_counts = {}
+        for group_key in ("flavors", "shapes", "coatings", "packaging"):
+            catalog = pricing["option_catalog"][group_key]
+            active_options = [option for option in catalog if option["active"]]
+            count = self._get_option_count(group_key, len(active_options))
+            self.option_group_counts[group_key] = count
+            count_name = f"option_{group_key}_count"
+            self.fields[count_name] = forms.IntegerField(
+                required=False,
+                min_value=0,
+                max_value=self.MAX_OPTIONS,
+                initial=count,
+                widget=forms.HiddenInput(
+                    attrs={"data-option-count": group_key}
+                ),
+            )
+            group_items = []
+            for index in range(count):
+                option = (
+                    active_options[index]
+                    if index < len(active_options)
+                    else {
+                        "value": "",
+                        "label": "",
+                        "label_en": "",
+                        "extra": 0,
+                    }
+                )
+                value = option["value"]
+                value_name = f"option_{group_key}_{index}_value"
+                label_name = f"option_{group_key}_{index}_label"
+                label_en_name = f"option_{group_key}_{index}_label_en"
+                extra_name = f"option_{group_key}_{index}_extra"
+                image_name = f"option_image_{group_key}_{index}"
+                option_image = (
+                    option_images.get((group_key, value)) if value else None
+                )
+                label = (
+                    option_image.label
+                    if option_image and option_image.label
+                    else option["label"]
+                )
+                label_en = (
+                    option_image.label_en
+                    if option_image and option_image.label_en
+                    else option["label_en"]
+                )
+                option_title = label_en if english else label
+                option_title = option_title or (
+                    "New option" if english else "Новая опция"
+                )
+                self.fields[value_name] = forms.SlugField(
+                    required=False,
+                    max_length=32,
+                    allow_unicode=True,
+                    initial=value,
+                    widget=forms.HiddenInput(
+                        attrs={"data-option-input": "value"}
+                    ),
+                )
+                self.fields[label_name] = forms.CharField(
+                    required=False,
+                    max_length=100,
+                    label="Name (Russian)" if english else "Название (русский)",
+                    initial=label,
+                    widget=forms.TextInput(
+                        attrs={
+                            "class": "site-content-form-control",
+                            "data-option-input": "label",
+                        }
+                    ),
+                )
+                self.fields[label_en_name] = forms.CharField(
+                    required=False,
+                    max_length=100,
+                    label="Name (English)" if english else "Название (английский)",
+                    initial=label_en,
+                    widget=forms.TextInput(
+                        attrs={
+                            "class": "site-content-form-control",
+                            "data-option-input": "label-en",
+                        }
+                    ),
+                )
+                field_names = [label_name, label_en_name]
+                if group_key != "shapes":
+                    self._add_price_field(
+                        extra_name,
+                        "Additional price (RUB)" if english else "Доплата (₽)",
+                        option["extra"],
+                        minimum=None,
+                        decimal_places=2,
+                    )
+                    self.fields[extra_name].required = False
+                    self.fields[extra_name].widget.attrs["data-option-input"] = "extra"
+                    field_names.append(extra_name)
+                self.fields[image_name] = forms.ImageField(
+                    required=False,
+                    label="Photo" if english else "Фото",
+                    initial=(
+                        option_image.image
+                        if option_image and option_image.image
+                        else None
+                    ),
+                    validators=[
+                        FileExtensionValidator(["jpg", "jpeg", "png", "webp"])
+                    ],
+                    widget=forms.ClearableFileInput(
+                        attrs={
+                            "class": "site-content-form-control",
+                            "accept": "image/jpeg,image/png,image/webp",
+                            "data-option-input": "image",
+                        }
+                    ),
+                )
+                field_names.append(image_name)
+                group_items.append(
+                    {
+                        "title": option_title,
+                        "value_field_name": value_name,
+                        "field_names": tuple(field_names),
+                        "image_url": (
+                            option_image.image.url
+                            if option_image and option_image.image
+                            else ""
+                        ),
+                    }
+                )
+            self.option_image_groups.append(
+                {
+                    "key": group_key,
+                    "title": image_group_titles[group_key][0 if english else 1],
+                    "items": group_items,
+                }
             )
 
         tier_names = []
@@ -2292,6 +2557,16 @@ class CalculatorPricingForm(forms.Form):
             return min(max(count, 1), self.MAX_PRODUCTS)
         return min(max(len(pricing["products"]), 1), self.MAX_PRODUCTS)
 
+    def _get_option_count(self, group, initial):
+        field_name = f"option_{group}_count"
+        if self.is_bound and field_name in self.data:
+            try:
+                count = int(self.data[field_name])
+            except (TypeError, ValueError):
+                return initial
+            return min(max(count, 0), self.MAX_OPTIONS)
+        return min(max(initial, 0), self.MAX_OPTIONS)
+
     def _add_price_field(self, name, label, initial, *, minimum, decimal_places):
         self.fields[name] = forms.DecimalField(
             label=label,
@@ -2345,6 +2620,117 @@ class CalculatorPricingForm(forms.Form):
                 )
         if products:
             cleaned_data["products"] = products
+        option_catalog = {}
+        option_image_inputs = {}
+        for group in ("flavors", "shapes", "coatings", "packaging"):
+            count_name = f"option_{group}_count"
+            if self.is_bound and count_name not in self.data:
+                option_catalog[group] = [
+                    {**option, "extra": str(option["extra"])}
+                    for option in self.option_catalog[group]
+                ]
+                continue
+            count = cleaned_data.get(count_name)
+            count = (
+                count
+                if count is not None
+                else self.option_group_counts[group]
+            )
+            submitted_options = {}
+            seen_labels = set()
+            seen_labels_en = set()
+            for index in range(min(count, self.MAX_OPTIONS)):
+                value_name = f"option_{group}_{index}_value"
+                label_name = f"option_{group}_{index}_label"
+                label_en_name = f"option_{group}_{index}_label_en"
+                extra_name = f"option_{group}_{index}_extra"
+                label = (cleaned_data.get(label_name) or "").strip()
+                label_en = (cleaned_data.get(label_en_name) or "").strip()
+                value = (cleaned_data.get(value_name) or "").strip()
+                if not value:
+                    value = slugify(label or label_en, allow_unicode=True)[:32]
+                if not value:
+                    self.add_error(
+                        label_name,
+                        "Enter at least one option name."
+                        if (get_language() or "").startswith("en")
+                        else "Укажите хотя бы одно название опции.",
+                    )
+                    continue
+                if not (label or label_en):
+                    self.add_error(
+                        label_name,
+                        "Enter at least one option name."
+                        if (get_language() or "").startswith("en")
+                        else "Укажите хотя бы одно название опции.",
+                    )
+                    continue
+                if value in submitted_options:
+                    self.add_error(
+                        label_name,
+                        "Option names must be unique."
+                        if (get_language() or "").startswith("en")
+                        else "Названия опций должны быть уникальными.",
+                    )
+                    continue
+                label_key = label.casefold()
+                label_en_key = label_en.casefold()
+                if (
+                    (label_key and label_key in seen_labels)
+                    or (label_en_key and label_en_key in seen_labels_en)
+                ):
+                    self.add_error(
+                        label_name,
+                        "Option names must be unique."
+                        if (get_language() or "").startswith("en")
+                        else "Названия опций должны быть уникальными.",
+                    )
+                    continue
+                if label_key:
+                    seen_labels.add(label_key)
+                if label_en_key:
+                    seen_labels_en.add(label_en_key)
+                extra = (
+                    cleaned_data.get(extra_name, 0)
+                    if group != "shapes"
+                    else 0
+                )
+                option = {
+                    "value": value,
+                    "label": label or label_en,
+                    "label_en": label_en or label,
+                    "extra": str(extra or 0),
+                    "active": True,
+                }
+                submitted_options[value] = option
+                option_image_inputs[(group, value)] = {
+                    "image_name": f"option_image_{group}_{index}",
+                    "label": option["label"],
+                    "label_en": option["label_en"],
+                }
+            if not submitted_options:
+                self.add_error(
+                    None,
+                    "Keep at least one option in each group."
+                    if (get_language() or "").startswith("en")
+                    else "В каждой группе должна остаться хотя бы одна опция.",
+                )
+            group_catalog = []
+            for previous in self.option_catalog[group]:
+                current = submitted_options.pop(previous["value"], None)
+                if current is not None:
+                    group_catalog.append(current)
+                else:
+                    archived = {
+                        **previous,
+                        "extra": str(previous["extra"]),
+                    }
+                    if archived["active"]:
+                        archived["active"] = False
+                    group_catalog.append(archived)
+            group_catalog.extend(submitted_options.values())
+            option_catalog[group] = group_catalog
+
         tiers = []
         for slot in range(1, 4):
             threshold_name = f"discount_quantity_{slot}"
@@ -2380,16 +2766,16 @@ class CalculatorPricingForm(forms.Form):
                 for value, _ in SIZE_CHOICES
             },
             "flavor_additions": {
-                value: str(cleaned_data.get(f"flavor_addition_{value}", 0))
-                for value, _ in FLAVOR_CHOICES
+                option["value"]: option["extra"]
+                for option in option_catalog["flavors"]
             },
             "coating_additions": {
-                value: str(cleaned_data.get(f"coating_addition_{value}", 0))
-                for value, _ in COATING_CHOICES
+                option["value"]: option["extra"]
+                for option in option_catalog["coatings"]
             },
             "packaging_additions": {
-                value: str(cleaned_data.get(f"packaging_addition_{value}", 0))
-                for value, _ in PACKAGING_CHOICES
+                option["value"]: option["extra"]
+                for option in option_catalog["packaging"]
             },
             "delivery_costs": {
                 value: str(cleaned_data.get(f"delivery_cost_{value}", 0))
@@ -2399,5 +2785,7 @@ class CalculatorPricingForm(forms.Form):
                 list(tier) for tier in sorted(tiers, reverse=True)
             ],
             "lead_time_days": cleaned_data.get("lead_time_days", 1),
+            "option_catalog": option_catalog,
         }
+        cleaned_data["option_image_inputs"] = option_image_inputs
         return cleaned_data

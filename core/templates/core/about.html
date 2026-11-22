@@ -46,15 +46,17 @@
                     <p>{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko grew from a love of tradition, craftsmanship, and beautiful details. Inspired by culture, nature, and people, we make modern confectionery with heart.{% else %}«Вкусно Да Сладко» родилось из любви к традициям, ремеслу и красивым деталям. Мы вдохновляемся культурой, природой и людьми, создавая современные кондитерские изделия с душой.{% endif %}</p>
                     <p>{% if LANGUAGE_CODE == 'en' %}From the beginning, our goal has been to create joy and make important moments even more special.{% else %}С самого начала наша цель — дарить эмоции и делать важные моменты ещё особеннее.{% endif %}</p>
                 {% endif %}
-                <div class="about-stats" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko in numbers{% else %}«Вкусно Да Сладко» в цифрах{% endif %}">
-                    {% for item in site_page_sections.stats %}
-                        <div><strong>{{ item.localized_value }}</strong><span>{{ item.localized_description }}</span></div>
-                    {% empty %}
-                        <div><strong>{% if LANGUAGE_CODE == 'en' %}5+ years{% else %}5+ лет{% endif %}</strong><span>{% if LANGUAGE_CODE == 'en' %}creating sweet stories{% else %}создаём сладкие истории{% endif %}</span></div>
-                        <div><strong>5000+</strong><span>{% if LANGUAGE_CODE == 'en' %}orders fulfilled{% else %}выполненных заказов{% endif %}</span></div>
-                        <div><strong>100+</strong><span>{% if LANGUAGE_CODE == 'en' %}corporate clients{% else %}корпоративных клиентов{% endif %}</span></div>
-                    {% endfor %}
-                </div>
+                {% if site_page_sections.stats or not site_about_stats_configured %}
+                    <div class="about-stats" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko in numbers{% else %}«Вкусно Да Сладко» в цифрах{% endif %}">
+                        {% for item in site_page_sections.stats %}
+                            <div><strong>{{ item.localized_value }}</strong><span>{{ item.localized_description }}</span></div>
+                        {% empty %}
+                            <div><strong>{% if LANGUAGE_CODE == 'en' %}5+ years{% else %}5+ лет{% endif %}</strong><span>{% if LANGUAGE_CODE == 'en' %}creating sweet stories{% else %}создаём сладкие истории{% endif %}</span></div>
+                            <div><strong>5000+</strong><span>{% if LANGUAGE_CODE == 'en' %}orders fulfilled{% else %}выполненных заказов{% endif %}</span></div>
+                            <div><strong>100+</strong><span>{% if LANGUAGE_CODE == 'en' %}corporate clients{% else %}корпоративных клиентов{% endif %}</span></div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
         </section>
 

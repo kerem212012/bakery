@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Prata&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=153">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=159">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -54,12 +54,14 @@
                         </div>
                     </div>
                 {% endif %}
-                {% if user.is_staff %}
+                {% if user.is_superuser %}
                     <div class="header-staff-links">
-                        {% if perms.core.view_preorder or perms.core.view_feedbacksubmission %}
-                            <a class="header-staff-link" href="{% url 'manager_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Manager{% else %}Менеджер{% endif %}</a>
-                        {% endif %}
+                        <a class="header-staff-link" href="{% url 'manager_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Manager{% else %}Менеджер{% endif %}</a>
                         <a class="header-staff-link" href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Admin panel{% else %}Админ-панель{% endif %}</a>
+                    </div>
+                {% elif user.is_staff %}
+                    <div class="header-staff-links">
+                        <a class="header-staff-link" href="{% url 'manager_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Manager{% else %}Менеджер{% endif %}</a>
                     </div>
                 {% endif %}
             </nav>
@@ -227,12 +229,14 @@
             <span>{% if LANGUAGE_CODE == 'en' %}My account{% else %}Личный кабинет{% endif %}</span>
             <svg class="mobile-menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
         </a>
-        {% if user.is_staff %}
+        {% if user.is_superuser %}
             <div class="mobile-staff-links">
-                {% if perms.core.view_preorder or perms.core.view_feedbacksubmission %}
-                    <a href="{% url 'manager_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Manager workspace{% else %}Кабинет менеджера{% endif %} →</a>
-                {% endif %}
+                <a href="{% url 'manager_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Manager workspace{% else %}Кабинет менеджера{% endif %} →</a>
                 <a href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Admin panel{% else %}Панель администратора{% endif %} →</a>
+            </div>
+        {% elif user.is_staff %}
+            <div class="mobile-staff-links">
+                <a href="{% url 'manager_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Manager workspace{% else %}Кабинет менеджера{% endif %} →</a>
             </div>
         {% endif %}
         <div class="mobile-menu-links">

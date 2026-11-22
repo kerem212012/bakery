@@ -41,6 +41,8 @@ def site_content_blocks(request):
             "site_home_hero_slides": (),
             "site_home_hero_configured": False,
             "site_page_sections": {},
+            "site_home_about_configured": False,
+            "site_about_stats_configured": False,
             "site_footer_contacts": (),
         }
 
@@ -57,6 +59,22 @@ def site_content_blocks(request):
             is_active=True,
         ):
             page_sections.setdefault(section.group, []).append(section)
+    home_about_configured = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.HOME,
+            group="home_about",
+        ).exists()
+        if page == SiteContentBlock.Page.HOME
+        else False
+    )
+    about_stats_configured = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.ABOUT,
+            group="stats",
+        ).exists()
+        if page == SitePageSection.Page.ABOUT
+        else False
+    )
     return {
         "site_content_blocks": SiteContentBlock.objects.filter(
             is_active=True,
@@ -78,6 +96,8 @@ def site_content_blocks(request):
             else False
         ),
         "site_page_sections": page_sections,
+        "site_home_about_configured": home_about_configured,
+        "site_about_stats_configured": about_stats_configured,
         "site_footer_contacts": SitePageSection.objects.filter(
             page=SitePageSection.Page.CONTACTS,
             group="details",

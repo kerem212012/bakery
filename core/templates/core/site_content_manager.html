@@ -342,7 +342,7 @@
             {% endif %}
 
             {% if delivery_methods_heading_form %}
-                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                <form class="site-content-editor" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="page" value="{{ selected_page }}">
                     <input type="hidden" name="action" value="save_delivery_methods">
@@ -373,9 +373,6 @@
                                         </div>
                                     {% endfor %}
                                 </div>
-                                {% if method_form.instance.image %}
-                                    <img class="site-content-editor-preview" src="{{ method_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current delivery method image{% else %}Текущее изображение способа доставки{% endif %}">
-                                {% endif %}
                             </article>
                         {% endfor %}
                     </section>
@@ -426,7 +423,7 @@
             {% endif %}
 
             {% if delivery_help_heading_form %}
-                <form class="site-content-editor" method="post">
+                <form class="site-content-editor" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <input type="hidden" name="page" value="{{ selected_page }}">
                     <input type="hidden" name="action" value="save_delivery_help">
@@ -452,6 +449,7 @@
                                         <div class="site-content-form-field">
                                             <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                                             {{ field }}
+                                            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
                                             {{ field.errors }}
                                         </div>
                                     {% endfor %}
@@ -494,7 +492,7 @@
             {% endif %}
 
             {% if partnership_directions_heading_form %}
-                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                <form class="site-content-editor" id="partnership-directions-form" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <input type="hidden" name="page" value="{{ selected_page }}">
                     <input type="hidden" name="action" value="save_partnership_directions">
@@ -512,14 +510,19 @@
                             {% endfor %}
                         </div>
                         {% for direction_form in partnership_directions_formset %}
+                            {% if direction_form.instance.pk %}
                             <article class="site-content-form-section">
                                 {% for hidden in direction_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Direction {{ forloop.counter }}{% else %}Направление {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
                                     {% for field in direction_form.visible_fields %}
-                                        <div class="site-content-form-field">
-                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                            {{ field }}
+                                        <div class="site-content-form-field{% if field.name == 'DELETE' %} site-content-published{% endif %}">
+                                            {% if field.name == 'DELETE' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
                                             {{ field.errors }}
                                             {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
                                         </div>
@@ -529,12 +532,78 @@
                                     <img class="site-content-editor-preview" src="{{ direction_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current partnership direction image{% else %}Текущее изображение направления сотрудничества{% endif %}">
                                 {% endif %}
                             </article>
+                            {% endif %}
                         {% endfor %}
+                        <button class="admin-dashboard-site-link" id="add-partnership-direction" type="button">{% if LANGUAGE_CODE == 'en' %}Add direction{% else %}Добавить направление{% endif %}</button>
+                        <div id="new-partnership-directions">
+                            {% for direction_form in partnership_directions_formset %}
+                                {% if not direction_form.instance.pk %}
+                                    <article class="site-content-form-section">
+                                        {% for hidden in direction_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                        <h3>{% if LANGUAGE_CODE == 'en' %}New direction{% else %}Новое направление{% endif %}</h3>
+                                        <div class="site-content-form-grid">
+                                            {% for field in direction_form.visible_fields %}
+                                                <div class="site-content-form-field{% if field.name == 'DELETE' %} site-content-published{% endif %}">
+                                                    {% if field.name == 'DELETE' %}
+                                                        <label>{{ field }}<span>{{ field.label }}</span></label>
+                                                    {% else %}
+                                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                        {{ field }}
+                                                    {% endif %}
+                                                    {{ field.errors }}
+                                                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </article>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
                     </section>
                     <div class="site-content-form-actions">
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save partnership directions{% else %}Сохранить направления сотрудничества{% endif %}</button>
                     </div>
+                    <template id="partnership-direction-empty-form">
+                        <article class="site-content-form-section">
+                            {% for hidden in partnership_directions_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                            <h3>{% if LANGUAGE_CODE == 'en' %}New direction{% else %}Новое направление{% endif %}</h3>
+                            <div class="site-content-form-grid">
+                                {% for field in partnership_directions_formset.empty_form.visible_fields %}
+                                    <div class="site-content-form-field{% if field.name == 'DELETE' %} site-content-published{% endif %}">
+                                        {% if field.name == 'DELETE' %}
+                                            <label>{{ field }}<span>{{ field.label }}</span></label>
+                                        {% else %}
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                        {% endif %}
+                                        {{ field.errors }}
+                                        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </article>
+                    </template>
                 </form>
+                <script>
+                    (() => {
+                        const form = document.getElementById("partnership-directions-form");
+                        const addButton = document.getElementById("add-partnership-direction");
+                        const list = document.getElementById("new-partnership-directions");
+                        const template = document.getElementById("partnership-direction-empty-form");
+                        const totalForms = form?.querySelector("#id_partnership-directions-TOTAL_FORMS");
+                        if (!form || !addButton || !list || !template || !totalForms) return;
+
+                        addButton.addEventListener("click", () => {
+                            const index = Number(totalForms.value);
+                            list.insertAdjacentHTML(
+                                "beforeend",
+                                template.innerHTML.replace(/__prefix__/g, String(index))
+                            );
+                            totalForms.value = String(index + 1);
+                            list.lastElementChild.querySelector('input[type="text"], textarea')?.focus();
+                        });
+                    })();
+                </script>
             {% endif %}
 
             {% if partnership_success_heading_form %}
@@ -789,6 +858,42 @@
                     </section>
                     <div class="site-content-form-actions">
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save story{% else %}Сохранить историю{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if about_stats_formset %}
+                <form class="site-content-editor" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_about_stats">
+                    {{ about_stats_formset.management_form }}
+                    {% if about_stats_formset.non_form_errors %}<div class="site-content-form-errors">{{ about_stats_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}About us page — Statistics{% else %}Страница «О нас» — показатели{% endif %}</h2>
+                        <p>{% if LANGUAGE_CODE == 'en' %}Edit these figures and their captions, or uncheck Published to hide a figure.{% else %}Измените показатели и подписи или снимите отметку «Показывать», чтобы скрыть показатель.{% endif %}</p>
+                        {% for statistic_form in about_stats_formset %}
+                            <article class="site-content-form-section">
+                                {% for hidden in statistic_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}Figure {{ forloop.counter }}{% else %}Показатель {{ forloop.counter }}{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in statistic_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
+                                            {% if field.name == 'is_active' %}
+                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save statistics{% else %}Сохранить показатели{% endif %}</button>
                     </div>
                 </form>
             {% endif %}

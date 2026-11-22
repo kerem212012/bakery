@@ -24,39 +24,36 @@
                 <h2 id="delivery-methods-heading">{% if site_page_sections.methods %}{{ site_page_sections.methods.0.localized_section_title }}{% else %}{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}{% endif %}</h2>
                 <p>{% if site_page_sections.methods %}{{ site_page_sections.methods.0.localized_section_description }}{% else %}{% if LANGUAGE_CODE == 'en' %}We deliver in Moscow, the Moscow region, and throughout Russia.{% else %}Мы доставляем заказы по Москве, Московской области и по всей России.{% endif %}{% endif %}</p>
             </header>
-            <div class="delivery-methods-layout">
-                <div class="delivery-method-grid">
-                    {% if site_page_sections.methods %}
-                        {% for item in site_page_sections.methods %}
-                            <article class="delivery-method-card">
-                                <span class="delivery-icon" aria-hidden="true">{% cycle "▱" "⌖" "◇" %}</span>
-                                <h3>{{ item.localized_title|linebreaksbr }}</h3>
-                                <p>{{ item.localized_description }}</p>
-                                {% if item.localized_value %}<p class="delivery-method-note"><span aria-hidden="true">◷</span> {{ item.localized_value }}</p>{% endif %}
-                            </article>
-                        {% endfor %}
-                    {% else %}
-                    <article class="delivery-method-card">
-                        <span class="delivery-icon" aria-hidden="true">▱</span>
-                        <h3>{% if LANGUAGE_CODE == 'en' %}Moscow<br>and Moscow region{% else %}По Москве<br>и Московской области{% endif %}</h3>
-                        <p>{% if LANGUAGE_CODE == 'en' %}Delivery by our own service or courier companies.{% else %}Доставка собственной службой или курьерскими компаниями.{% endif %}</p>
-                        <p class="delivery-method-note"><span aria-hidden="true">◷</span> {% if LANGUAGE_CODE == 'en' %}Usually 1–2 days after your order is ready.{% else %}Обычно 1–2 дня с момента готовности.{% endif %}</p>
-                    </article>
-                    <article class="delivery-method-card">
-                        <span class="delivery-icon" aria-hidden="true">⌖</span>
-                        <h3>{% if LANGUAGE_CODE == 'en' %}Across Russia{% else %}По России{% endif %}</h3>
-                        <p>{% if LANGUAGE_CODE == 'en' %}We ship with CDEK, Delovye Linii, and other carriers.{% else %}Отправляем СДЭК, Деловыми линиями и другими транспортными компаниями.{% endif %}</p>
-                        <p class="delivery-method-note"><span aria-hidden="true">◷</span> {% if LANGUAGE_CODE == 'en' %}Delivery time depends on the destination and carrier.{% else %}Сроки зависят от региона и выбранной ТК.{% endif %}</p>
-                    </article>
-                    <article class="delivery-method-card">
-                        <span class="delivery-icon" aria-hidden="true">◇</span>
-                        <h3>{% if LANGUAGE_CODE == 'en' %}Packaging{% else %}Упаковка{% endif %}</h3>
-                        <p>{% if LANGUAGE_CODE == 'en' %}We carefully pack every product so it arrives in perfect condition.{% else %}Надёжно упаковываем изделия, чтобы они доехали до вас в идеальном состоянии.{% endif %}</p>
-                        <p class="delivery-method-note"><span aria-hidden="true">✓</span> {% if LANGUAGE_CODE == 'en' %}Protective and custom packaging.{% else %}Защитная и индивидуальная упаковка.{% endif %}</p>
-                    </article>
-                    {% endif %}
-                </div>
-                <div class="delivery-feature-image" role="img" aria-label="{% if site_page_sections.methods %}{{ site_page_sections.methods.0.localized_image_alt }}{% elif LANGUAGE_CODE == 'en' %}Packaged gift set of gingerbread{% else %}Упакованный подарочный набор с пряниками{% endif %}"{% if site_page_sections.methods.0.image %} style="background-image:url('{{ site_page_sections.methods.0.image.url }}')"{% endif %}></div>
+            <div class="delivery-method-grid">
+                {% if site_page_sections.methods %}
+                    {% for item in site_page_sections.methods %}
+                        <article class="delivery-method-card">
+                            <span class="delivery-icon" aria-hidden="true">{% cycle "▱" "⌖" "◇" %}</span>
+                            <h3>{{ item.localized_title|linebreaksbr }}</h3>
+                            <p>{{ item.localized_description }}</p>
+                            {% if item.localized_value %}<p class="delivery-method-note"><span aria-hidden="true">◷</span> {{ item.localized_value }}</p>{% endif %}
+                        </article>
+                    {% endfor %}
+                {% else %}
+                <article class="delivery-method-card">
+                    <span class="delivery-icon" aria-hidden="true">▱</span>
+                    <h3>{% if LANGUAGE_CODE == 'en' %}Moscow<br>and Moscow region{% else %}По Москве<br>и Московской области{% endif %}</h3>
+                    <p>{% if LANGUAGE_CODE == 'en' %}Delivery by our own service or courier companies.{% else %}Доставка собственной службой или курьерскими компаниями.{% endif %}</p>
+                    <p class="delivery-method-note"><span aria-hidden="true">◷</span> {% if LANGUAGE_CODE == 'en' %}Usually 1–2 days after your order is ready.{% else %}Обычно 1–2 дня с момента готовности.{% endif %}</p>
+                </article>
+                <article class="delivery-method-card">
+                    <span class="delivery-icon" aria-hidden="true">⌖</span>
+                    <h3>{% if LANGUAGE_CODE == 'en' %}Across Russia{% else %}По России{% endif %}</h3>
+                    <p>{% if LANGUAGE_CODE == 'en' %}We ship with CDEK, Delovye Linii, and other carriers.{% else %}Отправляем СДЭК, Деловыми линиями и другими транспортными компаниями.{% endif %}</p>
+                    <p class="delivery-method-note"><span aria-hidden="true">◷</span> {% if LANGUAGE_CODE == 'en' %}Delivery time depends on the destination and carrier.{% else %}Сроки зависят от региона и выбранной ТК.{% endif %}</p>
+                </article>
+                <article class="delivery-method-card">
+                    <span class="delivery-icon" aria-hidden="true">◇</span>
+                    <h3>{% if LANGUAGE_CODE == 'en' %}Packaging{% else %}Упаковка{% endif %}</h3>
+                    <p>{% if LANGUAGE_CODE == 'en' %}We carefully pack every product so it arrives in perfect condition.{% else %}Надёжно упаковываем изделия, чтобы они доехали до вас в идеальном состоянии.{% endif %}</p>
+                    <p class="delivery-method-note"><span aria-hidden="true">✓</span> {% if LANGUAGE_CODE == 'en' %}Protective and custom packaging.{% else %}Защитная и индивидуальная упаковка.{% endif %}</p>
+                </article>
+                {% endif %}
             </div>
             <div class="delivery-cost">
                 <span class="delivery-info-icon" aria-hidden="true">ⓘ</span>
@@ -110,7 +107,7 @@
                 {% if site_page_sections.notes %}
                     {% for item in site_page_sections.notes|slice:"1:" %}
                         <article class="delivery-help-item">
-                            <span class="delivery-icon" aria-hidden="true">{% cycle "▦" "◷" "✓" %}</span>
+                            <span class="delivery-icon" aria-hidden="true">{% if item.image %}<img src="{{ item.image.url }}" alt="">{% else %}{% cycle "▦" "◷" "✓" %}{% endif %}</span>
                             <div><h3>{{ item.localized_title }}</h3><p>{{ item.localized_description }}</p>{% if item.url %}<a href="{{ item.url }}">{{ item.localized_value }} →</a>{% endif %}</div>
                         </article>
                     {% endfor %}

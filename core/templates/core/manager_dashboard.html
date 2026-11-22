@@ -14,6 +14,10 @@
             <a class="manager-dashboard-site-link" href="{% url 'home' %}">{% if LANGUAGE_CODE == 'en' %}View website{% else %}Открыть сайт{% endif %} ↗</a>
         </header>
 
+        {% if can_manage_site_content %}
+            <a class="manager-dashboard-site-link" href="{% url 'site_content_manager' %}?page=delivery">{% if LANGUAGE_CODE == 'en' %}Edit website content{% else %}Редактировать контент сайта{% endif %}</a>
+        {% endif %}
+
         {% include "user/_account_messages.html" %}
 
         <div class="manager-dashboard-stats">
@@ -43,7 +47,7 @@
             {% endif %}
         </div>
 
-        {% if not can_view_orders and not can_view_feedback %}
+        {% if not can_view_orders and not can_view_feedback and not can_manage_site_content %}
             <p class="manager-dashboard-empty">{% if LANGUAGE_CODE == 'en' %}Your staff account does not have access to customer orders or messages yet.{% else %}У вашей учётной записи пока нет доступа к заказам и обращениям клиентов.{% endif %}</p>
         {% endif %}
 

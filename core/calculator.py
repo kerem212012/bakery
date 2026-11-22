@@ -123,6 +123,43 @@ def normalize_calculator_pricing(pricing=None):
             option: Decimal(str(values.get(option, default)))
             for option, default in defaults.items()
         }
+    option_catalog = source.get("option_catalog")
+    default_catalog = _default_calculator_option_catalog(result)
+    if not isinstance(option_catalog, dict):
+        option_catalog = {}
+    result["option_catalog"] = {}
+    for group, defaults in default_catalog.items():
+        raw_options = option_catalog.get(group, defaults)
+        if not isinstance(raw_options, list):
+            raw_options = defaults
+        normalized_options = []
+        seen_values = set()
+        for option in raw_options:
+            if not isinstance(option, dict):
+                continue
+            value = str(option.get("value", "")).strip()
+            label = str(option.get("label", "")).strip()
+            label_en = str(option.get("label_en", "")).strip()
+            if not value or value in seen_values or not (label or label_en):
+                continue
+            seen_values.add(value)
+            normalized_options.append(
+                {
+                    "value": value,
+                    "label": label or label_en,
+                    "label_en": label_en or label,
+                    "extra": Decimal(str(option.get("extra", 0))),
+                    "active": bool(option.get("active", True)),
+                }
+            )
+        result["option_catalog"][group] = normalized_options
+    for group, pricing_key in (
+        ("flavors", "flavor_additions"),
+        ("coatings", "coating_additions"),
+        ("packaging", "packaging_additions"),
+    ):
+        for option in result["option_catalog"][group]:
+            result[pricing_key][option["value"]] = option["extra"]
     tiers = source.get("discount_tiers", DISCOUNT_TIERS)
     result["discount_tiers"] = tuple(
         sorted(
@@ -241,6 +278,51 @@ ENGLISH_CHOICES = {
 }
 
 
+def _default_calculator_option_catalog(pricing):
+    return {
+        "flavors": [
+            {
+                "value": value,
+                "label": label,
+                "label_en": ENGLISH_CHOICES["flavor"][value],
+                "extra": pricing["flavor_additions"][value],
+                "active": True,
+            }
+            for value, label in FLAVOR_CHOICES
+        ],
+        "shapes": [
+            {
+                "value": value,
+                "label": label,
+                "label_en": ENGLISH_CHOICES["shape"][value],
+                "extra": Decimal("0"),
+                "active": True,
+            }
+            for value, label in SHAPE_CHOICES
+        ],
+        "coatings": [
+            {
+                "value": value,
+                "label": label,
+                "label_en": ENGLISH_CHOICES["coating"][value],
+                "extra": pricing["coating_additions"][value],
+                "active": True,
+            }
+            for value, label in COATING_CHOICES
+        ],
+        "packaging": [
+            {
+                "value": value,
+                "label": label,
+                "label_en": ENGLISH_CHOICES["packaging"][value],
+                "extra": pricing["packaging_additions"][value],
+                "active": True,
+            }
+            for value, label in PACKAGING_CHOICES
+        ],
+    }
+
+
 def localized_calculator_options(pricing=None):
     pricing = normalize_calculator_pricing(pricing)
     options = {
@@ -256,21 +338,60 @@ def localized_calculator_options(pricing=None):
             for product in pricing["products"]
         ),
         "flavors": tuple(
-            {"value": value, "label": label, "extra": pricing["flavor_additions"][value]}
-            for value, label in FLAVOR_CHOICES
+            {
+                **option,
+                "label_ru": option["label"],
+                "label": (
+                    option["label_en"]
+                    if get_language() == "en"
+                    else option["label"]
+                ),
+            }
+            for option in pricing["option_catalog"]["flavors"]
+            if option["active"]
         ),
         "sizes": tuple(
             {"value": value, "label": label, "multiplier": pricing["size_multipliers"][value]}
             for value, label in SIZE_CHOICES
         ),
-        "shapes": tuple({"value": value, "label": label} for value, label in SHAPE_CHOICES),
+        "shapes": tuple(
+            {
+                **option,
+                "label_ru": option["label"],
+                "label": (
+                    option["label_en"]
+                    if get_language() == "en"
+                    else option["label"]
+                ),
+            }
+            for option in pricing["option_catalog"]["shapes"]
+            if option["active"]
+        ),
         "coatings": tuple(
-            {"value": value, "label": label, "extra": pricing["coating_additions"][value]}
-            for value, label in COATING_CHOICES
+            {
+                **option,
+                "label_ru": option["label"],
+                "label": (
+                    option["label_en"]
+                    if get_language() == "en"
+                    else option["label"]
+                ),
+            }
+            for option in pricing["option_catalog"]["coatings"]
+            if option["active"]
         ),
         "packaging": tuple(
-            {"value": value, "label": label, "extra": pricing["packaging_additions"][value]}
-            for value, label in PACKAGING_CHOICES
+            {
+                **option,
+                "label_ru": option["label"],
+                "label": (
+                    option["label_en"]
+                    if get_language() == "en"
+                    else option["label"]
+                ),
+            }
+            for option in pricing["option_catalog"]["packaging"]
+            if option["active"]
         ),
         "deliveries": tuple(
             {"value": value, "label": label, "cost": pricing["delivery_costs"][value]}
@@ -282,10 +403,6 @@ def localized_calculator_options(pricing=None):
         return options
 
     choice_groups = {
-        "flavors": "flavor",
-        "shapes": "shape",
-        "coatings": "coating",
-        "packaging": "packaging",
         "deliveries": "delivery",
         "payments": "payment",
     }

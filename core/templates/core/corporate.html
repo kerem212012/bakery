@@ -19,7 +19,7 @@
                     {% if site_page_content %}{{ site_page_content.localized_button_text }}{% else %}{% if LANGUAGE_CODE == 'en' %}Become a partner{% else %}Стать партнёром{% endif %}{% endif %} <span aria-hidden="true">→</span>
                 </button>
             </div>
-            <div class="partnership-hero-media" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift boxes with gingerbread{% else %}Подарочные наборы с пряниками в коробке{% endif %}" data-brand="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
+            <div class="partnership-hero-media" role="img" aria-label="{% if LANGUAGE_CODE == 'en' %}Gift boxes with gingerbread{% else %}Подарочные наборы с пряниками в коробке{% endif %}"{% if site_page_content.image %} style="background-image:url('{{ site_page_content.image.url }}')"{% endif %}></div>
         </section>
 
         <section class="partnership-directions" aria-labelledby="partnership-directions-heading">

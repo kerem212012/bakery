@@ -158,10 +158,13 @@
                             <label for="id_product"><span class="calculator-icon" aria-hidden="true">♧</span><b>1.</b> {% if LANGUAGE_CODE == 'en' %}Product{% else %}Товар{% endif %}</label>
                             <select id="id_product" name="product">
                                 {% for option in calculator_options.products %}
-                                    <option value="{{ option.value }}" data-base-price="{{ option.base_unit_price|unlocalize }}" {% if preorder_form.product.value == option.value %}selected{% endif %}>{{ option.label }}</option>
+                                    <option value="{{ option.value }}" data-base-price="{{ option.base_unit_price|unlocalize }}" data-image-url="{{ option.image_url }}" {% if preorder_form.product.value == option.value %}selected{% endif %}>{{ option.label }}</option>
                                 {% endfor %}
                             </select>
                             {{ preorder_form.product.errors }}
+                            <div class="calculator-product-image-preview" data-calculator-product-image hidden>
+                                <img src="" alt="">
+                            </div>
                         </div>
                         <fieldset class="calculator-group flavor-group">
                             <legend><span class="calculator-icon" aria-hidden="true">♡</span><span><b>2.</b> {% if LANGUAGE_CODE == 'en' %}Flavor{% else %}Вкус{% endif %}</span></legend>
@@ -169,7 +172,7 @@
                                 {% for option in calculator_options.flavors %}
                                     <label class="flavor-option">
                                         <input class="js-calculator-option" type="radio" name="flavor" value="{{ option.value }}" data-extra="{{ option.extra|unlocalize }}" {% if preorder_form.flavor.value == option.value %}checked{% endif %}>
-                                        <span class="flavor-illustration" aria-hidden="true">{% if option.value == "classic" %}♡{% elif option.value == "chocolate" %}●{% elif option.value == "honey" %}✿{% else %}✧{% endif %}</span>
+                                        <span class="flavor-illustration" aria-hidden="true">{% if option.image_url %}<img class="calculator-choice-photo" src="{{ option.image_url }}" alt="" loading="lazy">{% elif option.value == "classic" %}♡{% elif option.value == "chocolate" %}●{% elif option.value == "honey" %}✿{% else %}✧{% endif %}</span>
                                         <span>{{ option.label }}</span>
                                     </label>
                                 {% endfor %}
@@ -207,7 +210,7 @@
                                 {% for option in calculator_options.shapes %}
                                     <label class="shape-option">
                                         <input class="js-calculator-option" type="radio" name="shape" value="{{ option.value }}" {% if preorder_form.shape.value == option.value %}checked{% endif %}>
-                                        <span class="shape-symbol shape-{{ option.value }}" aria-hidden="true">{% if option.value == "heart" %}♥{% elif option.value == "circle" %}○{% elif option.value == "star" %}☆{% elif option.value == "square" %}□{% elif option.value == "flower" %}❀{% else %}♟{% endif %}</span>
+                                        <span class="shape-symbol shape-{{ option.value }}{% if option.image_url %} shape-symbol-photo{% endif %}" aria-hidden="true">{% if option.image_url %}<img class="calculator-choice-photo" src="{{ option.image_url }}" alt="" loading="lazy">{% elif option.value == "heart" %}♥{% elif option.value == "circle" %}○{% elif option.value == "star" %}☆{% elif option.value == "square" %}□{% elif option.value == "flower" %}❀{% else %}♟{% endif %}</span>
                                         <span>{{ option.label }}</span>
                                     </label>
                                 {% endfor %}
@@ -221,7 +224,7 @@
                                 {% for option in calculator_options.coatings %}
                                     <label class="image-option">
                                         <input class="js-calculator-option" type="radio" name="coating" value="{{ option.value }}" data-extra="{{ option.extra|unlocalize }}" {% if preorder_form.coating.value == option.value %}checked{% endif %}>
-                                        <span class="option-art coating-art coating-{{ option.value }}" aria-hidden="true">{% if option.value == "none" %}♥{% else %}✿{% endif %}</span>
+                                        <span class="option-art coating-art coating-{{ option.value }}" aria-hidden="true">{% if option.image_url %}<img class="calculator-choice-photo" src="{{ option.image_url }}" alt="" loading="lazy">{% elif option.value == "none" %}♥{% else %}✿{% endif %}</span>
                                         <span>{{ option.label }}</span>
                                     </label>
                                 {% endfor %}
@@ -235,7 +238,7 @@
                                 {% for option in calculator_options.packaging %}
                                     <label class="image-option">
                                         <input class="js-calculator-option" type="radio" name="packaging" value="{{ option.value }}" data-extra="{{ option.extra|unlocalize }}" {% if preorder_form.packaging.value == option.value %}checked{% endif %}>
-                                        <span class="option-art package-art package-{{ option.value }}" aria-hidden="true">{% if option.value == "ribbon" %}♧{% elif option.value == "box" %}▱{% elif option.value == "premium" %}✿{% else %}□{% endif %}</span>
+                                        <span class="option-art package-art package-{{ option.value }}" aria-hidden="true">{% if option.image_url %}<img class="calculator-choice-photo" src="{{ option.image_url }}" alt="" loading="lazy">{% elif option.value == "ribbon" %}♧{% elif option.value == "box" %}▱{% elif option.value == "premium" %}✿{% else %}□{% endif %}</span>
                                         <span>{{ option.label }}</span>
                                     </label>
                                 {% endfor %}
@@ -340,6 +343,7 @@
                 </form>
             </section>
 
+            {% if site_page_sections.home_about or not site_home_about_configured %}
             <section class="about-section" id="about">
                 <div class="about-copy">
                     <p class="eyebrow">{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_section_eyebrow }}{% else %}{% if LANGUAGE_CODE == 'en' %}About us{% else %}О компании{% endif %}{% endif %}</p>
@@ -354,6 +358,7 @@
                 </div>
                 <div class="about-photo" role="img" aria-label="{% if site_page_sections.home_about %}{{ site_page_sections.home_about.0.localized_image_alt }}{% elif LANGUAGE_CODE == 'en' %}A baker decorates handmade cookies{% else %}Мастер украшает авторское печенье{% endif %}"{% if site_page_sections.home_about.0.image %} style="background-image:url('{{ site_page_sections.home_about.0.image.url }}')"{% endif %}></div>
             </section>
+            {% endif %}
 
             <section class="section home-faq-section" id="faq">
                 <div class="section-heading">
@@ -414,6 +419,8 @@
         const attachmentInput = preorderForm.querySelector('[name="attachments"]');
         const uploadDropzone = document.querySelector("#upload-dropzone");
         const uploadFilenames = document.querySelector("#upload-filenames");
+        const productImagePreview = document.querySelector("[data-calculator-product-image]");
+        const productImage = productImagePreview.querySelector("img");
         const currencyFormatter = new Intl.NumberFormat(document.documentElement.lang === "en" ? "en-US" : "ru-RU", { maximumFractionDigits: 0 });
         const quoteOutputs = {
             unitPrice: document.querySelector("#quote-unit-price"),
@@ -530,8 +537,22 @@
             }
         }
 
+        function updateProductImage() {
+            const selectedProduct = preorderForm.querySelector('[name="product"]').selectedOptions[0];
+            const imageUrl = selectedProduct.dataset.imageUrl;
+            productImagePreview.hidden = !imageUrl;
+            if (imageUrl) {
+                productImage.src = imageUrl;
+                productImage.alt = selectedProduct.textContent.trim();
+            } else {
+                productImage.removeAttribute("src");
+                productImage.alt = "";
+            }
+        }
+
         preorderForm.addEventListener("input", () => updateQuote());
         preorderForm.addEventListener("change", () => updateQuote());
+        preorderForm.addEventListener("change", updateProductImage);
         preorderForm.addEventListener("change", (event) => {
             const radio = event.target.closest(".js-calculator-option");
             if (!radio) {
@@ -588,6 +609,7 @@
             }
         });
 
+        updateProductImage();
         updateQuote(false);
 
         if ("IntersectionObserver" in window && !reducedMotionPreference.matches) {
