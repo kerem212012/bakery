@@ -179,11 +179,11 @@
                     <input type="hidden" name="action" value="save_catalog_promos">
                     {{ catalog_promo_formset.management_form }}
                     {% if catalog_promo_formset.non_form_errors %}<div class="site-content-form-errors">{{ catalog_promo_formset.non_form_errors }}</div>{% endif %}
-                    <section class="site-content-form-section">
+                    <section class="site-content-form-section" data-repeatable-list data-formset-prefix="catalog-promos">
                         <h2>{% if LANGUAGE_CODE == 'en' %}Catalog — promo grid{% else %}Каталог — промо-карточки{% endif %}</h2>
                         <p>{% if LANGUAGE_CODE == 'en' %}Edit, reorder, publish, or remove promo cards. The final blank form adds a card.{% else %}Редактируйте, сортируйте, публикуйте или удаляйте промо-карточки. Последняя пустая форма добавляет карточку.{% endif %}</p>
                         {% for promo_form in catalog_promo_formset %}
-                            <article class="site-content-form-section" data-promo-card>
+                            <article class="site-content-form-section" data-promo-card data-repeatable-row>
                                 {% for hidden in promo_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if forloop.last and not promo_form.instance.pk %}{% if LANGUAGE_CODE == 'en' %}Add promo card{% else %}Добавить промо-карточку{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Promo card {{ forloop.counter }}{% else %}Промо-карточка {{ forloop.counter }}{% endif %}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -207,13 +207,14 @@
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="catalog-promos">{% if LANGUAGE_CODE == 'en' %}Add promo card{% else %}Добавить промо-карточку{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save promo cards{% else %}Сохранить промо-карточки{% endif %}</button>
                     </div>
                 </form>
             {% endif %}
 
             {% if packaging_options_heading_form %}
-                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                <form class="site-content-editor" method="post" enctype="multipart/form-data" data-packaging-formset>
                     {% csrf_token %}
                     <input type="hidden" name="page" value="{{ selected_page }}">
                     <input type="hidden" name="action" value="save_packaging_options">
@@ -230,15 +231,42 @@
                                 </div>
                             {% endfor %}
                         </div>
-                        {% for card_form in packaging_options_formset %}
-                            <article class="site-content-form-section">
-                                {% for hidden in card_form.hidden_fields %}{{ hidden }}{% endfor %}
-                                <h3>{% if LANGUAGE_CODE == 'en' %}Packaging option {{ forloop.counter }}{% else %}Вариант упаковки {{ forloop.counter }}{% endif %}</h3>
+                        <div data-packaging-rows>
+                            {% for card_form in packaging_options_formset %}
+                                <article class="site-content-form-section" data-packaging-row>
+                                    {% for hidden in card_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                    <h3>{% if LANGUAGE_CODE == 'en' %}Packaging option {{ forloop.counter }}{% else %}Вариант упаковки {{ forloop.counter }}{% endif %}</h3>
+                                    <div class="site-content-form-grid">
+                                        {% for field in card_form.visible_fields %}
+                                            {% if field.name != 'DELETE' or not forloop.parentloop.first %}
+                                                <div class="site-content-form-field{% if field.name == 'DELETE' %} site-content-published{% endif %}">
+                                                    {% if field.name == 'DELETE' %}
+                                                        <label>{{ field }}<span>{% if LANGUAGE_CODE == 'en' %}Delete this option{% else %}Удалить вариант{% endif %}</span></label>
+                                                    {% else %}
+                                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                        {{ field }}
+                                                    {% endif %}
+                                                    {{ field.errors }}
+                                                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% if card_form.instance.image %}
+                                        <img class="site-content-editor-preview" src="{{ card_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current packaging image{% else %}Текущее изображение упаковки{% endif %}">
+                                    {% endif %}
+                                </article>
+                            {% endfor %}
+                        </div>
+                        <template data-packaging-empty-form>
+                            <article class="site-content-form-section" data-packaging-row>
+                                {% for hidden in packaging_options_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}New packaging option{% else %}Новый вариант упаковки{% endif %}</h3>
                                 <div class="site-content-form-grid">
-                                    {% for field in card_form.visible_fields %}
-                                        <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
-                                            {% if field.name == 'is_active' %}
-                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                    {% for field in packaging_options_formset.empty_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'DELETE' %} site-content-published{% endif %}">
+                                            {% if field.name == 'DELETE' %}
+                                                <label>{{ field }}<span>{% if LANGUAGE_CODE == 'en' %}Delete this option{% else %}Удалить вариант{% endif %}</span></label>
                                             {% else %}
                                                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                                                 {{ field }}
@@ -248,20 +276,91 @@
                                         </div>
                                     {% endfor %}
                                 </div>
-                                {% if card_form.instance.image %}
-                                    <img class="site-content-editor-preview" src="{{ card_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current packaging image{% else %}Текущее изображение упаковки{% endif %}">
-                                {% endif %}
                             </article>
-                        {% endfor %}
+                        </template>
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-packaging-add>{% if LANGUAGE_CODE == 'en' %}Add option{% else %}Добавить вариант{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save packaging options{% else %}Сохранить варианты упаковки{% endif %}</button>
                     </div>
                 </form>
             {% endif %}
 
+            {% if packaging_gifts_heading_form %}
+                <form class="site-content-editor" method="post" enctype="multipart/form-data" data-packaging-formset>
+                    {% csrf_token %}
+                    <input type="hidden" name="page" value="{{ selected_page }}">
+                    <input type="hidden" name="action" value="save_packaging_gifts">
+                    {{ packaging_gifts_formset.management_form }}
+                    {% if packaging_gifts_formset.non_form_errors %}<div class="site-content-form-errors">{{ packaging_gifts_formset.non_form_errors }}</div>{% endif %}
+                    <section class="site-content-form-section">
+                        <h2>{% if LANGUAGE_CODE == 'en' %}Packaging for gift sets{% else %}Упаковка для наборов{% endif %}</h2>
+                        <div class="site-content-form-grid">
+                            {% for field in packaging_gifts_heading_form %}
+                                <div class="site-content-form-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div data-packaging-rows>
+                            {% for card_form in packaging_gifts_formset %}
+                                <article class="site-content-form-section" data-packaging-row>
+                                    {% for hidden in card_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                    <h3>{% if LANGUAGE_CODE == 'en' %}Gift set option {{ forloop.counter }}{% else %}Вариант для набора {{ forloop.counter }}{% endif %}</h3>
+                                    <div class="site-content-form-grid">
+                                        {% for field in card_form.visible_fields %}
+                                            {% if field.name != 'DELETE' or not forloop.parentloop.first %}
+                                                <div class="site-content-form-field{% if field.name == 'DELETE' %} site-content-published{% endif %}">
+                                                    {% if field.name == 'DELETE' %}
+                                                        <label>{{ field }}<span>{% if LANGUAGE_CODE == 'en' %}Delete this option{% else %}Удалить вариант{% endif %}</span></label>
+                                                    {% else %}
+                                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                        {{ field }}
+                                                    {% endif %}
+                                                    {{ field.errors }}
+                                                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% if card_form.instance.image %}
+                                        <img class="site-content-editor-preview" src="{{ card_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current packaging image{% else %}Текущее изображение упаковки{% endif %}">
+                                    {% endif %}
+                                </article>
+                            {% endfor %}
+                        </div>
+                        <template data-packaging-empty-form>
+                            <article class="site-content-form-section" data-packaging-row>
+                                {% for hidden in packaging_gifts_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}New gift set option{% else %}Новый вариант для набора{% endif %}</h3>
+                                <div class="site-content-form-grid">
+                                    {% for field in packaging_gifts_formset.empty_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'DELETE' %} site-content-published{% endif %}">
+                                            {% if field.name == 'DELETE' %}
+                                                <label>{{ field }}<span>{% if LANGUAGE_CODE == 'en' %}Delete this option{% else %}Удалить вариант{% endif %}</span></label>
+                                            {% else %}
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            {% endif %}
+                                            {{ field.errors }}
+                                            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                        </template>
+                    </section>
+                    <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-packaging-add>{% if LANGUAGE_CODE == 'en' %}Add option{% else %}Добавить вариант{% endif %}</button>
+                        <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save gift set packaging{% else %}Сохранить упаковку для наборов{% endif %}</button>
+                    </div>
+                </form>
+            {% endif %}
+
             {% if packaging_extras_heading_form %}
-                <form class="site-content-editor" method="post" enctype="multipart/form-data">
+                <form class="site-content-editor" method="post" enctype="multipart/form-data" data-packaging-formset>
                     {% csrf_token %}
                     <input type="hidden" name="page" value="{{ selected_page }}">
                     <input type="hidden" name="action" value="save_packaging_extras">
@@ -278,15 +377,42 @@
                                 </div>
                             {% endfor %}
                         </div>
-                        {% for card_form in packaging_extras_formset %}
-                            <article class="site-content-form-section">
-                                {% for hidden in card_form.hidden_fields %}{{ hidden }}{% endfor %}
-                                <h3>{% if LANGUAGE_CODE == 'en' %}Additional option {{ forloop.counter }}{% else %}Дополнительный вариант {{ forloop.counter }}{% endif %}</h3>
+                        <div data-packaging-rows>
+                            {% for card_form in packaging_extras_formset %}
+                                <article class="site-content-form-section" data-packaging-row>
+                                    {% for hidden in card_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                    <h3>{% if LANGUAGE_CODE == 'en' %}Additional option {{ forloop.counter }}{% else %}Дополнительный вариант {{ forloop.counter }}{% endif %}</h3>
+                                    <div class="site-content-form-grid">
+                                        {% for field in card_form.visible_fields %}
+                                            {% if field.name != 'DELETE' or not forloop.parentloop.first %}
+                                                <div class="site-content-form-field{% if field.name == 'DELETE' %} site-content-published{% endif %}">
+                                                    {% if field.name == 'DELETE' %}
+                                                        <label>{{ field }}<span>{% if LANGUAGE_CODE == 'en' %}Delete this option{% else %}Удалить вариант{% endif %}</span></label>
+                                                    {% else %}
+                                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                        {{ field }}
+                                                    {% endif %}
+                                                    {{ field.errors }}
+                                                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    {% if card_form.instance.image %}
+                                        <img class="site-content-editor-preview" src="{{ card_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current packaging image{% else %}Текущее изображение упаковки{% endif %}">
+                                    {% endif %}
+                                </article>
+                            {% endfor %}
+                        </div>
+                        <template data-packaging-empty-form>
+                            <article class="site-content-form-section" data-packaging-row>
+                                {% for hidden in packaging_extras_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <h3>{% if LANGUAGE_CODE == 'en' %}New additional option{% else %}Новый дополнительный вариант{% endif %}</h3>
                                 <div class="site-content-form-grid">
-                                    {% for field in card_form.visible_fields %}
-                                        <div class="site-content-form-field{% if field.name == 'is_active' %} site-content-published{% endif %}">
-                                            {% if field.name == 'is_active' %}
-                                                <label>{{ field }}<span>{{ field.label }}</span></label>
+                                    {% for field in packaging_extras_formset.empty_form.visible_fields %}
+                                        <div class="site-content-form-field{% if field.name == 'DELETE' %} site-content-published{% endif %}">
+                                            {% if field.name == 'DELETE' %}
+                                                <label>{{ field }}<span>{% if LANGUAGE_CODE == 'en' %}Delete this option{% else %}Удалить вариант{% endif %}</span></label>
                                             {% else %}
                                                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                                                 {{ field }}
@@ -296,13 +422,11 @@
                                         </div>
                                     {% endfor %}
                                 </div>
-                                {% if card_form.instance.image %}
-                                    <img class="site-content-editor-preview" src="{{ card_form.instance.image.url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current packaging image{% else %}Текущее изображение упаковки{% endif %}">
-                                {% endif %}
                             </article>
-                        {% endfor %}
+                        </template>
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-packaging-add>{% if LANGUAGE_CODE == 'en' %}Add option{% else %}Добавить вариант{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save additional options{% else %}Сохранить дополнительные варианты{% endif %}</button>
                     </div>
                 </form>
@@ -315,11 +439,11 @@
                     <input type="hidden" name="action" value="save_faq_questions">
                     {{ faq_questions_formset.management_form }}
                     {% if faq_questions_formset.non_form_errors %}<div class="site-content-form-errors">{{ faq_questions_formset.non_form_errors }}</div>{% endif %}
-                    <section class="site-content-form-section">
+                    <section class="site-content-form-section" data-repeatable-list data-formset-prefix="faq-questions">
                         <h2>{% if LANGUAGE_CODE == 'en' %}FAQ — questions and answers{% else %}Частые вопросы — вопросы и ответы{% endif %}</h2>
                         <p>{% if LANGUAGE_CODE == 'en' %}Edit, reorder, publish, or remove questions. The last blank form adds one new question.{% else %}Редактируйте, сортируйте, публикуйте или удаляйте вопросы. Последняя пустая форма добавляет новый вопрос.{% endif %}</p>
                         {% for question_form in faq_questions_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in question_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if forloop.last and not question_form.instance.pk %}{% if LANGUAGE_CODE == 'en' %}Add question{% else %}Добавить вопрос{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Question {{ forloop.counter }}{% else %}Вопрос {{ forloop.counter }}{% endif %}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -339,6 +463,7 @@
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="faq-questions">{% if LANGUAGE_CODE == 'en' %}Add question{% else %}Добавить вопрос{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save FAQ{% else %}Сохранить вопросы и ответы{% endif %}</button>
                     </div>
                 </form>
@@ -351,7 +476,7 @@
                     <input type="hidden" name="action" value="save_delivery_methods">
                     {{ delivery_methods_formset.management_form }}
                     {% if delivery_methods_formset.non_form_errors %}<div class="site-content-form-errors">{{ delivery_methods_formset.non_form_errors }}</div>{% endif %}
-                    <section class="site-content-form-section">
+                    <section class="site-content-form-section" data-repeatable-list data-formset-prefix="delivery-methods">
                         <h2>{% if LANGUAGE_CODE == 'en' %}Delivery — delivery methods{% else %}Доставка — способы доставки{% endif %}</h2>
                         <div class="site-content-form-grid">
                             {% for field in delivery_methods_heading_form %}
@@ -363,7 +488,7 @@
                             {% endfor %}
                         </div>
                         {% for method_form in delivery_methods_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in method_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Delivery method {{ forloop.counter }}{% else %}Способ доставки {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -380,6 +505,7 @@
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="delivery-methods">{% if LANGUAGE_CODE == 'en' %}Add delivery method{% else %}Добавить способ доставки{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save delivery methods{% else %}Сохранить способы доставки{% endif %}</button>
                     </div>
                 </form>
@@ -392,7 +518,7 @@
                     <input type="hidden" name="action" value="save_delivery_pickup">
                     {{ delivery_pickup_formset.management_form }}
                     {% if delivery_pickup_formset.non_form_errors %}<div class="site-content-form-errors">{{ delivery_pickup_formset.non_form_errors }}</div>{% endif %}
-                    <section class="site-content-form-section">
+                    <section class="site-content-form-section" data-repeatable-list data-formset-prefix="delivery-pickup">
                         <h2>{% if LANGUAGE_CODE == 'en' %}Delivery — pickup{% else %}Доставка — самовывоз{% endif %}</h2>
                         <div class="site-content-form-grid">
                             {% for field in delivery_pickup_heading_form %}
@@ -404,7 +530,7 @@
                             {% endfor %}
                         </div>
                         {% for pickup_form in delivery_pickup_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in pickup_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Pickup detail {{ forloop.counter }}{% else %}Информация о самовывозе {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -420,6 +546,7 @@
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="delivery-pickup">{% if LANGUAGE_CODE == 'en' %}Add pickup detail{% else %}Добавить информацию о самовывозе{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save pickup information{% else %}Сохранить информацию о самовывозе{% endif %}</button>
                     </div>
                 </form>
@@ -432,7 +559,7 @@
                     <input type="hidden" name="action" value="save_delivery_help">
                     {{ delivery_help_formset.management_form }}
                     {% if delivery_help_formset.non_form_errors %}<div class="site-content-form-errors">{{ delivery_help_formset.non_form_errors }}</div>{% endif %}
-                    <section class="site-content-form-section">
+                    <section class="site-content-form-section" data-repeatable-list data-formset-prefix="delivery-help">
                         <h2>{% if LANGUAGE_CODE == 'en' %}Delivery — useful information{% else %}Доставка — полезная информация{% endif %}</h2>
                         <div class="site-content-form-grid">
                             {% for field in delivery_help_heading_form %}
@@ -444,7 +571,7 @@
                             {% endfor %}
                         </div>
                         {% for help_form in delivery_help_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in help_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Information {{ forloop.counter }}{% else %}Информация {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -461,6 +588,7 @@
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="delivery-help">{% if LANGUAGE_CODE == 'en' %}Add information card{% else %}Добавить информационную карточку{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save delivery information{% else %}Сохранить информацию о доставке{% endif %}</button>
                     </div>
                 </form>
@@ -616,7 +744,7 @@
                     <input type="hidden" name="action" value="save_partnership_success">
                     {{ partnership_success_formset.management_form }}
                     {% if partnership_success_formset.non_form_errors %}<div class="site-content-form-errors">{{ partnership_success_formset.non_form_errors }}</div>{% endif %}
-                    <section class="site-content-form-section">
+                    <section class="site-content-form-section" data-repeatable-list data-formset-prefix="partnership-success">
                         <h2>{% if LANGUAGE_CODE == 'en' %}Partnership — our success{% else %}Партнёрство — наши успехи{% endif %}</h2>
                         <div class="site-content-form-grid">
                             {% for field in partnership_success_heading_form %}
@@ -628,7 +756,7 @@
                             {% endfor %}
                         </div>
                         {% for success_form in partnership_success_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in success_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Success metric {{ forloop.counter }}{% else %}Показатель успеха {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -644,6 +772,7 @@
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="partnership-success">{% if LANGUAGE_CODE == 'en' %}Add success metric{% else %}Добавить показатель успеха{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save partnership success{% else %}Сохранить успехи сотрудничества{% endif %}</button>
                     </div>
                 </form>
@@ -656,7 +785,7 @@
                     <input type="hidden" name="action" value="save_business_clients_steps">
                     {{ business_clients_steps_formset.management_form }}
                     {% if business_clients_steps_formset.non_form_errors %}<div class="site-content-form-errors">{{ business_clients_steps_formset.non_form_errors }}</div>{% endif %}
-                    <section class="site-content-form-section">
+                    <section class="site-content-form-section" data-repeatable-list data-formset-prefix="steps">
                         <h2>{% if LANGUAGE_CODE == 'en' %}Business clients — interaction{% else %}Корпоративным клиентам — порядок работы{% endif %}</h2>
                         <div class="site-content-form-grid">
                             {% for field in business_clients_steps_heading_form %}
@@ -668,7 +797,7 @@
                             {% endfor %}
                         </div>
                         {% for step_form in business_clients_steps_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in step_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Step {{ forloop.counter }}{% else %}Этап {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -688,6 +817,7 @@
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="steps">{% if LANGUAGE_CODE == 'en' %}Add step{% else %}Добавить этап{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save interaction section{% else %}Сохранить раздел о порядке работы{% endif %}</button>
                     </div>
                 </form>
@@ -714,8 +844,9 @@
                                 </div>
                             {% endfor %}
                         </div>
+                        <div data-repeatable-list data-formset-prefix="payment">
                         {% for payment_form in business_clients_payment_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in payment_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Payment option {{ forloop.counter }}{% else %}Вариант оплаты {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -733,6 +864,8 @@
                                 </div>
                             </article>
                         {% endfor %}
+                        </div>
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="payment">{% if LANGUAGE_CODE == 'en' %}Add payment option{% else %}Добавить вариант оплаты{% endif %}</button>
                         <h3>{% if LANGUAGE_CODE == 'en' %}Delivery / pickup{% else %}Доставка / самовывоз{% endif %}</h3>
                         <div class="site-content-form-grid">
                             {% for field in business_clients_delivery_heading_form %}
@@ -743,8 +876,9 @@
                                 </div>
                             {% endfor %}
                         </div>
+                        <div data-repeatable-list data-formset-prefix="delivery">
                         {% for delivery_form in business_clients_delivery_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in delivery_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Delivery option {{ forloop.counter }}{% else %}Вариант доставки {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -762,6 +896,8 @@
                                 </div>
                             </article>
                         {% endfor %}
+                        </div>
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="delivery">{% if LANGUAGE_CODE == 'en' %}Add delivery option{% else %}Добавить вариант доставки{% endif %}</button>
                     </section>
                     <div class="site-content-form-actions">
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save payment and delivery sections{% else %}Сохранить разделы оплаты и доставки{% endif %}</button>
@@ -872,11 +1008,11 @@
                     <input type="hidden" name="action" value="save_about_stats">
                     {{ about_stats_formset.management_form }}
                     {% if about_stats_formset.non_form_errors %}<div class="site-content-form-errors">{{ about_stats_formset.non_form_errors }}</div>{% endif %}
-                    <section class="site-content-form-section">
+                    <section class="site-content-form-section" data-repeatable-list data-formset-prefix="about-stats">
                         <h2>{% if LANGUAGE_CODE == 'en' %}About us page — Statistics{% else %}Страница «О нас» — показатели{% endif %}</h2>
                         <p>{% if LANGUAGE_CODE == 'en' %}Edit these figures and their captions, or uncheck Published to hide a figure.{% else %}Измените показатели и подписи или снимите отметку «Показывать», чтобы скрыть показатель.{% endif %}</p>
                         {% for statistic_form in about_stats_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in statistic_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Figure {{ forloop.counter }}{% else %}Показатель {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -896,6 +1032,7 @@
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="about-stats">{% if LANGUAGE_CODE == 'en' %}Add statistic{% else %}Добавить показатель{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save statistics{% else %}Сохранить показатели{% endif %}</button>
                     </div>
                 </form>
@@ -908,10 +1045,10 @@
                     <input type="hidden" name="action" value="save_about_promises">
                     {{ about_promises_formset.management_form }}
                     {% if about_promises_formset.non_form_errors %}<div class="site-content-form-errors">{{ about_promises_formset.non_form_errors }}</div>{% endif %}
-                    <section class="site-content-form-section">
+                    <section class="site-content-form-section" data-repeatable-list data-formset-prefix="promises">
                         <h2>{% if LANGUAGE_CODE == 'en' %}About us page — Our principles{% else %}Страница «О нас» — «Наши принципы»{% endif %}</h2>
                         {% for promise_form in about_promises_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in promise_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Principle {{ forloop.counter }}{% else %}Принцип {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -931,6 +1068,7 @@
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="promises">{% if LANGUAGE_CODE == 'en' %}Add principle{% else %}Добавить принцип{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save principles{% else %}Сохранить принципы{% endif %}</button>
                     </div>
                 </form>
@@ -943,7 +1081,7 @@
                     <input type="hidden" name="action" value="save_about_values">
                     {{ about_values_formset.management_form }}
                     {% if about_values_formset.non_form_errors %}<div class="site-content-form-errors">{{ about_values_formset.non_form_errors }}</div>{% endif %}
-                    <section class="site-content-form-section">
+                    <section class="site-content-form-section" data-repeatable-list data-formset-prefix="values">
                         <h2>{% if LANGUAGE_CODE == 'en' %}About us page — Our values{% else %}Страница «О нас» — «Наши ценности»{% endif %}</h2>
                         {% if about_values_heading_form.non_field_errors %}<div class="site-content-form-errors">{{ about_values_heading_form.non_field_errors }}</div>{% endif %}
                         <h3>{% if LANGUAGE_CODE == 'en' %}Section heading{% else %}Заголовок раздела{% endif %}</h3>
@@ -957,7 +1095,7 @@
                             {% endfor %}
                         </div>
                         {% for value_form in about_values_formset %}
-                            <article class="site-content-form-section">
+                            <article class="site-content-form-section" data-repeatable-row>
                                 {% for hidden in value_form.hidden_fields %}{{ hidden }}{% endfor %}
                                 <h3>{% if LANGUAGE_CODE == 'en' %}Value {{ forloop.counter }}{% else %}Ценность {{ forloop.counter }}{% endif %}</h3>
                                 <div class="site-content-form-grid">
@@ -981,6 +1119,7 @@
                         {% endfor %}
                     </section>
                     <div class="site-content-form-actions">
+                        <button class="admin-dashboard-site-link" type="button" data-repeatable-add="values">{% if LANGUAGE_CODE == 'en' %}Add value{% else %}Добавить ценность{% endif %}</button>
                         <button class="admin-dashboard-site-link admin-dashboard-primary-link" type="submit">{% if LANGUAGE_CODE == 'en' %}Save values{% else %}Сохранить ценности{% endif %}</button>
                     </div>
                 </form>
@@ -1042,6 +1181,90 @@
     {{ block.super }}
     <script>
         (() => {
+            document.querySelectorAll("[data-repeatable-list]").forEach((list) => {
+                const form = list.closest("form");
+                const prefix = list.dataset.formsetPrefix;
+                const totalForms = Array.from(
+                    form?.querySelectorAll('input[name$="-TOTAL_FORMS"]') || [],
+                ).find((input) => input.name === `${prefix}-TOTAL_FORMS`);
+                const addButton = form?.querySelector(
+                    `[data-repeatable-add="${prefix}"]`,
+                );
+                if (!form || !prefix || !totalForms || !addButton) return;
+
+                addButton.addEventListener("click", () => {
+                    const index = Number(totalForms.value);
+                    const sourceIndex = index - 1;
+                    const rows = list.querySelectorAll("[data-repeatable-row]");
+                    const sourceRow = rows[rows.length - 1];
+                    if (!sourceRow) return;
+
+                    const rowTemplate = document.createElement("template");
+                    rowTemplate.innerHTML = sourceRow.outerHTML.replaceAll(
+                        `${prefix}-${sourceIndex}-`,
+                        `${prefix}-${index}-`,
+                    );
+                    const newRow = rowTemplate.content.firstElementChild;
+                    newRow.querySelectorAll("input, textarea, select").forEach((field) => {
+                        if (field.name.endsWith("-id")) {
+                            field.value = "";
+                        } else if (field.name.endsWith("-display_order")) {
+                            const orders = Array.from(
+                                list.querySelectorAll('[name$="-display_order"]'),
+                            )
+                                .map((orderField) => orderField.value)
+                                .filter((value) => value !== "")
+                                .map(Number)
+                                .filter(Number.isFinite);
+                            field.value = Math.max(-1, ...orders) + 1;
+                        } else if (field.name.endsWith("-DELETE")) {
+                            field.checked = false;
+                        } else if (field.name.endsWith("-is_active")) {
+                            field.checked = false;
+                        } else if (field.tagName === "SELECT") {
+                            const defaultIndex = Array.from(field.options).findIndex(
+                                (option) => option.defaultSelected,
+                            );
+                            field.selectedIndex = Math.max(0, defaultIndex);
+                        } else if (
+                            field.type !== "hidden" &&
+                            field.type !== "checkbox" &&
+                            field.type !== "radio" &&
+                            field.tagName !== "SELECT"
+                        ) {
+                            field.value = "";
+                        }
+                    });
+                    newRow.querySelectorAll(".errorlist").forEach((errorList) => {
+                        errorList.remove();
+                    });
+                    const heading = newRow.querySelector("h3");
+                    if (heading) {
+                        heading.textContent = heading.textContent.replace(
+                            /\d+$/,
+                            String(index + 1),
+                        );
+                    }
+                    newRow.querySelectorAll("[data-promo-destination]").forEach((destination) => {
+                        const customUrlField = destination
+                            .closest("[data-promo-card]")
+                            ?.querySelector("[data-promo-custom-field]");
+                        if (!customUrlField) return;
+                        const syncCustomUrlVisibility = () => {
+                            customUrlField.hidden =
+                                destination.value !== destination.dataset.customValue;
+                        };
+                        destination.addEventListener("change", syncCustomUrlVisibility);
+                        syncCustomUrlVisibility();
+                    });
+                    list.appendChild(newRow);
+                    totalForms.value = String(index + 1);
+                    newRow.querySelector('input:not([type="hidden"]), textarea')?.focus();
+                });
+            });
+        })();
+
+        (() => {
             document.querySelectorAll("[data-promo-destination]").forEach((destination) => {
                 const promoCard = destination.closest("[data-promo-card]");
                 const customUrlField = promoCard?.querySelector("[data-promo-custom-field]");
@@ -1052,6 +1275,27 @@
                 };
                 destination.addEventListener("change", syncCustomUrlVisibility);
                 syncCustomUrlVisibility();
+            });
+        })();
+
+        (() => {
+            document.querySelectorAll("[data-packaging-formset]").forEach((form) => {
+                const addButton = form.querySelector("[data-packaging-add]");
+                const rows = form.querySelector("[data-packaging-rows]");
+                const template = form.querySelector("[data-packaging-empty-form]");
+                const totalForms = form.querySelector('input[name$="-TOTAL_FORMS"]');
+                if (!addButton || !rows || !template || !totalForms) return;
+
+                addButton.addEventListener("click", () => {
+                    const index = Number(totalForms.value);
+                    const emptyForm = document.createElement("template");
+                    emptyForm.innerHTML = template.innerHTML.replaceAll(
+                        "__prefix__",
+                        String(index),
+                    );
+                    rows.appendChild(emptyForm.content.firstElementChild);
+                    totalForms.value = index + 1;
+                });
             });
         })();
     </script>

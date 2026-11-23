@@ -1,4 +1,6 @@
 from pathlib import Path
+import json
+from decimal import Decimal, InvalidOperation
 
 from django import forms
 from django.forms import BaseModelFormSet
@@ -16,6 +18,7 @@ from .calculator import (
     PAYMENT_CHOICES,
     SHAPE_CHOICES,
     SIZE_CHOICES,
+    is_coating_modifier_group,
     normalize_calculator_pricing,
     localized_choices,
     localized_calculator_options,
@@ -219,14 +222,15 @@ class MultipleFileField(forms.FileField):
 
 class PreorderForm(forms.Form):
     product = forms.ChoiceField(required=False)
-    flavor = forms.ChoiceField(choices=FLAVOR_CHOICES)
+    flavor = forms.ChoiceField(choices=FLAVOR_CHOICES, required=False)
     quantity = forms.IntegerField(min_value=1, max_value=10000, initial=100)
     size = forms.ChoiceField(choices=SIZE_CHOICES)
-    shape = forms.ChoiceField(choices=SHAPE_CHOICES)
-    coating = forms.ChoiceField(choices=COATING_CHOICES)
-    packaging = forms.ChoiceField(choices=PACKAGING_CHOICES)
+    shape = forms.ChoiceField(choices=SHAPE_CHOICES, required=False)
+    coating = forms.ChoiceField(choices=COATING_CHOICES, required=False)
+    packaging = forms.ChoiceField(choices=PACKAGING_CHOICES, required=False)
     delivery = forms.ChoiceField(choices=DELIVERY_CHOICES)
     payment = forms.ChoiceField(choices=PAYMENT_CHOICES)
+    modifiers = forms.CharField(required=False, widget=forms.HiddenInput())
     name = forms.CharField(max_length=120)
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={"placeholder": "Введите email"})
@@ -262,6 +266,7 @@ class PreorderForm(forms.Form):
         *args,
         product_choices=None,
         option_choices=None,
+        pricing=None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -271,6 +276,38 @@ class PreorderForm(forms.Form):
         self.fields["product"].initial = (
             self.fields["product"].choices[0][0]
             if self.fields["product"].choices
+            else ""
+        )
+        self.pricing = normalize_calculator_pricing(pricing)
+        selected_product_value = (
+            self.data.get("product")
+            if self.is_bound
+            else self.fields["product"].initial
+        )
+        selected_product = next(
+            (
+                product
+                for product in self.pricing["products"]
+                if product["value"] == selected_product_value
+            ),
+            self.pricing["products"][0],
+        )
+        self.fields["size"].choices = tuple(
+            (size["value"], size["label"])
+            for size in selected_product["sizes"]
+        )
+        self.fields["size"].initial = (
+            self.fields["size"].choices[0][0]
+            if self.fields["size"].choices
+            else ""
+        )
+        self.fields["payment"].choices = tuple(
+            (method["value"], method["label_en"] if get_language() == "en" else method["label"])
+            for method in self.pricing["payment_methods"]
+        )
+        self.fields["payment"].initial = (
+            self.fields["payment"].choices[0][0]
+            if self.fields["payment"].choices
             else ""
         )
         for field_name, group, option_group in (
@@ -292,7 +329,6 @@ class PreorderForm(forms.Form):
                 )
         self.fields["name"].widget.attrs["placeholder"] = "Как к вам обращаться"
         self.fields["quantity"].initial = 100
-        self.fields["size"].initial = "5"
         for field_name, default, option_group in (
             ("flavor", "classic", "flavors"),
             ("shape", "heart", "shapes"),
@@ -302,7 +338,14 @@ class PreorderForm(forms.Form):
             ("payment", "organization", None),
         ):
             if option_group not in option_choices:
-                self.fields[field_name].initial = default
+                available_values = {
+                    value for value, _ in self.fields[field_name].choices
+                }
+                self.fields[field_name].initial = (
+                    default
+                    if default in available_values
+                    else next(iter(available_values), "")
+                )
         if get_language() == "en":
             self.fields["consent_given"].error_messages["required"] = (
                 "You must agree to the processing of your personal data."
@@ -317,6 +360,46 @@ class PreorderForm(forms.Form):
         cleaned_data = super().clean()
         if not cleaned_data.get("product") and self.fields["product"].choices:
             cleaned_data["product"] = self.fields["product"].choices[0][0]
+        selected_product = next(
+            (
+                product
+                for product in self.pricing["products"]
+                if product["value"] == cleaned_data.get("product")
+            ),
+            None,
+        )
+        if selected_product:
+            data = cleaned_data.get("modifiers", "")
+            try:
+                modifiers = json.loads(data) if data else {}
+            except json.JSONDecodeError:
+                modifiers = None
+            if modifiers is None or not isinstance(modifiers, dict):
+                self.add_error("modifiers", "Invalid modifier selection.")
+            else:
+                legacy_values = {
+                    "flavors": cleaned_data.get("flavor"),
+                    "shapes": cleaned_data.get("shape"),
+                    "coatings": cleaned_data.get("coating"),
+                    "packaging": cleaned_data.get("packaging"),
+                }
+                for group in selected_product["modifier_groups"]:
+                    selected = modifiers.get(group["value"])
+                    if not selected:
+                        selected = legacy_values.get(group["value"])
+                    if not selected and group["options"]:
+                        selected = group["options"][0]["value"]
+                    if selected not in {
+                        option["value"] for option in group["options"]
+                    }:
+                        self.add_error("modifiers", "Select a valid modifier option.")
+                        break
+                    modifiers[group["value"]] = selected
+                if set(modifiers) - {
+                    group["value"] for group in selected_product["modifier_groups"]
+                }:
+                    self.add_error("modifiers", "Select valid modifier options.")
+                cleaned_data["modifiers"] = modifiers
         if (
             cleaned_data.get("delivery") != "pickup"
             and not cleaned_data.get("address")
@@ -777,6 +860,8 @@ class AboutPromiseForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.initial["is_active"] = False
         if not self.is_bound and self.instance.pk:
             self.initial["display_order"] = self.instance.display_order + 1
         if (get_language() or "").startswith("en"):
@@ -844,6 +929,8 @@ class AboutStatForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.initial["is_active"] = False
         if not self.is_bound and self.instance.pk:
             self.initial["display_order"] = self.instance.display_order + 1
         if (get_language() or "").startswith("en"):
@@ -937,6 +1024,8 @@ class AboutValueCardForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.initial["is_active"] = False
         if not self.is_bound and self.instance.pk:
             self.initial["display_order"] = self.instance.display_order + 1
         if (get_language() or "").startswith("en"):
@@ -1249,6 +1338,8 @@ class DeliveryPageFormMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if "is_active" in self.fields and not self.instance.pk:
+            self.initial["is_active"] = False
         if (get_language() or "").startswith("en"):
             for field_name, label in self.english_labels.items():
                 if field_name in self.fields:
@@ -1441,6 +1532,8 @@ class FAQQuestionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.initial["is_active"] = False
         if not self.is_bound and self.instance.pk:
             self.initial["display_order"] = self.instance.display_order + 1
         if (get_language() or "").startswith("en"):
@@ -2236,6 +2329,9 @@ class AdminFeedbackStatusForm(forms.Form):
 class CalculatorPricingForm(forms.Form):
     MAX_PRODUCTS = 30
     MAX_OPTIONS = 30
+    MAX_SIZES = 30
+    MAX_MODIFIER_GROUPS = 20
+    MAX_DISCOUNT_RULES = 30
 
     def __init__(
         self,
@@ -2246,6 +2342,7 @@ class CalculatorPricingForm(forms.Form):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        self.pricing_source = pricing
         pricing = normalize_calculator_pricing(pricing)
         product_images = product_images or {}
         option_images = option_images or {}
@@ -2295,9 +2392,9 @@ class CalculatorPricingForm(forms.Form):
             )
             self._add_price_field(
                 price_name,
-                f"Base price per item ({currency})"
+                f"Legacy fallback base price ({currency})"
                 if english
-                else f"Базовая цена за штуку ({currency})",
+                else f"Базовая цена для старых настроек ({currency})",
                 product["base_unit_price"],
                 minimum=0,
                 decimal_places=2,
@@ -2323,14 +2420,123 @@ class CalculatorPricingForm(forms.Form):
                     }
                 ),
             )
+            size_json_name = f"product_{index}_sizes_json"
+            modifier_json_name = f"product_{index}_modifier_groups_json"
+            lead_time_json_name = f"product_{index}_lead_time_rules_json"
+            self.fields[size_json_name] = forms.JSONField(
+                required=False,
+                initial=json.dumps(
+                    [
+                        {
+                            "value": size["value"],
+                            "label": size["label"],
+                            "base_price": str(size["base_price"]),
+                        }
+                        for size in product.get("sizes", [])
+                    ],
+                    ensure_ascii=False,
+                ),
+                widget=forms.HiddenInput(attrs={"data-product-sizes": ""}),
+            )
+            self.fields[modifier_json_name] = forms.JSONField(
+                required=False,
+                initial=json.dumps(
+                    [
+                        {
+                            "value": group["value"],
+                            "label": group["label"],
+                            "label_en": group["label_en"],
+                            "options": [
+                                {
+                                    "value": option["value"],
+                                    "label": option["label"],
+                                    "label_en": option["label_en"],
+                                    "amount": str(option["amount"]),
+                                    "amount_type": option["amount_type"],
+                                }
+                                for option in group["options"]
+                            ],
+                        }
+                        for group in product.get("modifier_groups", [])
+                    ],
+                    ensure_ascii=False,
+                ),
+                widget=forms.HiddenInput(attrs={"data-product-modifiers": ""}),
+            )
+            self.fields[lead_time_json_name] = forms.JSONField(
+                required=False,
+                initial=json.dumps(product.get("lead_time_rules", []), ensure_ascii=False),
+                widget=forms.HiddenInput(attrs={"data-product-lead-time-rules": ""}),
+            )
             self.product_groups.append(
                 {
                     "index": index,
                     "fields": (name, name_en, price_name, image_name),
                     "original_value": self[original_value_name],
                     "image_url": product_image.image.url if product_image else "",
+                    "sizes_field": self[size_json_name],
+                    "modifiers_field": self[modifier_json_name],
+                    "lead_time_rules_field": self[lead_time_json_name],
+                    "sizes_json": json.dumps(
+                        json.loads(self.fields[size_json_name].initial),
+                        ensure_ascii=False,
+                    ),
+                    "modifiers_json": json.dumps(
+                        json.loads(self.fields[modifier_json_name].initial),
+                        ensure_ascii=False,
+                    ),
+                    "lead_time_rules_json": json.dumps(
+                        json.loads(self.fields[lead_time_json_name].initial),
+                        ensure_ascii=False,
+                    ),
                 }
             )
+        self.fields["payment_methods_json"] = forms.JSONField(
+            required=False,
+            initial=json.dumps(
+                [
+                    {
+                        "value": method["value"],
+                        "label": method["label"],
+                        "label_en": method["label_en"],
+                    }
+                    for method in pricing["payment_methods"]
+                ],
+                ensure_ascii=False,
+            ),
+            widget=forms.HiddenInput(),
+        )
+        self.fields["discount_rules_json"] = forms.JSONField(
+            required=False,
+            initial=json.dumps(
+                [
+                    {
+                        "value": rule["value"],
+                        "label": rule["label"],
+                        "label_en": rule["label_en"],
+                        "trigger": rule["trigger"],
+                        "trigger_value": rule["trigger_value"],
+                        "amount_type": rule["amount_type"],
+                        "amount": str(rule["amount"]),
+                    }
+                    for rule in pricing["discount_rules"]
+                ],
+                ensure_ascii=False,
+            ),
+            widget=forms.HiddenInput(),
+        )
+        self.configuration_editors = [
+            {
+                "key": "payment_methods",
+                "field": self["payment_methods_json"],
+                "items_json": self.fields["payment_methods_json"].initial,
+            },
+            {
+                "key": "discount_rules",
+                "field": self["discount_rules_json"],
+                "items_json": self.fields["discount_rules_json"].initial,
+            },
+        ]
         for group_key, pricing_key in (
             ("sizes", "size_multipliers"),
             ("deliveries", "delivery_costs"),
@@ -2355,13 +2561,16 @@ class CalculatorPricingForm(forms.Form):
                 self._add_price_field(
                     name,
                     label,
-                    pricing[pricing_key][value],
+                    pricing[pricing_key].get(value, Decimal("1")),
                     minimum=minimum,
                     decimal_places=decimal_places,
                 )
                 field_names.append(name)
             group_labels = {
-                "sizes": ("Size multipliers", "Множители размера"),
+                "sizes": (
+                    "Legacy fallback size multipliers",
+                    "Множители размера для старых настроек",
+                ),
                 "deliveries": ("Delivery costs", "Стоимость доставки"),
             }
             self.field_groups.append(
@@ -2611,6 +2820,7 @@ class CalculatorPricingForm(forms.Form):
         cleaned_data = super().clean()
         product_count = cleaned_data.get("product_count") or self.product_count
         products = []
+        normalized_products = normalize_calculator_pricing(self.pricing_source)["products"]
         seen_values = set()
         for index in range(min(product_count, self.MAX_PRODUCTS)):
             name_field = f"product_{index}_name"
@@ -2635,14 +2845,79 @@ class CalculatorPricingForm(forms.Form):
             )
             price = cleaned_data.get(price_field)
             if label and price is not None:
-                products.append(
-                    {
-                        "value": value,
-                        "label": label,
-                        "label_en": label_en,
-                        "base_unit_price": str(price),
+                product_data = {
+                    "value": value,
+                    "label": label,
+                    "label_en": label_en,
+                    "base_unit_price": str(price),
+                }
+                sizes = cleaned_data.get(f"product_{index}_sizes_json")
+                groups = cleaned_data.get(f"product_{index}_modifier_groups_json")
+                previous = normalized_products[index] if index < len(normalized_products) else None
+                if previous is None:
+                    baseline_source = {
+                        **(self.pricing_source or {}),
+                        "products": [
+                            {
+                                "value": value,
+                                "label": label,
+                                "label_en": label_en,
+                                "base_unit_price": str(price),
+                            }
+                        ],
                     }
+                    previous = normalize_calculator_pricing(
+                        baseline_source
+                    )["products"][0]
+                if sizes:
+                    self._validate_product_sizes(sizes, index)
+                    if previous is None or sizes != [
+                        {
+                            "value": item["value"],
+                            "label": item["label"],
+                            "base_price": str(item["base_price"]),
+                        }
+                        for item in previous["sizes"]
+                    ]:
+                        product_data["sizes"] = sizes
+                if groups:
+                    self._validate_product_modifier_groups(groups, index)
+                    if previous is None or groups != [
+                        {
+                            "value": item["value"],
+                            "label": item["label"],
+                            "label_en": item["label_en"],
+                            "options": [
+                                {
+                                    "value": option["value"],
+                                    "label": option["label"],
+                                    "label_en": option["label_en"],
+                                    "amount": str(option["amount"]),
+                                    "amount_type": option["amount_type"],
+                                }
+                                for option in item["options"]
+                            ],
+                        }
+                        for item in previous["modifier_groups"]
+                    ]:
+                        product_data["modifier_groups"] = groups
+                lead_time_rules_field = f"product_{index}_lead_time_rules_json"
+                if self.is_bound and lead_time_rules_field not in self.data:
+                    lead_time_rules = previous.get("lead_time_rules", [])
+                else:
+                    lead_time_rules = cleaned_data.get(lead_time_rules_field) or []
+                groups_for_validation = (
+                    groups
+                    if isinstance(groups, list) and groups
+                    else previous.get("modifier_groups", [])
                 )
+                self._validate_product_lead_time_rules(
+                    lead_time_rules,
+                    groups_for_validation,
+                    index,
+                )
+                product_data["lead_time_rules"] = lead_time_rules
+                products.append(product_data)
         if products:
             cleaned_data["products"] = products
         option_catalog = {}
@@ -2779,6 +3054,13 @@ class CalculatorPricingForm(forms.Form):
                 else "Пороговые количества скидок не должны повторяться."
             )
             self.add_error(None, message)
+        payment_methods = cleaned_data.get("payment_methods_json") or []
+        discount_rules = cleaned_data.get("discount_rules_json") or []
+        self._validate_payment_methods(payment_methods)
+        self._validate_discount_rules(
+            discount_rules,
+            {method.get("value") for method in payment_methods if isinstance(method, dict)},
+        )
         cleaned_data["pricing"] = {
             "base_unit_price": str(
                 products[0]["base_unit_price"]
@@ -2811,6 +3093,273 @@ class CalculatorPricingForm(forms.Form):
             ],
             "lead_time_days": cleaned_data.get("lead_time_days", 1),
             "option_catalog": option_catalog,
+            "payment_methods": payment_methods,
+            "discount_rules": discount_rules,
         }
         cleaned_data["option_image_inputs"] = option_image_inputs
         return cleaned_data
+
+    def _add_configuration_error(self, field_name, message):
+        self.add_error(field_name, message)
+
+    def _validate_product_sizes(self, sizes, product_index):
+        if (
+            not isinstance(sizes, list)
+            or not sizes
+            or len(sizes) > self.MAX_SIZES
+        ):
+            self._add_configuration_error(
+                f"product_{product_index}_sizes_json",
+                "Each product must have at least one size.",
+            )
+            return
+        values = set()
+        for item in sizes:
+            if not isinstance(item, dict):
+                raise ValidationError("Invalid product size configuration.")
+            value = str(item.get("value", "")).strip()
+            label = str(item.get("label", "")).strip()
+            try:
+                price = Decimal(str(item.get("base_price", "")))
+            except (InvalidOperation, TypeError, ValueError):
+                price = Decimal("-1")
+            if (
+                not value
+                or len(value) > 20
+                or not label
+                or len(label) > 80
+                or value in values
+                or price < 0
+            ):
+                self._add_configuration_error(
+                    f"product_{product_index}_sizes_json",
+                    "Sizes need unique values, names, and non-negative prices.",
+                )
+                return
+            values.add(value)
+
+    def _validate_product_modifier_groups(self, groups, product_index):
+        if (
+            not isinstance(groups, list)
+            or not groups
+            or len(groups) > self.MAX_MODIFIER_GROUPS
+        ):
+            self._add_configuration_error(
+                f"product_{product_index}_modifier_groups_json",
+                "Each product must have at least one modifier group.",
+            )
+            return
+        group_values = set()
+        for group in groups:
+            if not isinstance(group, dict):
+                raise ValidationError("Invalid modifier group configuration.")
+            value = str(group.get("value", "")).strip()
+            if (
+                not value
+                or len(value) > 32
+                or value in group_values
+                or not str(group.get("label", "")).strip()
+                or len(str(group.get("label", ""))) > 100
+                or not str(group.get("label_en", "")).strip()
+                or len(str(group.get("label_en", ""))) > 100
+            ):
+                self._add_configuration_error(
+                    f"product_{product_index}_modifier_groups_json",
+                    "Modifier groups require unique values and names in both languages.",
+                )
+                return
+            group_values.add(value)
+            option_values = set()
+            options = group.get("options")
+            if (
+                not isinstance(options, list)
+                or not options
+                or len(options) > self.MAX_OPTIONS
+            ):
+                self._add_configuration_error(
+                    f"product_{product_index}_modifier_groups_json",
+                    "Each modifier group must have at least one option.",
+                )
+                return
+            for option in options:
+                if not isinstance(option, dict):
+                    raise ValidationError("Invalid modifier option configuration.")
+                option_value = str(option.get("value", "")).strip()
+                try:
+                    amount = Decimal(str(option.get("amount", "")))
+                except (InvalidOperation, TypeError, ValueError):
+                    amount = Decimal("-1")
+                if (
+                    not option_value
+                    or len(option_value) > 32
+                    or option_value in option_values
+                    or not str(option.get("label", "")).strip()
+                    or len(str(option.get("label", ""))) > 100
+                    or not str(option.get("label_en", "")).strip()
+                    or len(str(option.get("label_en", ""))) > 100
+                    or (
+                        option.get("amount_type") == "percent"
+                        and amount < 0
+                    )
+                    or option.get("amount_type") not in ("fixed", "percent")
+                ):
+                    self._add_configuration_error(
+                        f"product_{product_index}_modifier_groups_json",
+                        "Modifier options require unique values, names, and valid non-negative prices.",
+                    )
+                    return
+                option_values.add(option_value)
+
+    def _validate_product_lead_time_rules(self, rules, groups, product_index):
+        field_name = f"product_{product_index}_lead_time_rules_json"
+        if not isinstance(rules, list) or len(rules) > 100:
+            self._add_configuration_error(
+                field_name,
+                "Invalid lead-time rules."
+                if (get_language() or "").startswith("en")
+                else "Некорректный список правил срока изготовления.",
+            )
+            return
+
+        coating_groups = [
+            group
+            for group in groups
+            if isinstance(group, dict) and is_coating_modifier_group(group)
+        ]
+        coating_options = set()
+        if coating_groups:
+            options = coating_groups[0].get("options")
+            if isinstance(options, list):
+                coating_options = {
+                    str(option.get("value", "")).strip()
+                    for option in options
+                    if isinstance(option, dict)
+                }
+        english = (get_language() or "").startswith("en")
+        seen_thresholds = set()
+        for rule in rules:
+            if not isinstance(rule, dict):
+                self._add_configuration_error(
+                    field_name,
+                    "Invalid lead-time rule."
+                    if english
+                    else "Некорректное правило срока изготовления.",
+                )
+                return
+            coating_value = str(rule.get("coating_value", "")).strip()
+            min_quantity = self._positive_integer(rule.get("min_quantity"))
+            days = self._positive_integer(rule.get("days"))
+            if min_quantity is None or days is None:
+                self._add_configuration_error(
+                    field_name,
+                    (
+                        "Each lead-time rule needs a quantity and number of days."
+                        if english
+                        else "Для каждого правила укажите количество и срок изготовления."
+                    ),
+                )
+                return
+            threshold_key = (coating_value, min_quantity)
+            if (
+                not 1 <= min_quantity <= 10000
+                or not 1 <= days <= 365
+                or not coating_value
+                or len(coating_value) > 32
+                or coating_value not in coating_options
+                or threshold_key in seen_thresholds
+            ):
+                self._add_configuration_error(
+                    field_name,
+                    (
+                        "Lead-time rules need valid, unique quantities and coating options."
+                        if english
+                        else "Для правил укажите существующие варианты покрытия и уникальные пороги."
+                    ),
+                )
+                return
+            seen_thresholds.add(threshold_key)
+
+    @staticmethod
+    def _positive_integer(value):
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        if isinstance(value, str) and value.strip().isdigit():
+            return int(value.strip())
+        return None
+
+    def _validate_payment_methods(self, methods):
+        if not isinstance(methods, list) or not methods:
+            self._add_configuration_error(
+                "payment_methods_json",
+                "At least one payment method is required.",
+            )
+            return
+        values = set()
+        for method in methods:
+            if not isinstance(method, dict):
+                raise ValidationError("Invalid payment method configuration.")
+            value = str(method.get("value", "")).strip()
+            if (
+                not value
+                or len(value) > 32
+                or value in values
+                or not str(method.get("label", "")).strip()
+                or len(str(method.get("label", ""))) > 100
+                or not str(method.get("label_en", "")).strip()
+                or len(str(method.get("label_en", ""))) > 100
+            ):
+                self._add_configuration_error(
+                    "payment_methods_json",
+                    "Payment methods require unique values and names in both languages.",
+                )
+                return
+            values.add(value)
+
+    def _validate_discount_rules(self, rules, payment_values):
+        if not isinstance(rules, list) or len(rules) > self.MAX_DISCOUNT_RULES:
+            self._add_configuration_error("discount_rules_json", "Invalid discount rules.")
+            return
+        values = set()
+        for rule in rules:
+            if not isinstance(rule, dict):
+                raise ValidationError("Invalid discount rule configuration.")
+            value = str(rule.get("value", "")).strip()
+            trigger = rule.get("trigger")
+            trigger_value = str(rule.get("trigger_value", "")).strip()
+            try:
+                amount = Decimal(str(rule.get("amount", "")))
+            except (InvalidOperation, TypeError, ValueError):
+                amount = Decimal("-1")
+            if (
+                not value
+                or len(value) > 32
+                or value in values
+                or not str(rule.get("label", "")).strip()
+                or len(str(rule.get("label", ""))) > 100
+                or not str(rule.get("label_en", "")).strip()
+                or len(str(rule.get("label_en", ""))) > 100
+                or trigger not in ("quantity", "payment")
+                or not trigger_value
+                or (trigger == "quantity" and not trigger_value.isdigit())
+                or (
+                    trigger == "payment"
+                    and trigger_value not in payment_values
+                )
+                or rule.get("amount_type") not in ("fixed", "percent")
+                or amount < 0
+                or (rule.get("amount_type") == "percent" and amount > 100)
+                or (
+                    rule.get("amount_type") == "percent"
+                    and amount != amount.to_integral_value()
+                )
+            ):
+                self._add_configuration_error(
+                    "discount_rules_json",
+                    "Discount rules need a unique name, valid trigger, and non-negative amount.",
+                )
+                return
+            values.add(value)

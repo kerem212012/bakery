@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from decimal import Decimal
 from io import BytesIO
+import json
 from tempfile import TemporaryDirectory
 
 from django.contrib.auth import get_user_model
@@ -14,7 +15,7 @@ from PIL import Image
 
 from catalog.models import Category, Product, ProductFilterOption
 from .calculator import calculate_quote
-from .forms import CatalogPromoCardForm
+from .forms import CalculatorPricingForm, CatalogPromoCardForm
 from .models import (
     CalculatorOptionImage,
     CalculatorProductImage,
@@ -727,7 +728,8 @@ class AdminDashboardTests(TestCase):
             {"page": SitePageSection.Page.ABOUT},
         )
         formset = editor_response.context["about_stats_formset"]
-        self.assertEqual(len(formset.forms), 1)
+        self.assertEqual(len(formset.forms), formset.initial_form_count() + 1)
+        self.assertContains(editor_response, ">Добавить показатель</button>")
 
         def post_statistic(is_active, value, description):
             return self.client.post(
@@ -788,11 +790,12 @@ class AdminDashboardTests(TestCase):
             SitePageSection.objects.filter(
                 page=SitePageSection.Page.ABOUT,
                 group="promises",
-            ).count(),
+            ).count()
+            + 1,
         )
         self.assertEqual(
-            [form.initial["display_order"] for form in formset.forms],
-            list(range(1, len(formset.forms) + 1)),
+            [form.initial["display_order"] for form in formset.initial_forms],
+            list(range(1, formset.initial_form_count() + 1)),
         )
         post_data = {
             "page": SitePageSection.Page.ABOUT,
@@ -815,6 +818,17 @@ class AdminDashboardTests(TestCase):
                 if form.instance.is_active:
                     post_data[f"promises-{index}-is_active"] = "on"
         post_data["promises-0-title"] = "Новый принцип"
+        new_index = formset.initial_form_count()
+        post_data.update(
+            {
+                f"promises-{new_index}-title": "Добавленный принцип",
+                f"promises-{new_index}-title_en": "Added principle",
+                f"promises-{new_index}-description": "Описание нового принципа.",
+                f"promises-{new_index}-description_en": "New principle description.",
+                f"promises-{new_index}-display_order": "99",
+                f"promises-{new_index}-is_active": "on",
+            }
+        )
 
         response = self.client.post(reverse("site_content_manager"), post_data)
 
@@ -828,8 +842,24 @@ class AdminDashboardTests(TestCase):
             display_order=0,
         )
         self.assertEqual(promise.title, "Новый принцип")
+        added_promise = SitePageSection.objects.get(
+            page=SitePageSection.Page.ABOUT,
+            group="promises",
+            title="Добавленный принцип",
+        )
+        self.assertGreater(
+            added_promise.display_order,
+            max(
+                promise.display_order
+                for promise in SitePageSection.objects.filter(
+                    page=SitePageSection.Page.ABOUT,
+                    group="promises",
+                ).exclude(pk=added_promise.pk)
+            ),
+        )
         about_response = self.client.get(reverse("about"))
         self.assertContains(about_response, "Новый принцип")
+        self.assertContains(about_response, "Добавленный принцип")
 
     def test_about_values_form_updates_section_heading_and_value_cards(self):
         admin_user = get_user_model().objects.create_superuser(
@@ -848,11 +878,12 @@ class AdminDashboardTests(TestCase):
             SitePageSection.objects.filter(
                 page=SitePageSection.Page.ABOUT,
                 group="values",
-            ).count(),
+            ).count()
+            + 1,
         )
         self.assertEqual(
-            [form.initial["display_order"] for form in formset.forms],
-            list(range(1, len(formset.forms) + 1)),
+            [form.initial["display_order"] for form in formset.initial_forms],
+            list(range(1, formset.initial_form_count() + 1)),
         )
         post_data = {
             "page": SitePageSection.Page.ABOUT,
@@ -1120,7 +1151,7 @@ class AdminDashboardTests(TestCase):
                         continue
                     name = f"{form.prefix}-{field_name}"
                     if field_name == "id":
-                        data[name] = str(form.instance.pk)
+                        data[name] = str(form.instance.pk or "")
                     else:
                         data[name] = form[field_name].value() or ""
             return data
@@ -1343,14 +1374,31 @@ class AdminDashboardTests(TestCase):
         options_heading_form = editor_response.context[
             "packaging_options_heading_form"
         ]
+        gifts_formset = editor_response.context["packaging_gifts_formset"]
+        gifts_heading_form = editor_response.context[
+            "packaging_gifts_heading_form"
+        ]
         extras_formset = editor_response.context["packaging_extras_formset"]
         extras_heading_form = editor_response.context[
             "packaging_extras_heading_form"
         ]
         self.assertIsNotNone(options_formset)
+        self.assertIsNotNone(gifts_formset)
         self.assertIsNotNone(extras_formset)
+        self.assertEqual(gifts_formset.initial_form_count(), 3)
+        self.assertIn("image", gifts_formset.forms[0].fields)
         self.assertContains(editor_response, "Упаковка — основные варианты")
+        self.assertContains(editor_response, "Упаковка для наборов")
         self.assertContains(editor_response, "Упаковка — дополнительные варианты")
+        self.assertContains(editor_response, ">Добавить вариант</button>", count=3)
+        self.assertContains(
+            editor_response,
+            'name="packaging-gifts-heading-section_title"',
+        )
+        self.assertContains(
+            editor_response,
+            'name="packaging-gifts-0-image"',
+        )
 
         def formset_data(formset):
             data = {
@@ -1365,7 +1413,7 @@ class AdminDashboardTests(TestCase):
                         continue
                     name = f"{form.prefix}-{field_name}"
                     if field_name == "id":
-                        data[name] = str(form.instance.pk)
+                        data[name] = str(form.instance.pk or "")
                     elif field_name == "is_active":
                         if form[field_name].value():
                             data[name] = "on"
@@ -1388,10 +1436,34 @@ class AdminDashboardTests(TestCase):
             f"{options_formset.prefix}-0-title_en": "Updated box",
             f"{options_formset.prefix}-0-description": "Описание упаковки.",
             f"{options_formset.prefix}-0-description_en": "Packaging description.",
+            f"{options_formset.prefix}-1-DELETE": "on",
             f"{options_heading_form.prefix}-section_title": "Новая упаковка",
             f"{options_heading_form.prefix}-section_title_en": "New packaging",
         }
+        deleted_option_pk = options_formset.forms[1].instance.pk
         response = self.client.post(editor_url, options_post)
+        self.assertRedirects(response, f"{editor_url}?page={page}")
+
+        gifts_post = {
+            "page": page,
+            "action": "save_packaging_gifts",
+            **formset_data(gifts_formset),
+            **heading_form_data(gifts_heading_form),
+            f"{gifts_formset.prefix}-0-title": "Обновлённый набор",
+            f"{gifts_formset.prefix}-0-title_en": "Updated gift set",
+            f"{gifts_formset.prefix}-0-description": "Описание набора.",
+            f"{gifts_formset.prefix}-0-description_en": "Gift set description.",
+            f"{gifts_formset.prefix}-TOTAL_FORMS": str(
+                len(gifts_formset.forms) + 1
+            ),
+            f"{gifts_formset.prefix}-3-title": "Новая упаковка набора",
+            f"{gifts_formset.prefix}-3-title_en": "New gift set packaging",
+            f"{gifts_formset.prefix}-3-description": "Новая карточка набора.",
+            f"{gifts_formset.prefix}-3-description_en": "New gift set card.",
+            f"{gifts_heading_form.prefix}-section_title": "Новые наборы",
+            f"{gifts_heading_form.prefix}-section_title_en": "New gift sets",
+        }
+        response = self.client.post(editor_url, gifts_post)
         self.assertRedirects(response, f"{editor_url}?page={page}")
 
         extras_post = {
@@ -1414,6 +1486,16 @@ class AdminDashboardTests(TestCase):
             group="options",
             display_order=0,
         )
+        gifts_card = SitePageSection.objects.get(
+            page=page,
+            group="gifts",
+            display_order=0,
+        )
+        new_gifts_card = SitePageSection.objects.get(
+            page=page,
+            group="gifts",
+            title="Новая упаковка набора",
+        )
         extras_card = SitePageSection.objects.get(
             page=page,
             group="extras",
@@ -1421,6 +1503,10 @@ class AdminDashboardTests(TestCase):
         )
         self.assertEqual(options_card.title, "Обновлённая коробка")
         self.assertEqual(options_card.section_title, "Новая упаковка")
+        self.assertFalse(SitePageSection.objects.filter(pk=deleted_option_pk).exists())
+        self.assertEqual(gifts_card.title, "Обновлённый набор")
+        self.assertEqual(gifts_card.section_title, "Новые наборы")
+        self.assertEqual(new_gifts_card.display_order, 3)
         self.assertEqual(extras_card.title, "Новая брендированная коробка")
         self.assertEqual(extras_card.section_title, "Новые дополнения")
 
@@ -1429,6 +1515,10 @@ class AdminDashboardTests(TestCase):
             "Новая упаковка",
             "Обновлённая коробка",
             "Описание упаковки.",
+            "Новые наборы",
+            "Обновлённый набор",
+            "Новая упаковка набора",
+            "Новая карточка набора.",
             "Новые дополнения",
             "Новая брендированная коробка",
             "Описание брендирования.",
@@ -1630,7 +1720,7 @@ class AdminDashboardTests(TestCase):
                 for field_name in form.fields:
                     name = f"{form.prefix}-{field_name}"
                     if field_name == "id":
-                        data[name] = str(form.instance.pk)
+                        data[name] = str(form.instance.pk or "")
                     else:
                         value = form[field_name].value()
                         data[name] = (
@@ -1691,6 +1781,22 @@ class AdminDashboardTests(TestCase):
             "delivery-heading-section_title": "Новая доставка и самовывоз",
             "delivery-heading-section_title_en": "New delivery and pickup",
         }
+        new_payment_index = payment_formset.initial_form_count()
+        pricing_data.update(
+            {
+                f"{payment_formset.prefix}-{new_payment_index}-title": "Добавленный способ оплаты",
+                f"{payment_formset.prefix}-{new_payment_index}-title_en": "Added payment option",
+                f"{payment_formset.prefix}-{new_payment_index}-is_active": "on",
+            }
+        )
+        new_delivery_index = delivery_formset.initial_form_count()
+        pricing_data.update(
+            {
+                f"{delivery_formset.prefix}-{new_delivery_index}-title": "Добавленный вариант доставки",
+                f"{delivery_formset.prefix}-{new_delivery_index}-title_en": "Added delivery option",
+                f"{delivery_formset.prefix}-{new_delivery_index}-is_active": "on",
+            }
+        )
         response = self.client.post(editor_url, pricing_data)
         self.assertRedirects(response, f"{editor_url}?page={page}")
         self.assertEqual(
@@ -1700,6 +1806,20 @@ class AdminDashboardTests(TestCase):
                 display_order=0,
             ).title,
             "Новый способ оплаты",
+        )
+        self.assertTrue(
+            SitePageSection.objects.filter(
+                page=page,
+                group="payment",
+                title="Добавленный способ оплаты",
+            ).exists()
+        )
+        self.assertTrue(
+            SitePageSection.objects.filter(
+                page=page,
+                group="delivery",
+                title="Добавленный вариант доставки",
+            ).exists()
         )
         self.assertEqual(
             (
@@ -1757,8 +1877,10 @@ class AdminDashboardTests(TestCase):
             "Обновлённое описание процесса.",
             "Новая оплата",
             "Новый способ оплаты",
+            "Добавленный способ оплаты",
             "Новая доставка и самовывоз",
             "Новая доставка",
+            "Добавленный вариант доставки",
             "Новый калькулятор заказа",
             "Описание нового калькулятора.",
         ):
@@ -1819,7 +1941,7 @@ class AdminDashboardTests(TestCase):
                     name = f"{form.prefix}-{field_name}"
                     if field_name == "id":
                         if form.instance.pk:
-                            data[name] = str(form.instance.pk)
+                            data[name] = str(form.instance.pk or "")
                     else:
                         data[name] = form[field_name].value() or ""
             return data
@@ -3939,6 +4061,26 @@ class ManagerDashboardTests(TestCase):
 
 
 class CalculatorTests(TestCase):
+    def test_header_wordmark_uses_centered_decorative_lockup(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, 'class="wordmark-name">Вкусно Да Сладко</span>')
+        self.assertContains(response, 'class="wordmark-caption">Кондитерские изделия</span>')
+        self.assertContains(response, 'class="wordmark-ornament" aria-hidden="true"')
+        self.assertContains(response, '<svg viewBox="0 0 24 24"><path d="M20.4 8.8')
+
+    def test_homepage_intro_uses_the_header_ornament_without_replacing_brand_type(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, 'class="site-intro-name">Вкусно Да Сладко</span>')
+        self.assertContains(
+            response,
+            'class="site-intro-caption">Кондитерские изделия</span>',
+        )
+        self.assertContains(
+            response,
+            'class="wordmark-ornament site-intro-ornament" aria-hidden="true"',
+        )
     def setUp(self):
         self.configuration = {
             "flavor": "classic",
@@ -3968,6 +4110,274 @@ class CalculatorTests(TestCase):
         self.assertEqual(quote["unit_price"], Decimal("186"))
         self.assertEqual(quote["discount_percent"], 10)
         self.assertEqual(quote["total_price"], Decimal("4048.00"))
+
+    def test_dynamic_product_pricing_and_payment_discount_are_used_in_quote(self):
+        pricing = {
+            "base_unit_price": "100",
+            "products": [
+                {
+                    "value": "custom",
+                    "label": "Custom product",
+                    "base_unit_price": "100",
+                    "sizes": [
+                        {"value": "4", "label": "4 cm", "base_price": "72"},
+                        {"value": "9", "label": "9 cm", "base_price": "100"},
+                    ],
+                    "modifier_groups": [
+                        {
+                            "value": "flavor",
+                            "label": "Flavor",
+                            "label_en": "Flavor",
+                            "options": [
+                                {
+                                    "value": "vanilla",
+                                    "label": "Ваниль",
+                                    "label_en": "Vanilla",
+                                    "amount": "10",
+                                    "amount_type": "percent",
+                                }
+                            ],
+                        },
+                        {
+                            "value": "coating",
+                            "label": "Coating",
+                            "label_en": "Coating",
+                            "options": [
+                                {
+                                    "value": "icing",
+                                    "label": "Глазурь",
+                                    "label_en": "Icing",
+                                    "amount": "20",
+                                    "amount_type": "fixed",
+                                }
+                            ],
+                        },
+                    ],
+                }
+            ],
+            "payment_methods": [
+                {"value": "cash", "label": "Наличные", "label_en": "Cash"}
+            ],
+            "discount_tiers": [],
+            "discount_rules": [
+                {
+                    "value": "cash-discount",
+                    "label": "Скидка наличными",
+                    "label_en": "Cash discount",
+                    "trigger": "payment",
+                    "trigger_value": "cash",
+                    "amount_type": "fixed",
+                    "amount": "5",
+                }
+            ],
+            "delivery_costs": {"pickup": "0"},
+        }
+
+        quote = calculate_quote(
+            {
+                "product": "custom",
+                "size": "4",
+                "quantity": 2,
+                "modifiers": {"flavor": "vanilla", "coating": "icing"},
+                "payment": "cash",
+                "delivery": "pickup",
+            },
+            pricing,
+        )
+
+        self.assertEqual(quote["unit_price"], Decimal("99"))
+        self.assertEqual(quote["discount_amount"], Decimal("5.00"))
+        self.assertEqual(quote["total_price"], Decimal("193.00"))
+
+    def test_lead_time_uses_product_quantity_thresholds_for_each_coating(self):
+        pricing = {
+            "base_unit_price": "100",
+            "lead_time_days": 9,
+            "products": [
+                {
+                    "value": "custom",
+                    "label": "Custom product",
+                    "sizes": [{"value": "5", "label": "5 cm", "base_price": "100"}],
+                    "modifier_groups": [
+                        {
+                            "value": "coatings",
+                            "label": "Покрытие",
+                            "label_en": "Coating",
+                            "options": [
+                                {"value": "plain", "label": "Без покрытия", "label_en": "Plain"},
+                                {"value": "icing", "label": "Глазурь", "label_en": "Icing"},
+                            ],
+                        }
+                    ],
+                    "lead_time_rules": [
+                        {"coating_value": "plain", "min_quantity": 50, "days": 2},
+                        {"coating_value": "plain", "min_quantity": 100, "days": 4},
+                        {"coating_value": "icing", "min_quantity": 50, "days": 3},
+                        {"coating_value": "icing", "min_quantity": 100, "days": 6},
+                    ],
+                }
+            ],
+        }
+
+        def quote_lead_time(quantity, coating):
+            return calculate_quote(
+                {
+                    "product": "custom",
+                    "size": "5",
+                    "quantity": quantity,
+                    "modifiers": {"coatings": coating},
+                    "delivery": "pickup",
+                },
+                pricing,
+            )["lead_time_days"]
+
+        self.assertEqual(quote_lead_time(49, "plain"), 9)
+        self.assertEqual(quote_lead_time(75, "plain"), 2)
+        self.assertEqual(quote_lead_time(100, "plain"), 4)
+        self.assertEqual(quote_lead_time(75, "icing"), 3)
+        self.assertEqual(quote_lead_time(100, "icing"), 6)
+
+    def test_admin_rejects_duplicate_lead_time_thresholds_for_a_coating(self):
+        form = CalculatorPricingForm()
+        data = {
+            name: form[name].value() if form[name].value() is not None else ""
+            for name in form.fields
+            if not isinstance(form.fields[name], forms.ImageField)
+        }
+        data["product_0_lead_time_rules_json"] = json.dumps(
+            [
+                {"coating_value": "icing", "min_quantity": 50, "days": 2},
+                {"coating_value": "icing", "min_quantity": 50, "days": 3},
+            ]
+        )
+
+        submitted_form = CalculatorPricingForm(data=data, pricing=form.pricing_source)
+
+        self.assertFalse(submitted_form.is_valid())
+        self.assertIn(
+            "product_0_lead_time_rules_json",
+            submitted_form.errors,
+        )
+
+    def test_z_admin_can_save_product_sizes_modifiers_payment_and_discount_rules(self):
+        admin_user = get_user_model().objects.create_superuser(
+            username="dynamic_pricing_admin",
+            email="dynamic-pricing-admin@example.com",
+            password="test-password",
+        )
+        self.client.force_login(admin_user)
+        settings_url = reverse("calculator_settings")
+        form = self.client.get(settings_url).context["form"]
+        data = {
+            name: form[name].value() if form[name].value() is not None else ""
+            for name in form.fields
+            if not isinstance(form.fields[name], forms.ImageField)
+        }
+        data.update(
+            {
+                "product_0_sizes_json": json.dumps(
+                    [{"value": "4", "label": "4 cm", "base_price": "72"}]
+                ),
+                "product_0_modifier_groups_json": json.dumps(
+                    [
+                        {
+                            "value": "flavor",
+                            "label": "Вкус",
+                            "label_en": "Flavor",
+                            "options": [
+                                {
+                                    "value": "vanilla",
+                                    "label": "Ваниль",
+                                    "label_en": "Vanilla",
+                                    "amount": "10",
+                                    "amount_type": "percent",
+                                }
+                            ],
+                        },
+                        {
+                            "value": "coatings",
+                            "label": "Покрытие",
+                            "label_en": "Coating",
+                            "options": [
+                                {
+                                    "value": "icing",
+                                    "label": "Глазурь",
+                                    "label_en": "Icing",
+                                    "amount": "0",
+                                    "amount_type": "fixed",
+                                }
+                            ],
+                        },
+                    ]
+                ),
+                "product_0_lead_time_rules_json": json.dumps(
+                    [{"coating_value": "icing", "min_quantity": 1, "days": 4}]
+                ),
+                "payment_methods_json": json.dumps(
+                    [{"value": "cash", "label": "Наличные", "label_en": "Cash"}]
+                ),
+                "discount_rules_json": json.dumps(
+                    [
+                        {
+                            "value": "cash-discount",
+                            "label": "Скидка наличными",
+                            "label_en": "Cash discount",
+                            "trigger": "payment",
+                            "trigger_value": "cash",
+                            "amount_type": "fixed",
+                            "amount": "5",
+                        }
+                    ]
+                ),
+            }
+        )
+
+        response = self.client.post(settings_url, data)
+
+        self.assertRedirects(response, settings_url)
+        saved_pricing = CalculatorSettings.objects.get(pk=1).pricing
+        self.assertEqual(saved_pricing["products"][0]["sizes"][0]["base_price"], "72")
+        self.assertEqual(
+            saved_pricing["products"][0]["modifier_groups"][0]["options"][0]["amount"],
+            "10",
+        )
+        self.assertEqual(
+            saved_pricing["products"][0]["lead_time_rules"],
+            [{"coating_value": "icing", "min_quantity": 1, "days": 4}],
+        )
+        self.assertEqual(saved_pricing["payment_methods"][0]["value"], "cash")
+        self.assertEqual(saved_pricing["discount_rules"][0]["trigger_value"], "cash")
+        home = self.client.get(reverse("home"))
+        self.assertContains(home, "Наличные")
+        self.assertEqual(
+            home.context["calculator_initial_quote"]["lead_time_days"],
+            4,
+        )
+        order_response = self.client.post(
+            reverse("preorder"),
+            {
+                "product": "пряник",
+                "quantity": "2",
+                "size": "4",
+                "modifiers": json.dumps({"flavor": "vanilla", "coatings": "icing"}),
+                "delivery": "pickup",
+                "payment": "cash",
+                "name": "Иван",
+                "email": "ivan@example.com",
+                "phone": "+74951234567",
+                "consent_given": "on",
+            },
+        )
+
+        self.assertRedirects(order_response, "/#calculator")
+        preorder = Preorder.objects.get()
+        self.assertEqual(preorder.unit_price, Decimal("79"))
+        self.assertEqual(preorder.total_price, Decimal("153.00"))
+        self.assertEqual(
+            preorder.configuration["modifier_selections"][0]["option"],
+            "Ваниль",
+        )
+        self.assertEqual(preorder.configuration["estimated_lead_time_days"], 4)
 
     def test_custom_pricing_is_used_by_server_calculations_and_homepage(self):
         settings = CalculatorSettings.objects.create(
@@ -4264,6 +4674,8 @@ class CalculatorTests(TestCase):
         self.assertContains(response, 'class="contact-float-toggle calculator-float-toggle"')
         self.assertContains(response, 'class="wordmark-name">Вкусно Да Сладко</span>')
         self.assertContains(response, 'class="wordmark-caption">Кондитерские изделия</span>')
+        self.assertContains(response, 'class="wordmark-ornament" aria-hidden="true"')
+        self.assertContains(response, '<svg viewBox="0 0 24 24"><path d="M20.4 8.8')
         self.assertContains(response, 'class="site-intro-name">Вкусно Да Сладко</span>')
         self.assertContains(response, 'class="footer-brand-name">Вкусно Да Сладко</span>')
         self.assertContains(response, "Вкусно Да Сладко. Все права защищены.")
@@ -4283,6 +4695,10 @@ class CalculatorTests(TestCase):
         self.assertContains(
             english_response,
             'class="wordmark-name">Vkusno Da Sladko</span>',
+        )
+        self.assertContains(
+            english_response,
+            'class="wordmark-caption">Confectionery products</span>',
         )
         self.assertContains(
             english_response,

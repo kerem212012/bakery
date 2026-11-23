@@ -94,6 +94,33 @@ from .models import (
 )
 
 
+def _save_site_page_section_formset(
+    formset,
+    queryset,
+    page,
+    group,
+    instances=None,
+):
+    instances = instances if instances is not None else formset.save(commit=False)
+    next_display_order = max(
+        queryset.values_list("display_order", flat=True),
+        default=-1,
+    ) + 1
+    has_display_order_field = "display_order" in formset.form.base_fields
+    for instance in instances:
+        instance.page = page
+        instance.group = group
+        if not instance.pk:
+            if not has_display_order_field:
+                instance.display_order = next_display_order
+            next_display_order = max(
+                next_display_order,
+                instance.display_order + 1,
+            )
+        instance.save()
+    formset.save_m2m()
+
+
 SITE_CONTENT_PERMISSIONS = (
     "core.add_sitepagecontent",
     "core.change_sitepagecontent",
@@ -113,6 +140,11 @@ ORDER_CONFIGURATION_FIELDS = (
     ("shape", ("Форма", "Shape"), SHAPE_CHOICES),
     ("coating", ("Покрытие", "Coating"), COATING_CHOICES),
     ("packaging", ("Упаковка", "Packaging"), PACKAGING_CHOICES),
+    (
+        "estimated_lead_time_days",
+        ("Расчётный срок изготовления (дней)", "Estimated production time (days)"),
+        (),
+    ),
     ("delivery", ("Доставка", "Delivery"), DELIVERY_CHOICES),
     ("payment", ("Способ оплаты", "Payment method"), PAYMENT_CHOICES),
 )
@@ -211,6 +243,7 @@ def _format_order_configuration(configuration, language_code):
         field_name
         for field_name in configuration
         if field_name not in fields
+        and field_name not in ("modifier_selections", "modifiers")
         and not field_name.endswith(("_label", "_label_en"))
     )
     formatted = []
@@ -237,6 +270,15 @@ def _format_order_configuration(configuration, language_code):
             {
                 "label": label,
                 "value": "—" if value is None or value == "" else str(value),
+            }
+        )
+    for selection in configuration.get("modifier_selections", []):
+        if not isinstance(selection, dict):
+            continue
+        formatted.append(
+            {
+                "label": selection.get("group_en" if english else "group", "Option"),
+                "value": selection.get("option_en" if english else "option", ""),
             }
         )
     return {"items": [], "details": formatted}
@@ -379,8 +421,17 @@ def calculator_settings(request):
                     "fields": [form[name] for name in group["fields"]],
                     "original_value": group["original_value"],
                     "image_url": group["image_url"],
+                    "sizes_field": group["sizes_field"],
+                    "modifiers_field": group["modifiers_field"],
                 }
                 for group in form.product_groups
+            ],
+            "configuration_editors": [
+                {
+                    **editor,
+                    "field": editor["field"],
+                }
+                for editor in form.configuration_editors
             ],
             "option_image_groups": [
                 {
@@ -578,6 +629,8 @@ def site_content_manager(request, block_id=None):
     faq_questions_formset = None
     packaging_options_heading_form = None
     packaging_options_formset = None
+    packaging_gifts_heading_form = None
+    packaging_gifts_formset = None
     packaging_extras_heading_form = None
     packaging_extras_formset = None
     catalog_promo_formset = None
@@ -834,6 +887,14 @@ def site_content_manager(request, block_id=None):
         if selected_page == SitePageSection.Page.PACKAGING
         else SitePageSection.objects.none()
     )
+    packaging_gifts_queryset = (
+        SitePageSection.objects.filter(
+            page=SitePageSection.Page.PACKAGING,
+            group="gifts",
+        ).order_by("display_order", "pk")
+        if selected_page == SitePageSection.Page.PACKAGING
+        else SitePageSection.objects.none()
+    )
     packaging_extras_queryset = (
         SitePageSection.objects.filter(
             page=SitePageSection.Page.PACKAGING,
@@ -847,6 +908,14 @@ def site_content_manager(request, block_id=None):
         or SitePageSection(
             page=SitePageSection.Page.PACKAGING,
             group="options",
+            display_order=0,
+        )
+    )
+    packaging_gifts_heading_instance = (
+        packaging_gifts_queryset.first()
+        or SitePageSection(
+            page=SitePageSection.Page.PACKAGING,
+            group="gifts",
             display_order=0,
         )
     )
@@ -1005,7 +1074,7 @@ def site_content_manager(request, block_id=None):
             AboutStatsFormSet = modelformset_factory(
                 SitePageSection,
                 form=AboutStatForm,
-                extra=0,
+                extra=1,
             )
             about_stats_formset = AboutStatsFormSet(
                 request.POST,
@@ -1014,10 +1083,12 @@ def site_content_manager(request, block_id=None):
             )
             if about_stats_formset.is_valid():
                 with transaction.atomic():
-                    for statistic in about_stats_formset.save(commit=False):
-                        statistic.page = SitePageSection.Page.ABOUT
-                        statistic.group = "stats"
-                        statistic.save()
+                    _save_site_page_section_formset(
+                        about_stats_formset,
+                        about_stats_queryset,
+                        SitePageSection.Page.ABOUT,
+                        "stats",
+                    )
                 messages.success(
                     request,
                     "About statistics saved."
@@ -1033,7 +1104,7 @@ def site_content_manager(request, block_id=None):
             AboutPromisesFormSet = modelformset_factory(
                 SitePageSection,
                 form=AboutPromiseForm,
-                extra=0,
+                extra=1,
             )
             about_promises_formset = AboutPromisesFormSet(
                 request.POST,
@@ -1043,10 +1114,12 @@ def site_content_manager(request, block_id=None):
             )
             if about_promises_formset.is_valid():
                 with transaction.atomic():
-                    for promise in about_promises_formset.save(commit=False):
-                        promise.page = SitePageSection.Page.ABOUT
-                        promise.group = "promises"
-                        promise.save()
+                    _save_site_page_section_formset(
+                        about_promises_formset,
+                        about_promises_queryset,
+                        SitePageSection.Page.ABOUT,
+                        "promises",
+                    )
                 messages.success(
                     request,
                     "About principles saved."
@@ -1062,7 +1135,7 @@ def site_content_manager(request, block_id=None):
             AboutValuesFormSet = modelformset_factory(
                 SitePageSection,
                 form=AboutValueCardForm,
-                extra=0,
+                extra=1,
             )
             about_values_formset = AboutValuesFormSet(
                 request.POST,
@@ -1080,10 +1153,12 @@ def site_content_manager(request, block_id=None):
                 and about_values_heading_form.is_valid()
             ):
                 with transaction.atomic():
-                    for value_card in about_values_formset.save(commit=False):
-                        value_card.page = SitePageSection.Page.ABOUT
-                        value_card.group = "values"
-                        value_card.save()
+                    _save_site_page_section_formset(
+                        about_values_formset,
+                        about_values_queryset,
+                        SitePageSection.Page.ABOUT,
+                        "values",
+                    )
                     heading_instance = (
                         SitePageSection.objects.filter(
                             page=SitePageSection.Page.ABOUT,
@@ -1128,10 +1203,13 @@ def site_content_manager(request, block_id=None):
                     questions = faq_questions_formset.save(commit=False)
                     for deleted_question in faq_questions_formset.deleted_objects:
                         deleted_question.delete()
-                    for question in questions:
-                        question.page = SitePageSection.Page.FAQ
-                        question.group = "questions"
-                        question.save()
+                    _save_site_page_section_formset(
+                        faq_questions_formset,
+                        faq_questions_queryset,
+                        SitePageSection.Page.FAQ,
+                        "questions",
+                        instances=questions,
+                    )
                 messages.success(
                     request,
                     "FAQ questions saved."
@@ -1161,10 +1239,13 @@ def site_content_manager(request, block_id=None):
                     promos = catalog_promo_formset.save(commit=False)
                     for deleted_promo in catalog_promo_formset.deleted_objects:
                         deleted_promo.delete()
-                    for promo in promos:
-                        promo.page = SitePageSection.Page.CATALOG
-                        promo.group = "promos"
-                        promo.save()
+                    _save_site_page_section_formset(
+                        catalog_promo_formset,
+                        catalog_promos_queryset,
+                        SitePageSection.Page.CATALOG,
+                        "promos",
+                        instances=promos,
+                    )
                 messages.success(
                     request,
                     "Catalog promo cards saved."
@@ -1175,23 +1256,37 @@ def site_content_manager(request, block_id=None):
         elif (
             request.method == "POST"
             and request.POST.get("action")
-            in {"save_packaging_options", "save_packaging_extras"}
+            in {
+                "save_packaging_options",
+                "save_packaging_gifts",
+                "save_packaging_extras",
+            }
             and selected_page == SitePageSection.Page.PACKAGING
         ):
-            is_options = request.POST.get("action") == "save_packaging_options"
-            group = "options" if is_options else "extras"
-            queryset = (
-                packaging_options_queryset if is_options else packaging_extras_queryset
-            )
-            heading_instance = (
-                packaging_options_heading_instance
-                if is_options
-                else packaging_extras_heading_instance
-            )
+            group = {
+                "save_packaging_options": "options",
+                "save_packaging_gifts": "gifts",
+                "save_packaging_extras": "extras",
+            }[request.POST.get("action")]
+            queryset, heading_instance = {
+                "options": (
+                    packaging_options_queryset,
+                    packaging_options_heading_instance,
+                ),
+                "gifts": (
+                    packaging_gifts_queryset,
+                    packaging_gifts_heading_instance,
+                ),
+                "extras": (
+                    packaging_extras_queryset,
+                    packaging_extras_heading_instance,
+                ),
+            }[group]
             PackagingFormSet = modelformset_factory(
                 SitePageSection,
                 form=PackagingCardForm,
                 extra=0,
+                can_delete=True,
             )
             packaging_heading_form = BusinessClientsSectionTitleForm(
                 request.POST,
@@ -1204,23 +1299,45 @@ def site_content_manager(request, block_id=None):
                 queryset=queryset,
                 prefix=f"packaging-{group}",
             )
-            if is_options:
+            if group == "options":
                 packaging_options_heading_form = packaging_heading_form
                 packaging_options_formset = packaging_formset
+            elif group == "gifts":
+                packaging_gifts_heading_form = packaging_heading_form
+                packaging_gifts_formset = packaging_formset
             else:
                 packaging_extras_heading_form = packaging_heading_form
                 packaging_extras_formset = packaging_formset
             if packaging_heading_form.is_valid() and packaging_formset.is_valid():
                 with transaction.atomic():
-                    for card in packaging_formset.save(commit=False):
+                    heading_form = packaging_heading_form.save(commit=False)
+                    heading_form.page = SitePageSection.Page.PACKAGING
+                    heading_form.group = group
+                    if not heading_form.pk:
+                        heading_form.display_order = 0
+                    cards = packaging_formset.save(commit=False)
+                    deleted_ids = [
+                        card.pk for card in packaging_formset.deleted_objects
+                    ]
+                    existing_orders = list(
+                        queryset.exclude(pk__in=deleted_ids).values_list(
+                            "display_order",
+                            flat=True,
+                        )
+                    )
+                    next_order = max(existing_orders or [0]) + 1
+                    for deleted_card in packaging_formset.deleted_objects:
+                        if deleted_card.pk != heading_instance.pk:
+                            deleted_card.delete()
+                    for card in cards:
                         card.page = SitePageSection.Page.PACKAGING
                         card.group = group
+                        if not card.pk:
+                            card.display_order = next_order
+                            next_order += 1
                         card.save()
-                    heading = packaging_heading_form.save(commit=False)
-                    heading.page = SitePageSection.Page.PACKAGING
-                    heading.group = group
-                    if heading.pk:
-                        heading.save(
+                    if heading_form.pk:
+                        heading_form.save(
                             update_fields=(
                                 "page",
                                 "group",
@@ -1229,21 +1346,22 @@ def site_content_manager(request, block_id=None):
                             )
                         )
                     else:
-                        heading.save()
-                messages.success(
-                    request,
-                    (
-                        "Packaging options saved."
-                        if is_options
-                        else "Additional packaging options saved."
-                    )
+                        heading_form.save()
+                    packaging_formset.save_m2m()
+                message = (
+                    {
+                        "options": "Packaging options saved.",
+                        "gifts": "Gift set packaging saved.",
+                        "extras": "Additional packaging options saved.",
+                    }[group]
                     if request.LANGUAGE_CODE == "en"
-                    else (
-                        "Варианты упаковки сохранены."
-                        if is_options
-                        else "Дополнительные варианты упаковки сохранены."
-                    ),
+                    else {
+                        "options": "Варианты упаковки сохранены.",
+                        "gifts": "Упаковка для наборов сохранена.",
+                        "extras": "Дополнительные варианты упаковки сохранены.",
+                    }[group]
                 )
+                messages.success(request, message)
                 return redirect(f"{request.path}?page={SitePageSection.Page.PACKAGING}")
         elif (
             request.method == "POST"
@@ -1253,7 +1371,7 @@ def site_content_manager(request, block_id=None):
             DeliveryMethodsFormSet = modelformset_factory(
                 SitePageSection,
                 form=DeliveryMethodsCardForm,
-                extra=0,
+                extra=1,
             )
             delivery_methods_heading_form = DeliverySectionHeadingForm(
                 request.POST,
@@ -1270,10 +1388,12 @@ def site_content_manager(request, block_id=None):
                 and delivery_methods_formset.is_valid()
             ):
                 with transaction.atomic():
-                    for method in delivery_methods_formset.save(commit=False):
-                        method.page = SitePageSection.Page.DELIVERY
-                        method.group = "methods"
-                        method.save()
+                    _save_site_page_section_formset(
+                        delivery_methods_formset,
+                        delivery_methods_queryset,
+                        SitePageSection.Page.DELIVERY,
+                        "methods",
+                    )
                     heading = delivery_methods_heading_form.save(commit=False)
                     heading.page = SitePageSection.Page.DELIVERY
                     heading.group = "methods"
@@ -1305,7 +1425,7 @@ def site_content_manager(request, block_id=None):
             DeliveryPickupFormSet = modelformset_factory(
                 SitePageSection,
                 form=DeliveryPickupDetailForm,
-                extra=0,
+                extra=1,
             )
             delivery_pickup_heading_form = DeliveryPickupHeadingForm(
                 request.POST,
@@ -1322,10 +1442,12 @@ def site_content_manager(request, block_id=None):
                 and delivery_pickup_formset.is_valid()
             ):
                 with transaction.atomic():
-                    for detail in delivery_pickup_formset.save(commit=False):
-                        detail.page = SitePageSection.Page.DELIVERY
-                        detail.group = "pickup"
-                        detail.save()
+                    _save_site_page_section_formset(
+                        delivery_pickup_formset,
+                        delivery_pickup_items_queryset,
+                        SitePageSection.Page.DELIVERY,
+                        "pickup",
+                    )
                     heading = delivery_pickup_heading_form.save(commit=False)
                     heading.page = SitePageSection.Page.DELIVERY
                     heading.group = "pickup"
@@ -1360,7 +1482,7 @@ def site_content_manager(request, block_id=None):
             DeliveryHelpFormSet = modelformset_factory(
                 SitePageSection,
                 form=DeliveryHelpCardForm,
-                extra=0,
+                extra=1,
             )
             delivery_help_heading_form = DeliverySectionHeadingForm(
                 request.POST,
@@ -1378,10 +1500,12 @@ def site_content_manager(request, block_id=None):
                 and delivery_help_formset.is_valid()
             ):
                 with transaction.atomic():
-                    for help_item in delivery_help_formset.save(commit=False):
-                        help_item.page = SitePageSection.Page.DELIVERY
-                        help_item.group = "notes"
-                        help_item.save()
+                    _save_site_page_section_formset(
+                        delivery_help_formset,
+                        delivery_help_queryset,
+                        SitePageSection.Page.DELIVERY,
+                        "notes",
+                    )
                     heading = delivery_help_heading_form.save(commit=False)
                     heading.page = SitePageSection.Page.DELIVERY
                     heading.group = "notes"
@@ -1486,7 +1610,7 @@ def site_content_manager(request, block_id=None):
             PartnershipSuccessFormSet = modelformset_factory(
                 SitePageSection,
                 form=PartnershipSuccessForm,
-                extra=0,
+                extra=1,
             )
             partnership_success_heading_form = BusinessClientsSectionHeadingForm(
                 request.POST,
@@ -1503,12 +1627,12 @@ def site_content_manager(request, block_id=None):
                 and partnership_success_formset.is_valid()
             ):
                 with transaction.atomic():
-                    for achievement in partnership_success_formset.save(
-                        commit=False
-                    ):
-                        achievement.page = SitePageSection.Page.PARTNERSHIP
-                        achievement.group = "stats"
-                        achievement.save()
+                    _save_site_page_section_formset(
+                        partnership_success_formset,
+                        partnership_success_queryset,
+                        SitePageSection.Page.PARTNERSHIP,
+                        "stats",
+                    )
                     heading = partnership_success_heading_form.save(
                         commit=False
                     )
@@ -1544,7 +1668,7 @@ def site_content_manager(request, block_id=None):
             BusinessClientsStepsFormSet = modelformset_factory(
                 SitePageSection,
                 form=BusinessClientsCardForm,
-                extra=0,
+                extra=1,
             )
             business_clients_steps_heading_form = BusinessClientsSectionHeadingForm(
                 request.POST,
@@ -1561,10 +1685,12 @@ def site_content_manager(request, block_id=None):
                 and business_clients_steps_formset.is_valid()
             ):
                 with transaction.atomic():
-                    for step in business_clients_steps_formset.save(commit=False):
-                        step.page = SitePageSection.Page.BUSINESS_CLIENTS
-                        step.group = "steps"
-                        step.save()
+                    _save_site_page_section_formset(
+                        business_clients_steps_formset,
+                        business_clients_steps_queryset,
+                        SitePageSection.Page.BUSINESS_CLIENTS,
+                        "steps",
+                    )
                     heading = business_clients_steps_heading_form.save(commit=False)
                     heading.page = SitePageSection.Page.BUSINESS_CLIENTS
                     heading.group = "steps"
@@ -1598,12 +1724,12 @@ def site_content_manager(request, block_id=None):
             BusinessClientsPricingFormSet = modelformset_factory(
                 SitePageSection,
                 form=BusinessClientsCardForm,
-                extra=0,
+                extra=1,
             )
             BusinessClientsDeliveryFormSet = modelformset_factory(
                 SitePageSection,
                 form=BusinessClientsCardForm,
-                extra=0,
+                extra=1,
             )
             business_clients_payment_heading_form = BusinessClientsPaymentHeadingForm(
                 request.POST,
@@ -1632,14 +1758,18 @@ def site_content_manager(request, block_id=None):
                 and business_clients_delivery_formset.is_valid()
             ):
                 with transaction.atomic():
-                    for card in business_clients_payment_formset.save(commit=False):
-                        card.page = SitePageSection.Page.BUSINESS_CLIENTS
-                        card.group = "payment"
-                        card.save()
-                    for card in business_clients_delivery_formset.save(commit=False):
-                        card.page = SitePageSection.Page.BUSINESS_CLIENTS
-                        card.group = "delivery"
-                        card.save()
+                    _save_site_page_section_formset(
+                        business_clients_payment_formset,
+                        business_clients_payment_queryset,
+                        SitePageSection.Page.BUSINESS_CLIENTS,
+                        "payment",
+                    )
+                    _save_site_page_section_formset(
+                        business_clients_delivery_formset,
+                        business_clients_delivery_queryset,
+                        SitePageSection.Page.BUSINESS_CLIENTS,
+                        "delivery",
+                    )
                     payment_heading = (
                         business_clients_payment_heading_form.save(commit=False)
                     )
@@ -1803,7 +1933,7 @@ def site_content_manager(request, block_id=None):
             DeliveryMethodsFormSet = modelformset_factory(
                 SitePageSection,
                 form=DeliveryMethodsCardForm,
-                extra=0,
+                extra=1,
             )
             delivery_methods_formset = DeliveryMethodsFormSet(
                 queryset=delivery_methods_queryset,
@@ -1818,7 +1948,7 @@ def site_content_manager(request, block_id=None):
             DeliveryPickupFormSet = modelformset_factory(
                 SitePageSection,
                 form=DeliveryPickupDetailForm,
-                extra=0,
+                extra=1,
             )
             delivery_pickup_formset = DeliveryPickupFormSet(
                 queryset=delivery_pickup_items_queryset,
@@ -1833,7 +1963,7 @@ def site_content_manager(request, block_id=None):
             DeliveryHelpFormSet = modelformset_factory(
                 SitePageSection,
                 form=DeliveryHelpCardForm,
-                extra=0,
+                extra=1,
             )
             delivery_help_formset = DeliveryHelpFormSet(
                 queryset=delivery_help_queryset,
@@ -1856,6 +1986,7 @@ def site_content_manager(request, block_id=None):
             SitePageSection,
             form=PackagingCardForm,
             extra=0,
+            can_delete=True,
         )
         if packaging_options_heading_form is None:
             packaging_options_heading_form = BusinessClientsSectionTitleForm(
@@ -1866,6 +1997,16 @@ def site_content_manager(request, block_id=None):
             packaging_options_formset = PackagingFormSet(
                 queryset=packaging_options_queryset,
                 prefix="packaging-options",
+            )
+        if packaging_gifts_heading_form is None:
+            packaging_gifts_heading_form = BusinessClientsSectionTitleForm(
+                instance=packaging_gifts_heading_instance,
+                prefix="packaging-gifts-heading",
+            )
+        if packaging_gifts_formset is None:
+            packaging_gifts_formset = PackagingFormSet(
+                queryset=packaging_gifts_queryset,
+                prefix="packaging-gifts",
             )
         if packaging_extras_heading_form is None:
             packaging_extras_heading_form = BusinessClientsSectionTitleForm(
@@ -1919,7 +2060,7 @@ def site_content_manager(request, block_id=None):
             PartnershipSuccessFormSet = modelformset_factory(
                 SitePageSection,
                 form=PartnershipSuccessForm,
-                extra=0,
+                extra=1,
             )
             partnership_success_formset = PartnershipSuccessFormSet(
                 queryset=partnership_success_queryset,
@@ -1935,7 +2076,7 @@ def site_content_manager(request, block_id=None):
             BusinessClientsStepsFormSet = modelformset_factory(
                 SitePageSection,
                 form=BusinessClientsCardForm,
-                extra=0,
+                extra=1,
             )
             business_clients_steps_formset = BusinessClientsStepsFormSet(
                 queryset=business_clients_steps_queryset,
@@ -1950,7 +2091,7 @@ def site_content_manager(request, block_id=None):
             BusinessClientsPricingFormSet = modelformset_factory(
                 SitePageSection,
                 form=BusinessClientsCardForm,
-                extra=0,
+                extra=1,
             )
             business_clients_payment_formset = BusinessClientsPricingFormSet(
                 queryset=business_clients_payment_queryset,
@@ -1967,7 +2108,7 @@ def site_content_manager(request, block_id=None):
             BusinessClientsDeliveryFormSet = modelformset_factory(
                 SitePageSection,
                 form=BusinessClientsCardForm,
-                extra=0,
+                extra=1,
             )
             business_clients_delivery_formset = BusinessClientsDeliveryFormSet(
                 queryset=business_clients_delivery_queryset,
@@ -1984,7 +2125,7 @@ def site_content_manager(request, block_id=None):
             AboutStatsFormSet = modelformset_factory(
                 SitePageSection,
                 form=AboutStatForm,
-                extra=0,
+                extra=1,
             )
             about_stats_formset = AboutStatsFormSet(
                 queryset=about_stats_queryset,
@@ -1994,7 +2135,7 @@ def site_content_manager(request, block_id=None):
             AboutPromisesFormSet = modelformset_factory(
                 SitePageSection,
                 form=AboutPromiseForm,
-                extra=0,
+                extra=1,
             )
             about_promises_formset = AboutPromisesFormSet(
                 queryset=about_promises_queryset,
@@ -2004,7 +2145,7 @@ def site_content_manager(request, block_id=None):
             AboutValuesFormSet = modelformset_factory(
                 SitePageSection,
                 form=AboutValueCardForm,
-                extra=0,
+                extra=1,
             )
             about_values_formset = AboutValuesFormSet(
                 queryset=about_values_queryset,
@@ -2072,6 +2213,8 @@ def site_content_manager(request, block_id=None):
             "faq_questions_formset": faq_questions_formset,
             "packaging_options_heading_form": packaging_options_heading_form,
             "packaging_options_formset": packaging_options_formset,
+            "packaging_gifts_heading_form": packaging_gifts_heading_form,
+            "packaging_gifts_formset": packaging_gifts_formset,
             "packaging_extras_heading_form": packaging_extras_heading_form,
             "packaging_extras_formset": packaging_extras_formset,
             "catalog_promo_formset": catalog_promo_formset,
@@ -2600,7 +2743,9 @@ def manager_update_order_status(request, order_id):
 
 
 def home(request):
-    calculator_settings = CalculatorSettings.objects.filter(pk=1).first()
+    calculator_settings = CalculatorSettings.objects.order_by(
+        "-updated_at", "-pk"
+    ).first()
     calculator_pricing = normalize_calculator_pricing(
         calculator_settings.pricing if calculator_settings else None
     )
@@ -2645,22 +2790,53 @@ def home(request):
             else ()
         )
     }
-    calculator_options["products"] = tuple(
-        {
-            **product,
-            "image_url": product_image_urls.get(product["value"], ""),
-        }
-        for product in calculator_options["products"]
-    )
+    localized_products = []
+    for product in calculator_options["products"]:
+        localized_groups = []
+        for group in product["modifier_groups"]:
+            group_options = []
+            for option in group["options"]:
+                option_setting = option_settings.get(
+                    (group["value"], option["value"])
+                )
+                label_ru = option["label_ru"]
+                label_en = option["label_en"]
+                if option_setting:
+                    label_ru = option_setting.label or label_ru
+                    label_en = option_setting.label_en or label_en
+                group_options.append(
+                    {
+                        **option,
+                        "label": label_en if english else label_ru,
+                        "label_ru": label_ru,
+                        "label_en": label_en,
+                        "image_url": (
+                            option_setting.image.url
+                            if option_setting and option_setting.image
+                            else ""
+                        ),
+                    }
+                )
+            localized_groups.append({**group, "options": group_options})
+        localized_products.append(
+            {
+                **product,
+                "modifier_groups": localized_groups,
+                "image_url": product_image_urls.get(product["value"], ""),
+            }
+        )
+    calculator_options["products"] = tuple(localized_products)
     initial_quote = calculate_quote(
         {
             "product": calculator_options["products"][0]["value"],
-            "flavor": calculator_options["flavors"][0]["value"],
             "quantity": 100,
-            "size": "5",
-            "coating": calculator_options["coatings"][0]["value"],
-            "packaging": calculator_options["packaging"][0]["value"],
+            "size": calculator_options["products"][0]["sizes"][0]["value"],
+            "modifiers": {
+                group["value"]: group["options"][0]["value"]
+                for group in calculator_options["products"][0]["modifier_groups"]
+            },
             "delivery": "moscow",
+            "payment": calculator_options["payments"][0]["value"],
         },
         calculator_pricing,
     )
@@ -2678,6 +2854,7 @@ def home(request):
             )
             for group in ("flavors", "shapes", "coatings", "packaging")
         },
+        pricing=calculator_pricing,
     )
     if request.method == "POST" and preorder_form.is_valid():
         configuration = {
@@ -2694,26 +2871,57 @@ def home(request):
                 "payment",
             )
         }
+        configuration["modifiers"] = preorder_form.cleaned_data["modifiers"]
         selected_product = next(
             option
             for option in calculator_options["products"]
             if option["value"] == configuration["product"]
         )
         configuration["product_name"] = selected_product["label"]
+        modifier_selections = []
         for field, group in (
             ("flavor", "flavors"),
             ("shape", "shapes"),
             ("coating", "coatings"),
             ("packaging", "packaging"),
         ):
+            selected_group = next(
+                (
+                    option_group
+                    for option_group in selected_product["modifier_groups"]
+                    if option_group["value"] == group
+                ),
+                None,
+            )
+            if selected_group is None:
+                continue
+            selected_value = configuration["modifiers"].get(group)
             selected_option = next(
                 option
-                for option in calculator_options[group]
-                if option["value"] == configuration[field]
+                for option in selected_group["options"]
+                if option["value"] == selected_value
             )
-            configuration[f"{field}_label"] = selected_option["label_ru"]
+            configuration[field] = selected_value
+            configuration[f"{field}_label"] = selected_option["label"]
             configuration[f"{field}_label_en"] = selected_option["label_en"]
+        for selected_group in selected_product["modifier_groups"]:
+            selected_value = configuration["modifiers"][selected_group["value"]]
+            selected_option = next(
+                option
+                for option in selected_group["options"]
+                if option["value"] == selected_value
+            )
+            modifier_selections.append(
+                {
+                    "group": selected_group["label_ru"],
+                    "group_en": selected_group["label_en"],
+                    "option": selected_option["label_ru"],
+                    "option_en": selected_option["label_en"],
+                }
+            )
+        configuration["modifier_selections"] = modifier_selections
         quote = calculate_quote(configuration, calculator_pricing)
+        configuration["estimated_lead_time_days"] = quote["lead_time_days"]
         with transaction.atomic():
             preorder = Preorder.objects.create(
                 user=request.user if request.user.is_authenticated else None,

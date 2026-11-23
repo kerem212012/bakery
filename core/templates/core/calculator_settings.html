@@ -10,7 +10,7 @@
             <div>
                 <p class="eyebrow">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko management{% else %}Управление «Вкусно Да Сладко»{% endif %}</p>
                 <h1>{% if LANGUAGE_CODE == 'en' %}Calculator pricing{% else %}Настройки калькулятора{% endif %}</h1>
-                <p>{% if LANGUAGE_CODE == 'en' %}Changes apply to new quotes and pre-orders. Existing orders keep their saved prices. A size multiplier scales the base price; add-ons can be negative.{% else %}Настройки применяются к новым расчётам и предзаказам. В существующих заказах цены сохраняются. Множитель размера применяется к базовой цене; доплаты могут быть отрицательными.{% endif %}</p>
+                <p>{% if LANGUAGE_CODE == 'en' %}Changes apply to new quotes and pre-orders. Existing orders keep their saved prices. Configure each product’s own sizes, prices, and add-ons below.{% else %}Настройки применяются к новым расчётам и предзаказам. В существующих заказах цены сохраняются. Для каждого товара настройте размеры, цены и доплаты отдельно.{% endif %}</p>
             </div>
             <div class="admin-dashboard-heading-actions">
                 <a class="admin-dashboard-site-link" href="{% url 'admin_dashboard' %}">{% if LANGUAGE_CODE == 'en' %}Dashboard{% else %}Панель управления{% endif %}</a>
@@ -28,7 +28,7 @@
             {% if form.non_field_errors %}<div class="site-content-form-errors">{{ form.non_field_errors }}</div>{% endif %}
             <section class="site-content-form-section">
                 <h2>{% if LANGUAGE_CODE == 'en' %}Products{% else %}Товары{% endif %}</h2>
-                <p>{% if LANGUAGE_CODE == 'en' %}Add products such as gingerbread or cookies. All products use the same size, flavor, icing, and packaging options.{% else %}Добавляйте товары, например пряники или печенье. Для всех товаров используются общие параметры размера, вкуса, глазури и упаковки.{% endif %}</p>
+                <p>{% if LANGUAGE_CODE == 'en' %}Add products and configure independent sizes, modifier groups, and production-time rules for each one. The general lead time below is used when no product rule matches.{% else %}Добавляйте товары и настраивайте для каждого размеры, группы параметров и сроки изготовления. Общий срок ниже используется, если для товара не нашлось подходящего правила.{% endif %}</p>
                 {{ form.product_count }}
                 {{ form.product_count.errors }}
                 <div class="calculator-product-editor" data-product-editor>
@@ -42,6 +42,30 @@
                                 </div>
                             {% endfor %}
                             {{ group.original_value }}
+                            {{ group.sizes_field }}
+                            {{ group.modifiers_field }}
+                            {{ group.lead_time_rules_field }}
+                            {{ group.sizes_field.errors }}
+                            {{ group.modifiers_field.errors }}
+                            {{ group.lead_time_rules_field.errors }}
+                            <div class="calculator-product-pricing" data-product-pricing>
+                                <section>
+                                    <h3>{% if LANGUAGE_CODE == 'en' %}Sizes and base prices{% else %}Размеры и базовые цены{% endif %}</h3>
+                                    <div data-sizes-list></div>
+                                    <button class="admin-dashboard-site-link" type="button" data-add-size>{% if LANGUAGE_CODE == 'en' %}Add size{% else %}Добавить размер{% endif %}</button>
+                                </section>
+                                <section>
+                                    <h3>{% if LANGUAGE_CODE == 'en' %}Modifier groups and add-ons{% else %}Группы параметров и доплаты{% endif %}</h3>
+                                    <div data-modifier-groups-list></div>
+                                    <button class="admin-dashboard-site-link" type="button" data-add-modifier-group>{% if LANGUAGE_CODE == 'en' %}Add modifier group{% else %}Добавить группу параметров{% endif %}</button>
+                                </section>
+                                <section>
+                                    <h3>{% if LANGUAGE_CODE == 'en' %}Production time by quantity and coating{% else %}Срок изготовления по количеству и покрытию{% endif %}</h3>
+                                    <p>{% if LANGUAGE_CODE == 'en' %}Add a “Coating” modifier group (value “coating” or “coatings”) first. Set quantity thresholds for each coating; the highest matching threshold is used.{% else %}Сначала добавьте группу параметров «Покрытие» (значение «coating» или «coatings»). Укажите пороги количества для каждого варианта; применяется наибольший подходящий порог.{% endif %}</p>
+                                    <div data-lead-time-rules-list></div>
+                                    <button class="admin-dashboard-site-link" type="button" data-add-lead-time-rule>{% if LANGUAGE_CODE == 'en' %}Add lead-time rule{% else %}Добавить правило срока{% endif %}</button>
+                                </section>
+                            </div>
                             {% if group.image_url %}<img class="calculator-product-admin-preview" src="{{ group.image_url }}" alt="{% if LANGUAGE_CODE == 'en' %}Current product photo{% else %}Текущее фото товара{% endif %}">{% endif %}
                             <button class="admin-dashboard-site-link" type="button" data-remove-product{% if group.index == 0 %} hidden{% endif %}>{% if LANGUAGE_CODE == 'en' %}Remove{% else %}Удалить{% endif %}</button>
                         </div>
@@ -49,6 +73,15 @@
                 </div>
                 <button class="admin-dashboard-site-link" type="button" data-add-product>{% if LANGUAGE_CODE == 'en' %}Add product{% else %}Добавить товар{% endif %}</button>
             </section>
+            {% for editor in configuration_editors %}
+                <section class="site-content-form-section" data-configuration-editor="{{ editor.key }}">
+                    {{ editor.field }}
+                    {{ editor.field.errors }}
+                    <h2>{% if editor.key == 'payment_methods' %}{% if LANGUAGE_CODE == 'en' %}Payment methods{% else %}Способы оплаты{% endif %}{% else %}{% if LANGUAGE_CODE == 'en' %}Discount rules{% else %}Правила скидок{% endif %}{% endif %}</h2>
+                    <div data-configuration-items></div>
+                    <button class="admin-dashboard-site-link" type="button" data-add-configuration-item>{% if LANGUAGE_CODE == 'en' %}Add{% else %}Добавить{% endif %}</button>
+                </section>
+            {% endfor %}
             {% for title, fields in field_groups %}
                 <section class="site-content-form-section">
                     <h2>{{ title }}</h2>
@@ -67,6 +100,7 @@
             {% for group in option_image_groups %}
                 <section class="site-content-form-section calculator-option-image-section">
                     <h2>{{ group.title }}</h2>
+                    <p>{% if LANGUAGE_CODE == 'en' %}Legacy shared defaults for products that do not have their own modifier configuration. Use each product’s settings above for product-specific prices and options.{% else %}Общие параметры по умолчанию для товаров без собственных групп настроек. Для индивидуальных цен и вариантов используйте настройки товара выше.{% endif %}</p>
                     {{ group.count_field }}
                     <div class="calculator-option-image-grid" data-option-editor data-option-group="{{ group.key }}">
                         {% for item in group.items %}
@@ -101,12 +135,33 @@
                     <label for="id_product___prefix___name">{% if LANGUAGE_CODE == 'en' %}Product name{% else %}Название товара{% endif %}</label>
                     <input class="site-content-form-control" id="id_product___prefix___name" name="product___prefix___name" type="text" maxlength="80" required data-product-name>
                 </div>
+                <input type="hidden" name="product___prefix___sizes_json" value="[]" data-product-sizes>
+                <input type="hidden" name="product___prefix___modifier_groups_json" value="[]" data-product-modifiers>
+                <input type="hidden" name="product___prefix___lead_time_rules_json" value="[]" data-product-lead-time-rules>
+                <div class="calculator-product-pricing" data-product-pricing>
+                    <section>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Sizes and base prices{% else %}Размеры и базовые цены{% endif %}</h3>
+                        <div data-sizes-list></div>
+                        <button class="admin-dashboard-site-link" type="button" data-add-size>{% if LANGUAGE_CODE == 'en' %}Add size{% else %}Добавить размер{% endif %}</button>
+                    </section>
+                    <section>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Modifier groups and add-ons{% else %}Группы параметров и доплаты{% endif %}</h3>
+                        <div data-modifier-groups-list></div>
+                        <button class="admin-dashboard-site-link" type="button" data-add-modifier-group>{% if LANGUAGE_CODE == 'en' %}Add modifier group{% else %}Добавить группу параметров{% endif %}</button>
+                    </section>
+                    <section>
+                        <h3>{% if LANGUAGE_CODE == 'en' %}Production time by quantity and coating{% else %}Срок изготовления по количеству и покрытию{% endif %}</h3>
+                        <p>{% if LANGUAGE_CODE == 'en' %}Add a “Coating” modifier group (value “coating” or “coatings”) first. Set quantity thresholds for each coating; the highest matching threshold is used.{% else %}Сначала добавьте группу параметров «Покрытие» (значение «coating» или «coatings»). Укажите пороги количества для каждого варианта; применяется наибольший подходящий порог.{% endif %}</p>
+                        <div data-lead-time-rules-list></div>
+                        <button class="admin-dashboard-site-link" type="button" data-add-lead-time-rule>{% if LANGUAGE_CODE == 'en' %}Add lead-time rule{% else %}Добавить правило срока{% endif %}</button>
+                    </section>
+                </div>
                 <div class="site-content-form-field">
                     <label for="id_product___prefix___name_en">{% if LANGUAGE_CODE == 'en' %}Product name (English){% else %}Название товара (английский){% endif %}</label>
                     <input class="site-content-form-control" id="id_product___prefix___name_en" name="product___prefix___name_en" type="text" maxlength="80" data-product-name-en>
                 </div>
                 <div class="site-content-form-field">
-                    <label for="id_product___prefix___base_price">{% if LANGUAGE_CODE == 'en' %}Base price per item{% else %}Базовая цена за штуку{% endif %}</label>
+                    <label for="id_product___prefix___base_price">{% if LANGUAGE_CODE == 'en' %}Legacy fallback base price{% else %}Базовая цена для старых настроек{% endif %}</label>
                     <input class="site-content-form-control" id="id_product___prefix___base_price" name="product___prefix___base_price" type="number" min="0" step="0.01" required data-product-price>
                 </div>
                 <div class="site-content-form-field">
@@ -142,6 +197,6 @@
                 <button class="admin-dashboard-site-link" type="button" data-remove-option>{% if LANGUAGE_CODE == 'en' %}Delete option{% else %}Удалить опцию{% endif %}</button>
             </article>
         </template>
-        <script src="{% static 'core/calculator-product-editor.js' %}" defer></script>
+        <script src="{% static 'core/calculator-product-editor.js' %}?v=2" defer></script>
     </section>
 {% endblock %}

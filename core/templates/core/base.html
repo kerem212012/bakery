@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Prata&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=161">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=163">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -26,6 +26,11 @@
             <a class="wordmark" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — home{% else %}Вкусно Да Сладко — главная{% endif %}">
                 <span class="wordmark-name">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}</span>
                 <span class="wordmark-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
+                <span class="wordmark-ornament" aria-hidden="true">
+                    <span></span>
+                    <svg viewBox="0 0 24 24"><path d="M20.4 8.8c0 4.2-8.4 10-8.4 10s-8.4-5.8-8.4-10a4.3 4.3 0 0 1 8.4-1.3 4.3 4.3 0 0 1 8.4 1.3Z"/></svg>
+                    <span></span>
+                </span>
             </a>
             <nav class="header-actions" aria-label="{% if LANGUAGE_CODE == 'en' %}Quick links{% else %}Быстрые ссылки{% endif %}">
                 <form class="language-switch" method="post" action="{% url 'set_language' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Choose language{% else %}Выбрать язык{% endif %}">

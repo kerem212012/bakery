@@ -15,6 +15,11 @@
             <span class="site-intro-copy">
                 <span class="site-intro-name">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}</span>
                 <span class="site-intro-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
+                <span class="wordmark-ornament site-intro-ornament" aria-hidden="true">
+                    <span></span>
+                    <svg viewBox="0 0 24 24"><path d="M20.4 8.8c0 4.2-8.4 10-8.4 10s-8.4-5.8-8.4-10a4.3 4.3 0 0 1 8.4-1.3 4.3 4.3 0 0 1 8.4 1.3Z"/></svg>
+                    <span></span>
+                </span>
             </span>
         </div>
     </div>
@@ -149,6 +154,7 @@
 
                 <form class="preorder-form" action="{% url 'preorder' %}" method="post" enctype="multipart/form-data" data-base-price="{{ calculator_pricing.base_unit_price|unlocalize }}">
                     {% csrf_token %}
+                    {{ preorder_form.modifiers }}
                     {% if preorder_form.non_field_errors %}
                         <div class="form-errors">{{ preorder_form.non_field_errors }}</div>
                     {% endif %}
@@ -166,20 +172,6 @@
                                 <img src="" alt="">
                             </div>
                         </div>
-                        <fieldset class="calculator-group flavor-group">
-                            <legend><span class="calculator-icon" aria-hidden="true">♡</span><span><b>2.</b> {% if LANGUAGE_CODE == 'en' %}Flavor{% else %}Вкус{% endif %}</span></legend>
-                            <div class="flavor-options">
-                                {% for option in calculator_options.flavors %}
-                                    <label class="flavor-option">
-                                        <input class="js-calculator-option" type="radio" name="flavor" value="{{ option.value }}" data-extra="{{ option.extra|unlocalize }}" {% if preorder_form.flavor.value == option.value %}checked{% endif %}>
-                                        <span class="flavor-illustration" aria-hidden="true">{% if option.image_url %}<img class="calculator-choice-photo" src="{{ option.image_url }}" alt="" loading="lazy">{% elif option.value == "classic" %}♡{% elif option.value == "chocolate" %}●{% elif option.value == "honey" %}✿{% else %}✧{% endif %}</span>
-                                        <span>{{ option.label }}</span>
-                                    </label>
-                                {% endfor %}
-                            </div>
-                            {{ preorder_form.flavor.errors }}
-                        </fieldset>
-
                         <fieldset class="calculator-group quantity-group">
                             <legend><span class="calculator-icon" aria-hidden="true">▤</span><span><b>3.</b> {% if LANGUAGE_CODE == 'en' %}Quantity{% else %}Количество{% endif %}</span></legend>
                             <div class="quantity-control">
@@ -193,61 +185,33 @@
 
                         <fieldset class="calculator-group size-group">
                             <legend><span class="calculator-icon" aria-hidden="true">⌁</span><span><b>4.</b> {% if LANGUAGE_CODE == 'en' %}Size, cm{% else %}Размер, см{% endif %}</span></legend>
-                            <div class="size-options">
-                                {% for option in calculator_options.sizes %}
+                            <div class="size-options" data-calculator-sizes>
+                                {% for option in calculator_options.products.0.sizes %}
                                     <label class="size-option">
-                                        <input class="js-calculator-option" type="radio" name="size" value="{{ option.value }}" data-multiplier="{{ option.multiplier|unlocalize }}" {% if preorder_form.size.value == option.value %}checked{% endif %}>
-                                        <span>{{ option.label }}</span>
+                                        <input class="js-calculator-option" type="radio" name="size" value="{{ option.value }}" data-base-price="{{ option.base_price|unlocalize }}" data-multiplier="{{ option.multiplier|unlocalize }}" {% if forloop.first %}checked{% endif %}>
+                                        <span>{{ option.label }} — {{ option.base_price|floatformat:0 }} ₽</span>
                                     </label>
                                 {% endfor %}
                             </div>
                             {{ preorder_form.size.errors }}
                         </fieldset>
 
-                        <fieldset class="calculator-group shape-group">
-                            <legend><span class="calculator-icon" aria-hidden="true">☆</span><span><b>5.</b> {% if LANGUAGE_CODE == 'en' %}Shape{% else %}Форма{% endif %}</span></legend>
-                            <div class="shape-options">
-                                {% for option in calculator_options.shapes %}
-                                    <label class="shape-option">
-                                        <input class="js-calculator-option" type="radio" name="shape" value="{{ option.value }}" {% if preorder_form.shape.value == option.value %}checked{% endif %}>
-                                        <span class="shape-symbol shape-{{ option.value }}{% if option.image_url %} shape-symbol-photo{% endif %}" aria-hidden="true">{% if option.image_url %}<img class="calculator-choice-photo" src="{{ option.image_url }}" alt="" loading="lazy">{% elif option.value == "heart" %}♥{% elif option.value == "circle" %}○{% elif option.value == "star" %}☆{% elif option.value == "square" %}□{% elif option.value == "flower" %}❀{% else %}♟{% endif %}</span>
-                                        <span>{{ option.label }}</span>
-                                    </label>
-                                {% endfor %}
-                            </div>
-                            {{ preorder_form.shape.errors }}
-                        </fieldset>
-
-                        <fieldset class="calculator-group coating-group">
-                            <legend><span class="calculator-icon" aria-hidden="true">♧</span><span><b>6.</b> {% if LANGUAGE_CODE == 'en' %}Icing{% else %}Покрытие{% endif %}</span></legend>
-                            <div class="coating-options">
-                                {% for option in calculator_options.coatings %}
-                                    <label class="image-option">
-                                        <input class="js-calculator-option" type="radio" name="coating" value="{{ option.value }}" data-extra="{{ option.extra|unlocalize }}" {% if preorder_form.coating.value == option.value %}checked{% endif %}>
-                                        <span class="option-art coating-art coating-{{ option.value }}" aria-hidden="true">{% if option.image_url %}<img class="calculator-choice-photo" src="{{ option.image_url }}" alt="" loading="lazy">{% elif option.value == "none" %}♥{% else %}✿{% endif %}</span>
-                                        <span>{{ option.label }}</span>
-                                    </label>
-                                {% endfor %}
-                            </div>
-                            {{ preorder_form.coating.errors }}
-                        </fieldset>
-
-                        <fieldset class="calculator-group packaging-group">
-                            <legend><span class="calculator-icon" aria-hidden="true">♙</span><span><b>7.</b> {% if LANGUAGE_CODE == 'en' %}Packaging{% else %}Упаковка{% endif %}</span></legend>
-                            <div class="packaging-options">
-                                {% for option in calculator_options.packaging %}
-                                    <label class="image-option">
-                                        <input class="js-calculator-option" type="radio" name="packaging" value="{{ option.value }}" data-extra="{{ option.extra|unlocalize }}" {% if preorder_form.packaging.value == option.value %}checked{% endif %}>
-                                        <span class="option-art package-art package-{{ option.value }}" aria-hidden="true">{% if option.image_url %}<img class="calculator-choice-photo" src="{{ option.image_url }}" alt="" loading="lazy">{% elif option.value == "ribbon" %}♧{% elif option.value == "box" %}▱{% elif option.value == "premium" %}✿{% else %}□{% endif %}</span>
-                                        <span>{{ option.label }}</span>
-                                    </label>
-                                {% endfor %}
-                            </div>
-                            {{ preorder_form.packaging.errors }}
-                        </fieldset>
+                        <div data-calculator-modifier-groups>
+                            {% for group in calculator_options.products.0.modifier_groups %}
+                                <fieldset class="calculator-group select-group" data-modifier-group="{{ group.value }}">
+                                    <legend>{{ group.label }}</legend>
+                                    {% if group.options.0.image_url %}<img class="calculator-choice-photo" src="{{ group.options.0.image_url }}" alt="" data-group-image>{% endif %}
+                                    <select name="modifier_{{ group.value }}">
+                                        {% for option in group.options %}
+                                            <option value="{{ option.value }}" data-amount="{{ option.amount|unlocalize }}" data-amount-type="{{ option.amount_type }}" data-image-url="{{ option.image_url }}" {% if forloop.first %}selected{% endif %}>{{ option.label }}{% if option.amount %} (+{{ option.amount }}{% if option.amount_type == 'percent' %}%{% else %} ₽{% endif %}){% endif %}</option>
+                                        {% endfor %}
+                                    </select>
+                                </fieldset>
+                            {% endfor %}
+                        </div>
 
                         <div class="calculator-group select-group">
-                            <label for="id_delivery"><span class="calculator-icon" aria-hidden="true">♧</span><b>8.</b> {% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</label>
+                            <label for="id_delivery"><span class="calculator-icon" aria-hidden="true">♧</span><b>6.</b> {% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Доставка{% endif %}</label>
                             <select id="id_delivery" name="delivery">
                                 {% for option in calculator_options.deliveries %}
                                     <option value="{{ option.value }}" data-cost="{{ option.cost|unlocalize }}" {% if preorder_form.delivery.value == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -257,7 +221,7 @@
                         </div>
 
                         <div class="calculator-group select-group">
-                            <label for="id_payment"><span class="calculator-icon" aria-hidden="true">▤</span><b>9.</b> {% if LANGUAGE_CODE == 'en' %}Payment method{% else %}Способ оплаты{% endif %}</label>
+                            <label for="id_payment"><span class="calculator-icon" aria-hidden="true">▤</span><b>7.</b> {% if LANGUAGE_CODE == 'en' %}Payment method{% else %}Способ оплаты{% endif %}</label>
                             <select id="id_payment" name="payment">
                                 {% for option in calculator_options.payments %}
                                     <option value="{{ option.value }}" {% if preorder_form.payment.value == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -270,9 +234,9 @@
                     <div class="quote-summary">
                         <div class="quote-metrics">
                             <div><span>{% if LANGUAGE_CODE == 'en' %}Price per item{% else %}Стоимость 1 шт.{% endif %}</span><strong><output id="quote-unit-price">{{ calculator_initial_quote.unit_price|floatformat:0 }} ₽</output></strong></div>
-                            <div><span>{% if LANGUAGE_CODE == 'en' %}Discount{% else %}Скидка{% endif %}</span><strong><output id="quote-discount">{{ calculator_initial_quote.discount_percent }} %</output></strong></div>
+                            <div><span>{% if LANGUAGE_CODE == 'en' %}Discount{% else %}Скидка{% endif %}</span><strong><output id="quote-discount">{{ calculator_initial_quote.discount_percent }} %</output><small data-discount-detail>{{ calculator_initial_quote.discount_amount|floatformat:0 }} ₽</small></strong></div>
                             <div><span>{% if LANGUAGE_CODE == 'en' %}Delivery{% else %}Стоимость доставки{% endif %}</span><strong><output id="quote-delivery">{{ calculator_initial_quote.delivery_cost|floatformat:0 }} ₽</output></strong></div>
-                            <div><span>{% if LANGUAGE_CODE == 'en' %}Estimated lead time{% else %}Срок (примерно){% endif %}</span><strong><output id="quote-lead-time">{% if LANGUAGE_CODE == 'en' %}{{ calculator_pricing.lead_time_days }} days{% else %}{{ calculator_pricing.lead_time_days }} дн.{% endif %}</output></strong></div>
+                            <div><span>{% if LANGUAGE_CODE == 'en' %}Estimated lead time{% else %}Срок (примерно){% endif %}</span><strong><output id="quote-lead-time" data-default-days="{{ calculator_pricing.lead_time_days }}">{% if LANGUAGE_CODE == 'en' %}{{ calculator_initial_quote.lead_time_days }} days{% else %}{{ calculator_initial_quote.lead_time_days }} дн.{% endif %}</output></strong></div>
                         </div>
                         <div class="quote-total">
                             <span>{% if LANGUAGE_CODE == 'en' %}Total{% else %}Итого{% endif %}</span>
@@ -400,6 +364,8 @@
 
 {% block scripts %}
     {{ calculator_pricing.discount_tiers|json_script:"calculator-discount-tiers" }}
+    {{ calculator_pricing.discount_rules|json_script:"calculator-discount-rules" }}
+    {{ calculator_options.products|json_script:"calculator-products" }}
     <script>
         const popularTrack = document.querySelector("#popular-track");
         const popularArrows = document.querySelectorAll(".popular-arrow");
@@ -413,8 +379,18 @@
         const calculatorDiscountTiers = JSON.parse(
             document.querySelector("#calculator-discount-tiers").textContent
         );
+        const calculatorDiscountRules = JSON.parse(
+            document.querySelector("#calculator-discount-rules").textContent
+        );
+        const calculatorProducts = JSON.parse(
+            document.querySelector("#calculator-products").textContent
+        );
         const quantityInput = preorderForm.querySelector('[name="quantity"]');
         const deliverySelect = preorderForm.querySelector('[name="delivery"]');
+        const paymentSelect = preorderForm.querySelector('[name="payment"]');
+        const modifiersInput = preorderForm.querySelector('[name="modifiers"]');
+        const sizesContainer = preorderForm.querySelector("[data-calculator-sizes]");
+        const modifierGroupsContainer = preorderForm.querySelector("[data-calculator-modifier-groups]");
         const addressInput = preorderForm.querySelector('[name="address"]');
         const attachmentInput = preorderForm.querySelector('[name="attachments"]');
         const uploadDropzone = document.querySelector("#upload-dropzone");
@@ -427,6 +403,7 @@
             discount: document.querySelector("#quote-discount"),
             deliveryCost: document.querySelector("#quote-delivery"),
             total: document.querySelector("#quote-total"),
+            leadTime: document.querySelector("#quote-lead-time"),
         };
         const initialQuoteValue = (output) => Number(
             output.textContent.replace(/[^\d.-]/g, "")
@@ -446,6 +423,7 @@
             total: " ₽",
         };
         const quoteAnnouncement = document.querySelector("#quote-announcement");
+        const discountDetail = document.querySelector("[data-discount-detail]");
         const calculatorSection = document.querySelector("#calculator");
         const reducedMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -499,26 +477,67 @@
 
         function updateQuote(animate = true) {
             const size = preorderForm.querySelector('[name="size"]:checked');
-            const flavor = preorderForm.querySelector('[name="flavor"]:checked');
-            const coating = preorderForm.querySelector('[name="coating"]:checked');
-            const packaging = preorderForm.querySelector('[name="packaging"]:checked');
-            const product = preorderForm.querySelector('[name="product"]');
-            if (!product || !size || !flavor || !coating || !packaging) {
+            const productInput = preorderForm.querySelector('[name="product"]');
+            if (!productInput || !size) {
                 return;
             }
+            const product = calculatorProducts.find(
+                (item) => item.value === productInput.value
+            ) || calculatorProducts[0];
 
             const quantity = Math.min(10000, Math.max(1, Number(quantityInput.value) || 1));
-            const unitPrice = Math.round(
-                Number(product.selectedOptions[0].dataset.basePrice) * Number(size.dataset.multiplier)
-                + Number(flavor.dataset.extra)
-                + Number(coating.dataset.extra)
-                + Number(packaging.dataset.extra)
-            );
-            const discount = calculatorDiscountTiers.find(
+            let rawUnitPrice = Number(size.dataset.basePrice);
+            modifierGroupsContainer.querySelectorAll("select[data-modifier-value]").forEach((select) => {
+                const selectedOption = select.selectedOptions[0];
+                const amount = Number(selectedOption.dataset.amount);
+                rawUnitPrice += selectedOption.dataset.amountType === "percent"
+                    ? Number(size.dataset.basePrice) * amount / 100
+                    : amount;
+            });
+            const unitPrice = Math.round(rawUnitPrice);
+            const quantityDiscount = calculatorDiscountTiers.find(
                 ([threshold]) => quantity >= Number(threshold)
             )?.[1] || 0;
+            const applicableRules = calculatorDiscountRules.filter((rule) => (
+                (rule.trigger === "payment" && rule.trigger_value === paymentSelect.value)
+                || (rule.trigger === "quantity" && quantity >= Number(rule.trigger_value))
+            ));
+            const ruleQuantityPercent = applicableRules
+                .filter((rule) => rule.trigger === "quantity" && rule.amount_type === "percent")
+                .reduce((max, rule) => Math.max(max, Number(rule.amount)), 0);
+            const paymentPercent = applicableRules
+                .filter((rule) => rule.trigger === "payment" && rule.amount_type === "percent")
+                .reduce((sum, rule) => sum + Number(rule.amount), 0);
+            const discount = Math.min(100, Math.max(quantityDiscount, ruleQuantityPercent) + paymentPercent);
+            const subtotal = unitPrice * quantity;
+            const fixedDiscount = applicableRules
+                .filter((rule) => rule.amount_type === "fixed")
+                .reduce((sum, rule) => sum + Number(rule.amount), 0);
+            const discountAmount = Math.min(subtotal, subtotal * discount / 100 + fixedDiscount);
             const deliveryCost = Number(deliverySelect.selectedOptions[0].dataset.cost);
-            const total = unitPrice * quantity * (1 - discount / 100) + deliveryCost;
+            const total = subtotal - discountAmount + deliveryCost;
+            const coatingGroup = product.modifier_groups.find((group) => (
+                ["coating", "coatings"].includes(String(group.value || "").trim().toLowerCase())
+                || String(group.label_ru || group.label || "").trim().toLowerCase() === "покрытие"
+                || String(group.label_en || "").trim().toLowerCase() === "coating"
+            ));
+            const selectedCoating = coatingGroup
+                ? [...modifierGroupsContainer.querySelectorAll("select[data-modifier-value]")]
+                    .find((select) => select.dataset.modifierValue === coatingGroup.value)?.value || ""
+                : "";
+            const leadTimeRules = product.lead_time_rules || [];
+            const matchingLeadTimeRules = leadTimeRules.filter((rule) => (
+                rule.coating_value === selectedCoating
+                && quantity >= Number(rule.min_quantity)
+            ));
+            const leadTimeDays = matchingLeadTimeRules.length
+                ? matchingLeadTimeRules.reduce((best, rule) => (
+                    Number(rule.min_quantity) > Number(best.min_quantity) ? rule : best
+                )).days
+                : Number(quoteOutputs.leadTime.dataset.defaultDays);
+            quoteOutputs.leadTime.textContent = document.documentElement.lang === "en"
+                ? `${leadTimeDays} ${Number(leadTimeDays) === 1 ? "day" : "days"}`
+                : `${leadTimeDays} дн.`;
 
             const duration = animate
                 ? (reducedMotionPreference.matches ? 350 : 1000)
@@ -527,6 +546,7 @@
             animateQuoteValue("discount", discount, duration);
             animateQuoteValue("deliveryCost", deliveryCost, duration);
             animateQuoteValue("total", total, duration);
+            discountDetail.textContent = `${currencyFormatter.format(discountAmount)} ₽`;
             quoteAnnouncement.textContent = `Стоимость за штуку ${currencyFormatter.format(unitPrice)} рублей. Общая стоимость ${currencyFormatter.format(total)} рублей.`;
             if (animate) {
                 const summary = document.querySelector(".quote-summary");
@@ -550,9 +570,99 @@
             }
         }
 
+        function updateModifiersInput() {
+            const modifiers = {};
+            modifierGroupsContainer.querySelectorAll("select[data-modifier-value]").forEach((select) => {
+                modifiers[select.dataset.modifierValue] = select.value;
+            });
+            modifiersInput.value = JSON.stringify(modifiers);
+        }
+
+        function renderProductOptions(restore = {}) {
+            const product = calculatorProducts.find(
+                (item) => item.value === preorderForm.querySelector('[name="product"]').value
+            ) || calculatorProducts[0];
+            sizesContainer.replaceChildren();
+            product.sizes.forEach((size, index) => {
+                const label = document.createElement("label");
+                label.className = "size-option";
+                const input = document.createElement("input");
+                input.className = "js-calculator-option";
+                input.type = "radio";
+                input.name = "size";
+                input.value = size.value;
+                input.dataset.basePrice = size.base_price;
+                input.checked = restore.size === size.value || (!restore.size && index === 0);
+                const text = document.createElement("span");
+                text.textContent = `${size.label} — ${currencyFormatter.format(Number(size.base_price))} ₽`;
+                label.append(input, text);
+                sizesContainer.append(label);
+            });
+            modifierGroupsContainer.replaceChildren();
+            product.modifier_groups.forEach((group) => {
+                const fieldset = document.createElement("fieldset");
+                fieldset.className = "calculator-group select-group";
+                fieldset.dataset.modifierGroup = group.value;
+                const legend = document.createElement("legend");
+                legend.textContent = group.label;
+                const select = document.createElement("select");
+                select.dataset.modifierValue = group.value;
+                select.name = `modifier_${group.value}`;
+                group.options.forEach((option, index) => {
+                    const element = document.createElement("option");
+                    element.value = option.value;
+                    element.dataset.amount = option.amount;
+                    element.dataset.amountType = option.amount_type;
+                    element.dataset.imageUrl = option.image_url || "";
+                    element.textContent = `${option.label}${Number(option.amount) ? ` (+${option.amount}${option.amount_type === "percent" ? "%" : " ₽"})` : ""}`;
+                    element.selected = restore[group.value] === option.value || (!restore[group.value] && index === 0);
+                    select.append(element);
+                });
+                select.addEventListener("change", () => {
+                    const image = fieldset.querySelector("[data-group-image]");
+                    if (image) {
+                        image.src = select.selectedOptions[0].dataset.imageUrl || "";
+                        image.hidden = !image.src;
+                    }
+                    updateModifiersInput();
+                    updateQuote();
+                });
+                if (group.options.some((option) => option.image_url)) {
+                    const image = document.createElement("img");
+                    image.className = "calculator-choice-photo";
+                    image.dataset.groupImage = "";
+                    image.alt = "";
+                    image.src = select.selectedOptions[0].dataset.imageUrl || "";
+                    image.hidden = !image.src;
+                    fieldset.append(image);
+                }
+                fieldset.append(legend, select);
+                modifierGroupsContainer.append(fieldset);
+            });
+            updateModifiersInput();
+        }
+
         preorderForm.addEventListener("input", () => updateQuote());
         preorderForm.addEventListener("change", () => updateQuote());
         preorderForm.addEventListener("change", updateProductImage);
+        preorderForm.querySelector('[name="product"]').addEventListener("change", () => {
+            let previous = {};
+            try {
+                previous = JSON.parse(modifiersInput.value || "{}");
+            } catch {
+                previous = {};
+            }
+            renderProductOptions(previous);
+            updateQuote();
+        });
+        let initialModifiers = {};
+        try {
+            initialModifiers = JSON.parse(modifiersInput.value || "{}");
+        } catch {
+            initialModifiers = {};
+        }
+        renderProductOptions(initialModifiers);
+        updateQuote(false);
         preorderForm.addEventListener("change", (event) => {
             const radio = event.target.closest(".js-calculator-option");
             if (!radio) {
