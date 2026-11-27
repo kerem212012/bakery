@@ -3344,6 +3344,7 @@ class AdminDashboardTests(TestCase):
         response = self.client.get(calculator_url)
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-product-lead-time-rules=""')
         form = response.context["form"]
         data = {
             name: form[name].value() if form[name].value() is not None else ""

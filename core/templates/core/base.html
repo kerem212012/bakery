@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Prata&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=163">
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}?v=166">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -157,7 +157,6 @@
             </div>
             <div class="footer-bottom">
                 <a class="footer-brand" href="{% url 'home' %}" aria-label="{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko — home{% else %}Вкусно Да Сладко — главная{% endif %}">
-                    <span class="footer-brand-mark" aria-hidden="true">❧</span>
                     <span class="footer-brand-name">{% if LANGUAGE_CODE == 'en' %}Vkusno Da Sladko{% else %}Вкусно Да Сладко{% endif %}</span>
                     <span class="footer-brand-caption">{% if LANGUAGE_CODE == 'en' %}Confectionery products{% else %}Кондитерские изделия{% endif %}</span>
                 </a>

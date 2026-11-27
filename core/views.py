@@ -423,6 +423,7 @@ def calculator_settings(request):
                     "image_url": group["image_url"],
                     "sizes_field": group["sizes_field"],
                     "modifiers_field": group["modifiers_field"],
+                    "lead_time_rules_field": group["lead_time_rules_field"],
                 }
                 for group in form.product_groups
             ],

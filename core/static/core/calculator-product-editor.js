@@ -465,7 +465,7 @@
                 amountType.addEventListener("change", () => { entry.amount_type = amountType.value; onInput(); });
                 card.append(amountType);
             }
-            removeButton(card, () => { entries.splice(index, 1); card.remove(); sync(); });
+            removeButton(card, () => { entries.splice(index, 1); renderEntries(); sync(); });
             list.append(card);
             });
         }
